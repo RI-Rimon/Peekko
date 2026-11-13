@@ -12,6 +12,10 @@ Built with HTML5 Canvas, vanilla JavaScript, and CSS, Peekko delivers an interac
   <img src="assets/screenshot.png" alt="Peekko Game Preview" width="850" />
 </p>
 
+---
+
+### Live Demo
+Play **Peekko** directly in your browser: **[https://peekko.vercel.app](https://peekko.vercel.app)**
 
 ---
 
