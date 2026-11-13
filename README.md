@@ -2,11 +2,11 @@
 
 **Hide smart. Search carefully. Outsmart your opponent.**
 
-Peekko is a fast-paced, browser-based hide-and-seek strategy game where you either hide from an intelligent AI Seeker or hunt it down across four detailed environments.
+Peekko is a fast-paced, browser-based hide-and-seek strategy game where you either hide from an intelligent AI Seeker or hunt it down across four detailed environments — now featuring **"Play with Friends" (Custom Room)** online multiplayer for 2 to 5 players!
 
-Choose your role, explore handcrafted maps, use strategic hiding spots, and outsmart your opponent through movement, positioning, and careful decision-making.
+Choose your role, explore handcrafted maps, use strategic hiding spots, and outsmart your opponents through stealth, positioning, and split-second decisions.
 
-Built with HTML5 Canvas, vanilla JavaScript, and CSS, Peekko delivers an interactive gaming experience without relying on external game engines or JavaScript frameworks.
+Built with HTML5 Canvas, vanilla JavaScript, CSS, and WebRTC (PeerJS), Peekko delivers an interactive gaming experience without relying on external game engines or heavy frameworks.
 
 <p align="center">
   <img src="assets/screenshot.png" alt="Peekko Game Preview" width="850" />
@@ -21,68 +21,71 @@ Play **Peekko** directly in your browser: **[https://peekko.vercel.app](https://
 
 ## 📖 About Peekko
 
-Peekko is one of my fun projects it is a single-page, single-player browser game built around the classic concept of hide-and-seek, with strategic gameplay and a rule-based AI opponent.
+Peekko is a browser-based stealth strategy game built around the classic concept of hide-and-seek, featuring both an intelligent single-player AI mode and a full-featured real-time **Play with Friends (Custom Room)** online multiplayer mode.
 
 Players can choose between two roles:
 
-- **Hider:** Sneak around the environment, find the perfect hiding place, and survive while the AI Seeker systematically searches the map.
-- **Seeker:** Track down the hidden AI opponent by exploring the environment and inspecting potential hiding spots before running out of attempts.
+- **Hider:** Sneak around the environment, find the perfect hiding place, and survive while the Seeker systematically searches the map.
+- **Seeker:** Track down hidden opponents by exploring the environment, listening for footsteps, and inspecting potential hiding spots before running out of attempts.
 
-Every round creates a different strategic challenge. Players must consider hiding locations, movement, visibility, sound, and search patterns to win.
+Every round creates a different tactical challenge. Players must consider hiding locations, movement sound, lighting cones, line of sight, and search patterns to win.
 
-Your score, wins, losses, selected map, theme, and difficulty preferences are saved locally in your browser.
+Your single-player score, wins, losses, selected map, theme, volume, and difficulty preferences are saved locally in your browser.
 
 ---
 
 ## ✨ Features
 
+### 👥 Play with Friends (Custom Room Multiplayer)
+
+Connect with friends and play private multiplayer matches (2 to 5 players) without requiring any backend server, accounts, or API keys:
+
+- **Serverless WebRTC P2P:** Powered by PeerJS over WebRTC using a resilient Host-Authoritative state sync architecture.
+- **5-Character Room Codes:** Generate short, shareable codes (e.g. `PK492`) with one-click clipboard copying.
+- **Interactive Lobby Table:** Live player list with high-contrast color badges, ready statuses, and host-directed Seeker assignment.
+- **25-Second Hiding Phase:** Hiders receive 25 seconds to navigate the map and hide in spots. The Seeker's movement is locked and all Hiders remain completely invisible to the Seeker during this countdown.
+- **Fair Asymmetric Visibility:** Hiders can see the Seeker, fellow Hiders, and the Seeker's flashlight cone in Night mode. The Seeker *cannot* see hidden players or players behind walls without direct line-of-sight.
+- **Mid-Hunt Relocation:** Hiders can leave their spot mid-search and sprint to a new location if the Seeker is getting uncomfortably close.
+- **Spectator Elimination Mode:** When caught, a player becomes an active spectator able to watch the rest of the hunt unfold.
+- **Ranked Match Leaderboard:** Complete end-of-match rankings (1st, 2nd, 3rd...) with detailed justifications (*Apex Hunter*, *Unmoved Stealth Master (+25 Bonus)*, *Tactical Survivor*), plus "Return to Lobby" to play another round together.
+
 ### 🎯 Two Gameplay Roles
 
 - Play as either the Hider or the Seeker.
 - Switch roles after every round.
-- Each role has its own objectives and gameplay mechanics.
-- Different strategies are required to survive or successfully locate the opponent.
+- Each role has its own objectives, scoring rules, and gameplay mechanics.
+- Different strategies are required to survive or successfully locate opponents.
 
 ### 🗺️ Four Detailed Maps
 
-Explore four unique environments, each featuring its own atmosphere, layout, obstacles, and hiding locations.
+Explore four unique environments, each featuring its own atmosphere, layout, obstacles, and hiding locations:
 
 | Map | Environment | Hiding Spots |
 |---|---|---:|
 | Skyglass Penthouse | Terrace, master suite, lounge bar, cinema, and kitchen | 20 |
-| Heritage Manor | Atrium, banquet hall, parlor, suites, and library | 20 |
+| Heritage Manor | Grand atrium, banquet hall, parlor, suites, and library | 20 |
 | Underground Basement | Parked cars, elevators, boiler room, lockers, and pillars | 26 |
-| Grand Shopping Mall | Storefronts, escalators, fountain, kiosks, and aisles | 26 |
+| Grand Shopping Mall | Storefronts, concourse, food court, kiosks, and retail aisles | 26 |
 
-Each environment provides different navigation challenges and hiding opportunities.
+### 🤖 Intelligent AI Seeker (Solo Mode)
 
-### 🤖 Intelligent AI Seeker
+The AI Seeker uses rule-based decision-making and pathfinding to search for the hidden player:
 
-The Seeker Bot uses rule-based decision-making to search for the hidden player.
-
-Key AI capabilities include:
-
-- **Systematic Room Searching:** Sweeps rooms methodically instead of moving randomly.
-- **Navigation Graph:** Finds routes around walls and obstacles.
-- **Limited Vision:** Uses a directional field of view to detect exposed players.
-- **Sound Detection:** Can hear player movement and investigate the source of noise.
-- **Rechecking Behaviour:** May revisit previously searched locations.
-
-These mechanics make the bot more than a simple random-moving opponent.
+- **Systematic Room Searching:** Sweeps rooms methodically instead of wandering aimlessly.
+- **Navigation Graph & Unstuck Maneuvers:** Finds routes around walls and glides smoothly through doorways.
+- **Directional Vision Cone:** Uses realistic line of sight to detect exposed players.
+- **Acoustic Detection:** Can hear player footsteps in nearby rooms and investigate noise.
+- **Weighted Rechecking:** Re-evaluates previously visited areas if the player relocated.
 
 ### 🔥 Hot / Warm / Cool Search Hints
 
-When playing as the Seeker, unsuccessful searches provide proximity hints:
+When playing as the Seeker, empty searches provide tactile proximity hints:
 
 - **Hot:** The hidden opponent is very close.
-- **Warm:** The opponent is nearby.
-- **Cool:** The opponent is farther away.
+- **Warm:** An opponent is nearby.
+- **Cool:** Opponents are farther away.
 
-These clues encourage players to use information from previous searches to narrow down possible hiding locations.
-
-### ⚡ Three Difficulty Levels
-
-Choose the challenge that suits your play style.
+### ⚡ Three Difficulty Levels (Solo Mode)
 
 | Setting | Easy | Normal | Hard |
 |---|---:|---:|---:|
@@ -91,59 +94,20 @@ Choose the challenge that suits your play style.
 | Bot Speed | Slower | Standard | Faster |
 | Search Hints | Hot, Warm, Cool | Hot, Warm, Cool | Hot only |
 
-Difficulty settings affect the bot's behaviour, search limits, and available information.
+### 🔊 Procedural Web Audio Engine
 
-### 🔊 Procedural Audio System
+Peekko generates all audio effects procedurally using the **Web Audio API** without external audio files:
 
-Peekko generates its sound effects using the **Web Audio API** without requiring external audio files.
+- Distinct footsteps on wood, tile, and concrete.
+- Spatial audio attenuation and wall sound-muffling.
+- Tense proximity heartbeat for hiders when the seeker gets close.
+- Master volume slider and instant mute toggle.
 
-Audio features include:
+### 🎨 Themes & Mobile Support
 
-- Procedural footsteps.
-- Search and interaction sounds.
-- Gameplay audio cues.
-- Master volume control.
-- Mute and unmute functionality.
-
-### 🎨 Themes & Interface
-
-- Dark and Light themes.
-- Fullscreen gameplay.
-- Interactive pause menu.
-- Responsive interface.
-- Dedicated gameplay HUD.
-- Visual feedback for player actions and game events.
-
-### 📱 Mobile Support
-
-Peekko supports mobile landscape gameplay with:
-
-- On-screen directional D-pad.
-- Dedicated action buttons.
-- Touch-friendly interactions.
-- Landscape-oriented gameplay layout.
-
-### ♿ Accessibility
-
-The interface includes several accessibility considerations:
-
-- Keyboard-operable menus.
-- Visible focus indicators.
-- Labelled dialogs.
-- Live status announcements.
-- Support for reduced-motion preferences.
-
-### 💾 Local Progress Saving
-
-Peekko uses browser `localStorage` to preserve player information and preferences, including:
-
-- Total score.
-- Wins and losses.
-- Selected map.
-- Theme preference.
-- Difficulty preference.
-
-Progress is stored locally and does not require an account or backend server.
+- Dark Mode and Light Mode with responsive top-down architectural styling.
+- Fullscreen and mobile landscape support with on-screen D-pad and action buttons.
+- Keyboard accessible menus with visible focus indicators.
 
 ---
 
@@ -154,13 +118,26 @@ Progress is stored locally and does not require an account or backend server.
 | Action | Keyboard | Touch |
 |---|---|---|
 | Move | Arrow Keys / W A S D | On-screen D-pad |
-| Hide / Leave a Spot / Search | `Space` | SPACE button |
+| Hide / Relocate / Search | `Space` | SPACE button |
 | Confirm "I'm Ready" (Hider) | `Enter` | READY button |
 | Pause / Resume | `Esc` | Pause button |
 
-### Playing as the Hider
+---
 
-Your objective is to remain hidden while the Seeker Bot searches the environment.
+### Playing in Custom Rooms (Multiplayer)
+
+1. From the main menu, click **Play with Friends (Custom Room)**.
+2. **Create Room:** Enter your name, choose the map, your initial role, seeker attempts limit (7, 10, 15, or 20), and lighting mode (Day / Night). Click **Generate Room Code** and copy the 5-character code (e.g. `PK492`) to share with friends.
+3. **Join Room:** Friends click **Join Room**, enter their name and the room code, and click **Join Room**.
+4. **Lobby & Roles:** In the lobby, the Host can toggle who acts as the Seeker (exactly 1 Seeker required).
+5. **Start Match:** Once 2 to 5 players are connected, the Host clicks **Start Match**.
+6. **25-Second Hiding Phase:** Hiders have 25 seconds to infiltrate the map and hide (`Space`). The Seeker's movement is locked and all Hiders are completely invisible during this countdown.
+7. **The Hunt:** When the countdown hits 0, the Seeker is unleashed to search rooms, inspect spots (`Space`), and catch any Hiders spotted in the open!
+8. **Results & Rematch:** View the final ranked podium with stealth bonus justifications and click **Return to Lobby** to play again with new roles.
+
+---
+
+### Playing as the Hider (Solo)
 
 1. Choose your map and select the Hider role.
 2. Move around and explore available hiding locations.
@@ -169,32 +146,22 @@ Your objective is to remain hidden while the Seeker Bot searches the environment
 5. Survive all the bot's checks without getting caught.
 
 **Strategy Tips:**
-- Staying in your original hiding spot earns a +25 bonus.
-- You can move to another hiding spot while the bot is searching.
-- Moving creates noise, which may attract the bot's attention.
-- If the bot sees you in the open, you risk getting caught.
-
-### Playing as the Seeker
-
-Your objective is to locate the hidden bot before running out of attempts.
-
-1. Select the Seeker role.
-2. The bot chooses a hiding location.
-3. Explore the environment and approach potential hiding spots.
-4. Press `Space` to search a location.
-5. Use Hot, Warm, and Cool hints to narrow down the bot's position.
-6. Find the bot before all your attempts are exhausted.
-
-**Strategy Tips:**
-- Pay attention to proximity hints.
-- Use previous search results to guide your next decision.
-- Choose your searches carefully, especially on Hard difficulty.
+- Staying in your original hiding spot earns a **+25 Unmoved Stealth Bonus**.
+- You can move to another hiding spot while the bot is searching, but running creates noise.
 
 ---
 
-## 🏆 Scoring System
+### Playing as the Seeker (Solo)
 
-Your performance is rewarded or penalized based on the outcome of each round.
+1. Select the Seeker role.
+2. The bot chooses a hiding location.
+3. Explore the map and approach suspect hiding spots.
+4. Press `Space` to inspect a location.
+5. Follow Hot, Warm, and Cool clues to narrow down the opponent's position before attempts run out.
+
+---
+
+## 🏆 Scoring System (Solo Mode)
 
 | Outcome | Score |
 |---|---:|
@@ -205,24 +172,22 @@ Your performance is rewarded or penalized based on the outcome of each round.
 | Seeker finds the bot with remaining attempts | +15 per unused attempt |
 | Seeker runs out of attempts | -50 |
 
-**Score Protection:** Your total score will never drop below zero.
+Score protection ensures your total score will never drop below zero.
 
 ---
 
 ## 🛠️ Built With
 
-Peekko is developed using standard web technologies without external game engines or JavaScript frameworks.
+Peekko is developed with clean web standards without external game engines or frameworks:
 
 | Technology | Purpose |
 |---|---|
-| HTML5 | Application structure |
-| CSS3 | Styling, themes, and responsive layout |
-| Vanilla JavaScript (ES6) | Gameplay logic and AI behaviour |
-| HTML5 Canvas | Map, character, and visual-effect rendering |
-| Web Audio API | Procedural sound generation |
-| localStorage | Local progress and preference persistence |
-
-No package manager, build tools, or framework dependencies are required.
+| HTML5 & Canvas API | Application structure, top-down map, character & visual-effect rendering |
+| CSS3 | Responsive UI, theme variables, glassmorphic HUD styling |
+| Vanilla JavaScript (ES6) | Game state, navigation mesh, bot AI, and collision physics |
+| PeerJS (WebRTC) | Peer-to-peer data mesh for serverless custom room multiplayer |
+| Web Audio API | Procedural sound generation, spatial attenuation, and proximity heartbeat |
+| localStorage | Local progress, high scores, and preference persistence |
 
 ---
 
@@ -232,7 +197,7 @@ Peekko is a static browser application. There is no installation or build proces
 
 ### Prerequisites
 
-- A modern web browser.
+- A modern web browser with WebRTC and Web Audio support (Chrome, Firefox, Edge, Safari).
 - Python 3 (recommended for local hosting).
 
 ### Run Locally
@@ -263,10 +228,6 @@ Visit the following address in your browser:
 http://localhost:8080
 ```
 
-You can also open `index.html` directly in a modern browser. However, running a local HTTP server is recommended.
-
-**Mobile users:** Landscape orientation is recommended for the best gameplay experience.
-
 ---
 
 ## 📂 Project Structure
@@ -274,82 +235,49 @@ You can also open `index.html` directly in a modern browser. However, running a 
 ```text
 Peekko/
 ├── assets/
-│   └── peekko-icon.svg
+│   ├── peekko-icon.svg    # Game brand logo and favicon
+│   └── screenshot.png     # Visual preview
 │
 ├── css/
-│   └── style.css
+│   └── style.css          # Core styles, themes, and multiplayer HUD
 │
 ├── js/
-│   ├── apartment.js   # Map data, collision, navigation, and pathfinding
-│   ├── audio.js       # Procedural sound effects
-│   ├── renderer.js    # Canvas rendering and visual effects
-│   └── game.js        # Game state, rules, input, and AI behaviour
+│   ├── config.js          # Central game tuning and multiplayer configuration
+│   ├── apartment.js       # Map layouts, navigation nodes, and collision clearance
+│   ├── audio.js           # Procedural Web Audio sound effects engine
+│   ├── renderer.js        # Architectural top-down canvas rendering and visibility
+│   ├── multiplayer.js     # PeerJS host-authoritative custom rooms & sync
+│   └── game.js            # Core game state, solo AI behaviour, and input handling
 │
-└── index.html         # Main application structure
+├── README.md              # Documentation and game guide
+├── LICENSE                # MIT License
+└── index.html             # Application structure and UI modals
 ```
 
 ---
 
 ## 🔮 Future Roadmap — Peekko v2
 
-The current release focuses on single-player gameplay against an AI opponent.
+Peekko v2 is planned to expand the experience further:
 
-Peekko v2 is planned to expand the experience with multiplayer functionality, larger environments, improved visuals, and a downloadable edition.
-
-**Note:** The following features are planned for future development and are not included in the current release.
-
-### 🌐 Online Multiplayer
-
-Introduce real-time multiplayer gameplay with two matchmaking options.
-
-**1. Random Matches**
-- Join public matches with other players.
-- Support for up to five players per match.
-- Automatic matchmaking.
-
-**2. Custom Rooms**
-- Create private multiplayer rooms.
-- Generate shareable room codes.
-- Invite friends to join through room codes.
-- Support matches ranging from solo play to five players.
-- Allow players to choose their own roles.
-
-### 🗺️ Bigger Maps
-
-- Introduce larger and more expansive environments.
-- Add significantly more hiding locations.
-- Increase map variety and exploration opportunities.
-
-### 🎨 Enhanced Visual Experience
-
-- Redesigned environmental structures.
-- More realistic and detailed objects.
-- Improved map presentation and visual atmosphere.
-
-### 💻 Downloadable Edition
-
-- Develop a standalone downloadable version of Peekko.
-- Provide a public download link for players who prefer a downloadable experience.
+- **Public Matchmaking:** Random quick-match queue alongside custom rooms.
+- **Bigger Environments:** Expansive industrial and outdoor maps with 40+ hiding spots.
+- **Enhanced Visuals:** Animated environmental elements, weather effects, and object interactions.
+- **Downloadable Edition:** Desktop packaging for offline play.
 
 ---
 
 ## ⚠️ Known Limitations
 
-- The current release supports single-player gameplay against an AI bot only.
-- Online multiplayer and custom rooms are not implemented yet.
-- Player progress is stored in browser `localStorage`; clearing site data resets saved progress.
-- Google Fonts requires an internet connection. System fonts are used as fallbacks.
-- Automated test suites are not currently included.
+- Custom Room multiplayer supports 2 to 5 players over WebRTC via PeerJS; public random matchmaking is planned for future releases.
+- Player solo progress is stored in browser `localStorage`; clearing site data resets saved records.
+- Google Fonts and PeerJS CDN require an internet connection; system fonts are used as fallbacks.
 
 ---
 
 ## 🤝 Feedback & Contributions
 
-Ideas, suggestions, and feedback are welcome.
-
-If you find a bug or have an idea for improving Peekko, feel free to open an issue in the repository.
-
-Your feedback can help shape the future of Peekko.
+Ideas, suggestions, and feedback are welcome! If you find a bug or have an idea for improving Peekko, feel free to open an issue in the repository.
 
 ---
 
@@ -357,7 +285,7 @@ Your feedback can help shape the future of Peekko.
 
 Peekko was conceptualized, designed, and planned by **Redwanul Islam Rimon**.
 
-The implementation was developed with AI coding assistance and refined through iterative review, testing, and improvements.
+The implementation was developed with AI coding assistance and refined through iterative review, testing, and engineering improvements.
 
 **Connect with me:**
 
@@ -369,5 +297,4 @@ The implementation was developed with AI coding assistance and refined through i
 
 ## 📄 License
 
-Peekko is intended to be released under the **MIT License**.
-
+Peekko is released under the **MIT License**.

@@ -156,16 +156,17 @@ class ApartmentRenderer {
     // 4. Hiding Spot Furniture + Interactive Highlights
     for (const spot of this.apt.hidingSpots) {
       const isNearest = gameState.nearestSpot && gameState.nearestSpot.id === spot.id;
-      const isPlayerHere = gameState.player.hiddenSpot && gameState.player.hiddenSpot.id === spot.id;
+      const isPlayerHere = gameState.player && gameState.player.hiddenSpot && gameState.player.hiddenSpot.id === spot.id;
       const isBotRevealedHere = gameState.revealBotSpot && gameState.botHiddenSpot && gameState.botHiddenSpot.id === spot.id;
       const isBeingScanned = gameState.botSeeker && gameState.botSeeker.scanningSpotId === spot.id;
+      const isSeekerRole = gameState.role === 'seeker' || (gameState.isMultiplayer && gameState.mpRole === 'seeker');
 
       this.drawHidingSpot(ctx, spot, p, {
         isNearest,
         isPlayerHere,
         isBotRevealedHere,
         isBeingScanned,
-        showCheckedBadge: gameState.role === 'seeker'
+        showCheckedBadge: isSeekerRole
       });
     }
 
@@ -177,37 +178,135 @@ class ApartmentRenderer {
       this.drawAmbientLights(ctx);
     }
 
-    // 7. Characters (Bot Seeker, Bot Hider when revealed, Player)
-    if (gameState.botSeeker && gameState.botSeeker.active) {
-      this.drawSeekerBot(ctx, gameState.botSeeker);
-    }
+    // 7. MULTIPLAYER PLAYERS (if multiplayer active)
+    if (gameState.isMultiplayer && gameState.mpPlayers && gameState.mpPlayers.length > 0) {
+      const me = gameState.mpPlayers.find(pl => pl.id === gameState.mpLocalId);
+      const isMeSeeker = me && me.role === 'seeker';
+      const isMeEliminated = me && me.eliminated;
+      const isHidingCountdown = gameState.mpPhase === 'mp_hiding_countdown';
 
-    if (gameState.revealBotSpot && gameState.botHiddenSpot) {
-      this.drawCharacter(
-        ctx,
-        gameState.botHiddenSpot.hideX,
-        gameState.botHiddenSpot.hideY,
-        0,
-        '#f43f5e',
-        'BOT',
-        false,
-        true
-      );
-    }
-
-    if (gameState.player) {
-      const pl = gameState.player;
-      if (pl.isHidden && pl.hiddenSpot) {
-        // Subtle stealth silhouette showing player tucked inside furniture
-        this.drawCharacter(ctx, pl.hiddenSpot.hideX, pl.hiddenSpot.hideY, pl.angle, '#38bdf8', 'YOU', true, false);
-      } else {
-        this.drawCharacter(ctx, pl.x, pl.y, pl.angle, gameState.role === 'seeker' ? '#f59e0b' : '#38bdf8', 'YOU', false, pl.isMoving);
+      // 7a. Draw Seeker flashlight cone in Dark mode
+      const seeker = gameState.mpPlayers.find(pl => pl.role === 'seeker');
+      if (seeker && this.theme === 'dark') {
+        if (isMeSeeker || !isHidingCountdown || isMeEliminated) {
+          this.drawFlashlightCone(
+            ctx,
+            seeker.x,
+            seeker.y,
+            seeker.angle,
+            'rgba(245, 158, 11, 0.22)'
+          );
+        }
       }
-    }
 
-    // 8. Seeker Player Flashlight Cone (in Dark Mode when user is Seeker)
-    if (this.theme === 'dark' && gameState.role === 'seeker' && gameState.player) {
-      this.drawFlashlightCone(ctx, gameState.player.x, gameState.player.y, gameState.player.angle, 'rgba(253, 224, 71, 0.14)');
+      // 7b. Draw Characters with Asymmetric Fair Visibility
+      for (const pl of gameState.mpPlayers) {
+        const isLocal = pl.id === gameState.mpLocalId;
+        const label = isLocal ? `YOU (${pl.name})` : pl.name;
+
+        if (pl.role === 'seeker') {
+          if (isMeSeeker || !isHidingCountdown || isMeEliminated) {
+            this.drawCharacter(ctx, pl.x, pl.y, pl.angle, pl.color, label, false, pl.isMoving);
+          }
+        } else {
+          // Character is a Hider
+          if (pl.eliminated) {
+            // Eliminated spectator ghost (only visible to fellow hiders/spectators)
+            if (!isMeSeeker || isMeEliminated) {
+              ctx.save();
+              ctx.globalAlpha = 0.35;
+              this.drawCharacter(ctx, pl.x, pl.y, pl.angle, '#94a3b8', `[OUT] ${pl.name}`, false, false);
+              ctx.restore();
+            }
+            continue;
+          }
+
+          if (isHidingCountdown) {
+            // In 25s Countdown Phase: Seeker cannot see any Hiders!
+            if (isMeSeeker) {
+              continue;
+            } else {
+              if (pl.isHidden && pl.hiddenSpotId) {
+                const spot = this.apt.hidingSpots.find(s => s.id === pl.hiddenSpotId);
+                const hx = spot ? spot.hideX : pl.x;
+                const hy = spot ? spot.hideY : pl.y;
+                this.drawCharacter(ctx, hx, hy, pl.angle, pl.color, label, true, false);
+              } else {
+                this.drawCharacter(ctx, pl.x, pl.y, pl.angle, pl.color, label, false, pl.isMoving);
+              }
+            }
+          } else {
+            // Hunt Phase:
+            if (isMeEliminated) {
+              // Spectator sees everyone
+              if (pl.isHidden && pl.hiddenSpotId) {
+                const spot = this.apt.hidingSpots.find(s => s.id === pl.hiddenSpotId);
+                const hx = spot ? spot.hideX : pl.x;
+                const hy = spot ? spot.hideY : pl.y;
+                this.drawCharacter(ctx, hx, hy, pl.angle, pl.color, label, true, false);
+              } else {
+                this.drawCharacter(ctx, pl.x, pl.y, pl.angle, pl.color, label, false, pl.isMoving);
+              }
+            } else if (!isMeSeeker) {
+              // Local player is a Hider: can see fellow Hiders (stealth if hidden)
+              if (pl.isHidden && pl.hiddenSpotId) {
+                const spot = this.apt.hidingSpots.find(s => s.id === pl.hiddenSpotId);
+                const hx = spot ? spot.hideX : pl.x;
+                const hy = spot ? spot.hideY : pl.y;
+                this.drawCharacter(ctx, hx, hy, pl.angle, pl.color, label, true, false);
+              } else {
+                this.drawCharacter(ctx, pl.x, pl.y, pl.angle, pl.color, label, false, pl.isMoving);
+              }
+            } else {
+              // Local player is the Seeker!
+              // Rule 1: CANNOT see Hiders who are hidden inside a spot
+              if (pl.isHidden) {
+                continue;
+              }
+              // Rule 2: CANNOT see Hiders blocked behind walls
+              const hasLOS = this.apt.hasLineOfSight(me.x, me.y, pl.x, pl.y);
+              if (!hasLOS) {
+                continue;
+              }
+              // Rule 3: Moving out in open within Line of Sight
+              this.drawCharacter(ctx, pl.x, pl.y, pl.angle, pl.color, label, false, pl.isMoving);
+            }
+          }
+        }
+      }
+    } else {
+      // 7. SOLO MODE CHARACTERS (Bot Seeker, Bot Hider when revealed, Player)
+      if (gameState.botSeeker && gameState.botSeeker.active) {
+        this.drawSeekerBot(ctx, gameState.botSeeker);
+      }
+
+      if (gameState.revealBotSpot && gameState.botHiddenSpot) {
+        this.drawCharacter(
+          ctx,
+          gameState.botHiddenSpot.hideX,
+          gameState.botHiddenSpot.hideY,
+          0,
+          '#f43f5e',
+          'BOT',
+          false,
+          true
+        );
+      }
+
+      if (gameState.player) {
+        const pl = gameState.player;
+        if (pl.isHidden && pl.hiddenSpot) {
+          // Subtle stealth silhouette showing player tucked inside furniture
+          this.drawCharacter(ctx, pl.hiddenSpot.hideX, pl.hiddenSpot.hideY, pl.angle, '#38bdf8', 'YOU', true, false);
+        } else {
+          this.drawCharacter(ctx, pl.x, pl.y, pl.angle, gameState.role === 'seeker' ? '#f59e0b' : '#38bdf8', 'YOU', false, pl.isMoving);
+        }
+      }
+
+      // 8. Seeker Player Flashlight Cone (in Dark Mode when user is Seeker)
+      if (this.theme === 'dark' && gameState.role === 'seeker' && gameState.player) {
+        this.drawFlashlightCone(ctx, gameState.player.x, gameState.player.y, gameState.player.angle, 'rgba(253, 224, 71, 0.14)');
+      }
     }
 
     // 9. Hot / Warm / Cool Proximity Hint Banner (Seeker Mode feedback)

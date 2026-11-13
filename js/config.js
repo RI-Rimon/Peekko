@@ -1,10 +1,10 @@
 /* ========================================================
    Peekko - Central Game Configuration
-   Tuning parameters for difficulty, gameplay & physics
+   Tuning parameters for difficulty, gameplay, physics & multiplayer
    ======================================================== */
 
 const PEEKKO_CONFIG = Object.freeze({
-  version: '6.0',
+  version: '7.0',
   difficulties: {
     easy: {
       label: 'Easy',
@@ -45,10 +45,20 @@ const PEEKKO_CONFIG = Object.freeze({
   pointsUnmovedBonus: 25,
   pointsCaughtPenalty: -50,
   pointsSeekerBonusPerAttempt: 15,
-  botRecheckChance: 0.40,
+  botRecheckChance: 0.20,
   hintDistances: {
     hot: 180,
     warm: 380
+  },
+  multiplayer: {
+    hidingPhaseSeconds: 25,
+    minPlayers: 2,
+    maxPlayers: 5,
+    defaultAttempts: 10,
+    allowedAttempts: [7, 10, 15, 20],
+    hiderPalette: ['#38bdf8', '#10b981', '#a855f7', '#ec4899', '#f43f5e'],
+    seekerColor: '#f59e0b',
+    syncHz: 25
   }
 });
 

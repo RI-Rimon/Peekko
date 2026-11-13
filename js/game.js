@@ -137,6 +137,10 @@
       this.toastTimeout = null;
       this.introTimer = null;
 
+      // Multiplayer Room Manager
+      this.isMultiplayer = false;
+      this.mpManager = (typeof MultiplayerManager !== 'undefined') ? new MultiplayerManager(this) : null;
+
       this.bindDOM();
       this.bindEvents();
       this.selectMap(this.selectedMapId);
@@ -259,7 +263,7 @@
         }
 
         // Prevent default scrolling for arrows and space only during active unpaused play
-        const isGamePlaying = ['hider_move', 'hider_ready', 'bot_seeking', 'seeker_hunt'].includes(this.phase) && !this.isPaused;
+        const isGamePlaying = (['hider_move', 'hider_ready', 'bot_seeking', 'seeker_hunt'].includes(this.phase) || (this.isMultiplayer && ['mp_hiding_countdown', 'mp_hunting'].includes(this.phase))) && !this.isPaused;
         if (isGamePlaying && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
           e.preventDefault();
         }
@@ -270,7 +274,9 @@
         if (isGamePlaying && e.code === 'Space' && !e.repeat) {
           this.handleSpaceAction();
         } else if (isGamePlaying && e.code === 'Enter' && !e.repeat) {
-          if (this.role === 'hider' && this.phase === 'hider_ready') {
+          if (this.isMultiplayer && this.role === 'hider' && this.phase === 'mp_hiding_countdown') {
+            this.confirmHiderReady();
+          } else if (this.role === 'hider' && this.phase === 'hider_ready') {
             this.confirmHiderReady();
           }
         }
@@ -531,6 +537,11 @@
     }
 
     openMenu() {
+      if (this.isMultiplayer && this.mpManager) {
+        this.mpManager.leaveRoom();
+        return;
+      }
+      this.isMultiplayer = false;
       this.phase = 'menu';
       this.isPaused = false;
       this.botSeeker.active = false;
@@ -650,6 +661,11 @@
     }
 
     handleSpaceAction() {
+      if (this.isMultiplayer) {
+        this.handleMultiplayerSpaceAction();
+        return;
+      }
+
       if (this.role === 'hider') {
         if (this.phase === 'hider_move') {
           if (this.nearestSpot) {
@@ -706,6 +722,48 @@
         }
 
         this.inspectSpotAsSeeker(this.nearestSpot);
+      }
+    }
+
+    handleMultiplayerSpaceAction() {
+      const me = this.mpManager ? this.mpManager.players.find(p => p.id === this.mpManager.localPlayerId) : null;
+      if (!me || me.eliminated) return;
+
+      if (this.role === 'hider') {
+        if (this.player.isHidden && this.player.hiddenSpot) {
+          // Unhide / Exit spot
+          this.player.x = this.player.hiddenSpot.ix;
+          this.player.y = this.player.hiddenSpot.iy;
+          this.player.isHidden = false;
+          this.player.hiddenSpot = null;
+          this.hasRelocatedDuringSeek = true;
+          this.nearestSpot = this.apt.getNearestSpot(this.player.x, this.player.y);
+          this.phasePill.textContent = 'EXPOSED';
+          Sound.playUnhide();
+          this.showToast('Left hiding spot! Relocating...');
+        } else if (!this.player.isHidden && this.nearestSpot) {
+          // Hide in nearest spot
+          this.player.isHidden = true;
+          this.player.hiddenSpot = this.nearestSpot;
+          this.hasRelocatedDuringSeek = true;
+          this.phasePill.textContent = 'HIDDEN';
+          Sound.playHide();
+          this.showToast(`Hidden in ${this.nearestSpot.name}.`);
+        } else if (!this.player.isHidden) {
+          this.showToast('Move close to an object and press SPACE to hide.');
+        }
+      } else if (this.role === 'seeker') {
+        if (this.phase === 'mp_hiding_countdown') {
+          this.showToast('Hunters must wait for the 25-second hiding phase to end!');
+          return;
+        }
+        if (!this.nearestSpot) {
+          this.showToast('Move near an object and press SPACE to inspect.');
+          return;
+        }
+        if (this.mpManager) {
+          this.mpManager.sendSeekerSearch(this.nearestSpot.id);
+        }
       }
     }
 
@@ -766,6 +824,14 @@
     }
 
     confirmHiderReady() {
+      if (this.isMultiplayer) {
+        if (this.mpManager) this.mpManager.sendHiderReady();
+        this.btnReady.classList.add('hidden');
+        this.btnTouchReady.classList.add('hidden');
+        this.showToast('Ready locked in! Waiting for other hiders or timer.');
+        return;
+      }
+
       this.phase = 'bot_seeking';
       this.hasRelocatedDuringSeek = false;
       this.lastRelocateRoomId = null;
@@ -973,7 +1039,12 @@
         botSeeker: this.botSeeker,
         botHiddenSpot: this.botHiddenSpot,
         revealBotSpot: this.revealBotSpot,
-        proximityHint: this.proximityHint
+        proximityHint: this.proximityHint,
+        isMultiplayer: this.isMultiplayer,
+        mpPlayers: this.mpManager ? this.mpManager.players : null,
+        mpLocalId: this.mpManager ? this.mpManager.localPlayerId : null,
+        mpPhase: this.mpManager ? this.mpManager.phase : null,
+        mpRole: this.role
       });
 
       requestAnimationFrame((t) => this.loop(t));
@@ -983,6 +1054,14 @@
       if (this.proximityHint && this.proximityHint.timer > 0) {
         this.proximityHint.timer -= dt;
         if (this.proximityHint.timer <= 0) this.proximityHint = null;
+      }
+
+      if (this.isMultiplayer) {
+        if (this.phase === 'mp_hiding_countdown' || this.phase === 'mp_hunting') {
+          this.updatePlayerMovement(dt);
+          this.updateInteractionPrompt();
+        }
+        return;
       }
 
       if (this.phase === 'hider_move' || this.phase === 'seeker_hunt') {
@@ -1002,6 +1081,18 @@
     }
 
     updatePlayerMovement(dt) {
+      if (this.isMultiplayer) {
+        const me = this.mpManager ? this.mpManager.players.find(p => p.id === this.mpManager.localPlayerId) : null;
+        if (me && me.eliminated) {
+          this.player.isMoving = false;
+          return;
+        }
+        if (this.role === 'seeker' && this.phase === 'mp_hiding_countdown') {
+          this.player.isMoving = false;
+          return;
+        }
+      }
+
       let dx = 0;
       let dy = 0;
 
@@ -1051,6 +1142,39 @@
     }
 
     updateInteractionPrompt() {
+      if (this.isMultiplayer) {
+        const me = this.mpManager ? this.mpManager.players.find(p => p.id === this.mpManager.localPlayerId) : null;
+        if (!me || me.eliminated) {
+          this.interactionPrompt.classList.add('hidden');
+          return;
+        }
+
+        if (this.role === 'hider') {
+          if (this.player.isHidden && this.player.hiddenSpot) {
+            this.interactionPrompt.classList.remove('hidden');
+            this.promptText.textContent = `Exit ${this.player.hiddenSpot.name} to Switch`;
+          } else if (!this.player.isHidden && this.nearestSpot) {
+            this.interactionPrompt.classList.remove('hidden');
+            this.promptText.textContent = `Hide: ${this.nearestSpot.name}`;
+          } else {
+            this.interactionPrompt.classList.add('hidden');
+          }
+        } else if (this.role === 'seeker') {
+          if (this.phase === 'mp_hiding_countdown') {
+            this.interactionPrompt.classList.add('hidden');
+          } else if (this.nearestSpot) {
+            this.interactionPrompt.classList.remove('hidden');
+            const isChecked = this.mpManager && this.mpManager.checkedSpots.includes(this.nearestSpot.id);
+            this.promptText.textContent = isChecked
+              ? `Re-check: ${this.nearestSpot.name}`
+              : `Search: ${this.nearestSpot.name}`;
+          } else {
+            this.interactionPrompt.classList.add('hidden');
+          }
+        }
+        return;
+      }
+
       if (this.role === 'hider') {
         if (this.phase === 'hider_ready' && this.player.hiddenSpot) {
           this.interactionPrompt.classList.remove('hidden');

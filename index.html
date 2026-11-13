@@ -12,6 +12,7 @@
   <noscript>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap">
   </noscript>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
   <div id="app">
@@ -99,6 +100,25 @@
           <button id="btn-touch-ready" class="touch-ready-btn hidden">READY</button>
           <button id="btn-touch-space" class="touch-action-btn">SPACE</button>
         </div>
+      </div>
+
+      <!-- MULTIPLAYER 25S COUNTDOWN OVERLAY & NOTIFICATIONS -->
+      <div id="mp-countdown-overlay" class="mp-countdown-overlay hidden">
+        <div id="mp-countdown-hider-badge" class="mp-countdown-hider-badge">
+          <span class="pulse-beacon"></span> HIDE TIME: <strong id="mp-countdown-hider-seconds">25s</strong>
+        </div>
+        <div id="mp-countdown-seeker-banner" class="mp-countdown-seeker-banner hidden">
+          <div class="seeker-banner-box">
+            <span class="lock-icon">🔒</span>
+            <h3>HUNTER RESTRICTED</h3>
+            <p>Hiders are securing their positions... Hunt begins in <strong id="mp-countdown-seeker-seconds">25s</strong></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SPECTATOR MODE BANNER -->
+      <div id="mp-spectator-banner" class="mp-spectator-banner hidden">
+        <span class="spectator-icon">👁</span> SPECTATING (ELIMINATED)
       </div>
     </main>
 
@@ -219,9 +239,14 @@
             </div>
           </div>
 
-          <!-- STEP 4: EXPLICIT START BUTTON -->
+          <!-- STEP 4: EXPLICIT START BUTTON & MULTIPLAYER ENTRY -->
           <div class="start-action-row">
             <button id="btn-start-game" class="btn-start-game">START GAME</button>
+            <button id="btn-open-multiplayer" class="btn-multiplayer" type="button">
+              <span class="mp-btn-icon">👥</span>
+              <span class="mp-btn-text">PLAY WITH FRIENDS (CUSTOM ROOM)</span>
+              <span class="mp-btn-tag">2-5 PLAYERS</span>
+            </button>
           </div>
         </div>
       </div>
@@ -290,13 +315,182 @@
         </div>
       </div>
     </div>
+
+    <!-- CUSTOM ROOM MULTIPLAYER MODAL -->
+    <div id="custom-room-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="mp-modal-title">
+      <div class="modal-card mp-card">
+        <div class="mp-modal-header">
+          <div class="mp-modal-title-group">
+            <h2 id="mp-modal-title">Custom Room Multiplayer</h2>
+            <span class="mp-sub-tag">P2P Host-Authoritative • 2-5 Players</span>
+          </div>
+          <button id="btn-close-mp-modal" class="modal-close-icon" aria-label="Close Modal">✕</button>
+        </div>
+
+        <!-- TABS: CREATE / JOIN -->
+        <div class="mp-tab-bar">
+          <button id="mp-tab-create" class="mp-tab-btn active" type="button">CREATE ROOM</button>
+          <button id="mp-tab-join" class="mp-tab-btn" type="button">JOIN ROOM</button>
+        </div>
+
+        <!-- CREATE ROOM PANEL -->
+        <div id="mp-panel-create" class="mp-tab-panel">
+          <div class="mp-form-group">
+            <label for="mp-host-name">Set Your Name</label>
+            <input type="text" id="mp-host-name" class="mp-input" value="Agent Host" maxlength="12" placeholder="Enter Host Name">
+          </div>
+
+          <div class="mp-settings-grid">
+            <div class="mp-setting-col">
+              <span class="mp-setting-label">SELECT MAP</span>
+              <div class="mp-btn-pills">
+                <button type="button" class="mp-pill mp-setting-map active" data-map="1">Map 1</button>
+                <button type="button" class="mp-pill mp-setting-map" data-map="2">Map 2</button>
+                <button type="button" class="mp-pill mp-setting-map" data-map="3">Map 3</button>
+                <button type="button" class="mp-pill mp-setting-map" data-map="4">Map 4</button>
+              </div>
+            </div>
+
+            <div class="mp-setting-col">
+              <span class="mp-setting-label">HOST INITIAL ROLE</span>
+              <div class="mp-btn-pills">
+                <button type="button" class="mp-pill mp-setting-role active" data-role="hider">Hider</button>
+                <button type="button" class="mp-pill mp-setting-role" data-role="seeker">Seeker</button>
+              </div>
+            </div>
+
+            <div class="mp-setting-col">
+              <span class="mp-setting-label">SEEKER ATTEMPTS LIMIT</span>
+              <div class="mp-btn-pills">
+                <button type="button" class="mp-pill mp-setting-attempts" data-attempts="7">7</button>
+                <button type="button" class="mp-pill mp-setting-attempts active" data-attempts="10">10</button>
+                <button type="button" class="mp-pill mp-setting-attempts" data-attempts="15">15</button>
+                <button type="button" class="mp-pill mp-setting-attempts" data-attempts="20">20</button>
+              </div>
+            </div>
+
+            <div class="mp-setting-col">
+              <span class="mp-setting-label">LIGHTING MODE</span>
+              <div class="mp-btn-pills">
+                <button type="button" class="mp-pill mp-setting-light" data-light="light">Day (Light)</button>
+                <button type="button" class="mp-pill mp-setting-light active" data-light="dark">Night (Dark)</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="mp-create-error" class="mp-error-msg"></div>
+
+          <button id="btn-create-room-submit" class="btn-primary full-width mp-submit-btn" type="button">
+            GENERATE ROOM CODE
+          </button>
+        </div>
+
+        <!-- JOIN ROOM PANEL -->
+        <div id="mp-panel-join" class="mp-tab-panel hidden">
+          <div class="mp-form-group">
+            <label for="mp-join-name">Set Your Name</label>
+            <input type="text" id="mp-join-name" class="mp-input" maxlength="12" placeholder="Enter Your Name">
+          </div>
+
+          <div class="mp-form-group">
+            <label for="mp-join-code">Enter Room Code</label>
+            <input type="text" id="mp-join-code" class="mp-input code-input" maxlength="5" placeholder="e.g. PK492" autocomplete="off" spellcheck="false">
+          </div>
+
+          <div id="mp-join-error" class="mp-error-msg"></div>
+
+          <button id="btn-join-room-submit" class="btn-primary full-width mp-submit-btn" type="button">
+            JOIN ROOM
+          </button>
+        </div>
+
+        <!-- LOBBY VIEW (Embedded inside modal) -->
+        <div id="mp-lobby-view" class="mp-lobby-view hidden">
+          <div class="lobby-header-bar">
+            <div class="lobby-code-badge">
+              <span class="code-label">ROOM CODE:</span>
+              <strong id="lobby-room-code" class="code-val">PK---</strong>
+              <button id="btn-copy-code" class="btn-copy-code" type="button" title="Copy Room Code">📋 Copy Code</button>
+            </div>
+            <div class="lobby-meta-chips">
+              <span id="lobby-map-name" class="meta-chip">Penthouse</span>
+              <span id="lobby-lighting" class="meta-chip">Night (Dark)</span>
+              <span id="lobby-attempts" class="meta-chip">10 Checks</span>
+            </div>
+          </div>
+
+          <div class="lobby-table-wrapper">
+            <table class="lobby-table">
+              <thead>
+                <tr>
+                  <th>Player Name</th>
+                  <th>Color</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="lobby-players-tbody">
+                <!-- Dynamically populated rows -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="lobby-footer-info">
+            <div id="lobby-count" class="lobby-count">Players: 1 / 5 (Min 2 required)</div>
+            <div id="lobby-status-msg" class="lobby-status-msg">Share Room Code with your friends to join!</div>
+          </div>
+
+          <div class="lobby-actions-row">
+            <button id="btn-mp-start-match" class="btn-primary mp-start-match-btn" type="button" disabled>
+              START MATCH (25s HIDE)
+            </button>
+            <button id="btn-mp-leave-lobby" class="btn-ghost mp-leave-btn" type="button">
+              Leave Room
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MULTIPLAYER MATCH RESULT & RANKING LEADERBOARD -->
+    <div id="mp-result-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="mp-result-title">
+      <div class="modal-card mp-result-card">
+        <div class="mp-result-header">
+          <h2 id="mp-result-title" class="result-title seeker">SEEKER VICTORY</h2>
+          <p id="mp-result-subtitle" class="result-subtitle">All hiders were captured before attempts expired.</p>
+        </div>
+
+        <div class="mp-leaderboard-wrapper">
+          <table class="mp-leaderboard-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Player</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Justification & Stealth Bonus</th>
+              </tr>
+            </thead>
+            <tbody id="mp-result-tbody">
+              <!-- Dynamically populated rankings -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mp-result-actions">
+          <button id="btn-mp-return-lobby" class="btn-primary" type="button">Return to Lobby</button>
+          <button id="btn-mp-leave-game" class="btn-ghost" type="button">Leave Room</button>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <script src="js/config.js?v=6.0"></script>
-  <script src="js/audio.js?v=6.0"></script>
-  <script src="js/apartment.js?v=6.0"></script>
-  <script src="js/renderer.js?v=6.0"></script>
-  <script src="js/game.js?v=6.0"></script>
+  <script src="js/config.js?v=7.0"></script>
+  <script src="js/audio.js?v=7.0"></script>
+  <script src="js/apartment.js?v=7.0"></script>
+  <script src="js/renderer.js?v=7.0"></script>
+  <script src="js/multiplayer.js?v=7.0"></script>
+  <script src="js/game.js?v=7.0"></script>
   <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
 </body>
 </html>
