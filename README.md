@@ -17,7 +17,7 @@ Built with HTML5 Canvas, vanilla JavaScript, and CSS, Peekko delivers an interac
 
 ## 📖 About Peekko
 
-Peekko is a single-page, single-player browser game built around the classic concept of hide-and-seek, with strategic gameplay and a rule-based AI opponent.
+Peekko is one of my fun projects it is a single-page, single-player browser game built around the classic concept of hide-and-seek, with strategic gameplay and a rule-based AI opponent.
 
 Players can choose between two roles:
 
