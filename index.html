@@ -8,7 +8,10 @@
   <link rel="stylesheet" href="css/style.css?v=6.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" media="print" onload="this.media='all'">
+  <noscript>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap">
+  </noscript>
 </head>
 <body>
   <div id="app">
@@ -123,69 +126,75 @@
         <div id="menu-options-panel" class="menu-options-panel pre-reveal">
           <!-- STEP 1: CHOOSE MAP -->
           <div class="selection-block">
-            <div class="section-label">SELECT MAP</div>
+            <div class="section-label"><span class="label-dot"></span>01 · SELECT OPERATION ZONE</div>
             <div class="map-selector-grid">
               <button class="map-option active" data-map="1">
                 <div class="map-opt-head">
-                  <span class="map-num">MAP 1</span>
+                  <span class="map-num">MAP 01</span>
                   <span class="map-spots">20 Spots</span>
                 </div>
                 <div class="map-opt-name">Skyglass Penthouse</div>
-                <div class="map-opt-desc">Terrace, Master Suite, Lounge Bar, Cinema & Kitchen</div>
+                <div class="map-opt-desc">Terrace, Master Loft & Lounge Bar</div>
               </button>
 
               <button class="map-option" data-map="2">
                 <div class="map-opt-head">
-                  <span class="map-num">MAP 2</span>
+                  <span class="map-num">MAP 02</span>
                   <span class="map-spots">20 Spots</span>
                 </div>
                 <div class="map-opt-name">Heritage Manor</div>
-                <div class="map-opt-desc">Atrium, Banquet Hall, Parlor, Suites & Library</div>
+                <div class="map-opt-desc">Grand Atrium, Banquet Hall & Parlor</div>
               </button>
 
               <button class="map-option" data-map="3">
                 <div class="map-opt-head">
-                  <span class="map-num">MAP 3</span>
+                  <span class="map-num">MAP 03</span>
                   <span class="map-spots">26 Spots</span>
                 </div>
                 <div class="map-opt-name">Underground Basement</div>
-                <div class="map-opt-desc">10 Parked Cars, Elevators, Boiler, Lockers & Pillars</div>
+                <div class="map-opt-desc">Vehicles, Elevators & Boiler Room</div>
               </button>
 
               <button class="map-option" data-map="4">
                 <div class="map-opt-head">
-                  <span class="map-num">MAP 4</span>
+                  <span class="map-num">MAP 04</span>
                   <span class="map-spots">26 Spots</span>
                 </div>
                 <div class="map-opt-name">Grand Shopping Mall</div>
-                <div class="map-opt-desc">Glass Storefronts, Escalators, Fountain, Kiosks & Aisles</div>
+                <div class="map-opt-desc">Concourse, Food Court & Retail Aisles</div>
               </button>
             </div>
           </div>
 
           <!-- STEP 2: CHOOSE ROLE -->
           <div class="selection-block">
-            <div class="section-label">CHOOSE YOUR ROLE</div>
+            <div class="section-label"><span class="label-dot"></span>02 · SELECT AGENT ROLE</div>
             <div class="role-grid">
               <button id="btn-choose-hider" class="role-card hider-card active" data-role="hider">
-                <h3>Hider</h3>
+                <div class="role-card-top">
+                  <h3>Hider</h3>
+                  <span class="role-tag hider-tag">STEALTH</span>
+                </div>
                 <p id="hider-desc">
-                  Explore with Arrow Keys, press Spacebar to hide, then confirm Ready. Stay still for bonus points or relocate carefully mid-search.
+                  Infiltrate the map and conceal yourself in spots with Spacebar before the Seeker arrives.
                 </p>
                 <div class="role-meta">
-                  <span>+100 pts (+25 unmoved)</span>
-                  <span>-50 pts if caught</span>
+                  <span class="meta-win">+100 pts (+25 unmoved)</span>
+                  <span class="meta-loss">-50 pts if caught</span>
                 </div>
               </button>
 
               <button id="btn-choose-seeker" class="role-card seeker-card" data-role="seeker">
-                <h3>Seeker</h3>
+                <div class="role-card-top">
+                  <h3>Seeker</h3>
+                  <span class="role-tag seeker-tag">HUNT</span>
+                </div>
                 <p id="seeker-desc">
-                  The Bot hides inside the map. Move with Arrow Keys and inspect spots with Spacebar before running out of attempts.
+                  Track down the hidden Bot across rooms and scan suspect spots before attempts run out.
                 </p>
                 <div class="role-meta">
-                  <span>+100 pts + bonus if found</span>
-                  <span>-50 pts if missed</span>
+                  <span class="meta-win">+100 pts + speed bonus</span>
+                  <span class="meta-loss">-50 pts if missed</span>
                 </div>
               </button>
             </div>
@@ -193,7 +202,7 @@
 
           <!-- STEP 3: CHOOSE DIFFICULTY -->
           <div class="selection-block">
-            <div class="section-label">SELECT DIFFICULTY</div>
+            <div class="section-label"><span class="label-dot"></span>03 · BOT SEARCH PROTOCOL</div>
             <div class="diff-selector-row" role="radiogroup" aria-label="Select Game Difficulty">
               <button class="diff-btn" data-diff="easy" role="radio" aria-checked="false">
                 <span class="diff-name">Easy</span>
@@ -212,7 +221,7 @@
 
           <!-- STEP 4: EXPLICIT START BUTTON -->
           <div class="start-action-row">
-            <button id="btn-start-game" class="btn-start-game">Start</button>
+            <button id="btn-start-game" class="btn-start-game">START GAME</button>
           </div>
         </div>
       </div>

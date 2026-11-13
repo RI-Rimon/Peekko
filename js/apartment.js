@@ -736,7 +736,7 @@ class ApartmentMap {
     return true;
   }
 
-  hasWalkClearance(x1, y1, x2, y2, radius = 11) {
+  hasWalkClearance(x1, y1, x2, y2, radius = 9.5) {
     const dist = Math.hypot(x2 - x1, y2 - y1);
     const steps = Math.max(1, Math.ceil(dist / 4));
     for (let i = 0; i <= steps; i++) {
@@ -811,10 +811,10 @@ class ApartmentMap {
   }
 
   findBestNodeWithLOS(x, y) {
-    return this.findBestNodeWithClearance(x, y, 11);
+    return this.findBestNodeWithClearance(x, y, 9.5);
   }
 
-  findBestNodeWithClearance(x, y, radius = 11) {
+  findBestNodeWithClearance(x, y, radius = 9.5) {
     let bestId = null;
     let bestDist = Infinity;
     let fallbackId = null;
@@ -840,12 +840,12 @@ class ApartmentMap {
     const targetX = targetSpot.ix;
     const targetY = targetSpot.iy;
 
-    if (this.hasWalkClearance(fromX, fromY, targetX, targetY, 11)) {
+    if (this.hasWalkClearance(fromX, fromY, targetX, targetY, 9.5)) {
       return [{ x: targetX, y: targetY }];
     }
 
-    const startNodeId = this.findBestNodeWithClearance(fromX, fromY, 11);
-    const goalNodeId = this.findBestNodeWithClearance(targetX, targetY, 11);
+    const startNodeId = this.findBestNodeWithClearance(fromX, fromY, 9.5);
+    const goalNodeId = this.findBestNodeWithClearance(targetX, targetY, 9.5);
 
     const nodePath = this.dijkstra(startNodeId, goalNodeId);
     const waypoints = nodePath.map(id => ({ x: this.navNodes[id].x, y: this.navNodes[id].y }));
@@ -856,7 +856,7 @@ class ApartmentMap {
     while (currIdx < full.length - 1) {
       let nextIdx = full.length - 1;
       for (; nextIdx > currIdx + 1; nextIdx--) {
-        if (this.hasWalkClearance(full[currIdx].x, full[currIdx].y, full[nextIdx].x, full[nextIdx].y, 11)) {
+        if (this.hasWalkClearance(full[currIdx].x, full[currIdx].y, full[nextIdx].x, full[nextIdx].y, 9.5)) {
           break;
         }
       }
@@ -868,6 +868,6 @@ class ApartmentMap {
   }
 
   findClosestNode(x, y) {
-    return this.findBestNodeWithClearance(x, y, 11);
+    return this.findBestNodeWithClearance(x, y, 9.5);
   }
 }

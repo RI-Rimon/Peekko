@@ -50,7 +50,7 @@
     pointsUnmovedBonus: 25,
     pointsCaughtPenalty: -50,
     pointsSeekerBonusPerAttempt: 15,
-    botRecheckChance: 0.40,
+    botRecheckChance: 0.20,
     hintDistances: {
       hot: 180,
       warm: 380
@@ -124,6 +124,7 @@
         waypointIndex: 0,
         scanningSpotId: null,
         scanTimer: 0,
+        stuckTimer: 0,
         stuckTimerMs: 0,
         stuckFrames: 0,
         stuckOriginX: 680,
@@ -785,6 +786,7 @@
       this.botSeeker.currentTargetIndex = 0;
       this.botSeeker.scanningSpotId = null;
       this.botSeeker.scanTimer = 0;
+      this.botSeeker.stuckTimer = 0;
       this.botSeeker.stuckTimerMs = 0;
       this.botSeeker.stuckFrames = 0;
       this.botSeeker.stuckOriginX = this.botSeeker.x;
@@ -1183,7 +1185,7 @@
           let nextSpot = bot.targets[bot.currentTargetIndex];
           if (this.hasRelocatedDuringSeek && bot.checkedHistory.length >= 2) {
             const isNextAlreadyRecheck = bot.checkedHistory.some(s => s.id === nextSpot.id);
-            if (!isNextAlreadyRecheck && Math.random() < 0.45) {
+            if (!isNextAlreadyRecheck && Math.random() < CFG.botRecheckChance) {
               const recheck = this.pickWeightedRecheckCandidate(
                 bot.checkedHistory,
                 currentSpot.id,
@@ -1197,6 +1199,7 @@
           }
           bot.waypoints = this.apt.findPathToSpot(bot.x, bot.y, nextSpot);
           bot.waypointIndex = 0;
+          bot.stuckTimer = 0;
           bot.stuckTimerMs = 0;
           bot.stuckFrames = 0;
           bot.stuckOriginX = bot.x;
@@ -1208,7 +1211,7 @@
       // Smooth corner-cutting: skip intermediate waypoint early if line-of-clearance to next exists
       if (bot.waypointIndex + 1 < bot.waypoints.length) {
         const nextWp = bot.waypoints[bot.waypointIndex + 1];
-        if (this.apt.hasWalkClearance(bot.x, bot.y, nextWp.x, nextWp.y, 11)) {
+        if (this.apt.hasWalkClearance(bot.x, bot.y, nextWp.x, nextWp.y, 9.5)) {
           bot.waypointIndex++;
         }
       }
@@ -1217,6 +1220,7 @@
       if (!wp) {
         bot.scanningSpotId = currentSpot.id;
         bot.scanTimer = CFG.scanDuration;
+        bot.stuckTimer = 0;
         bot.stuckTimerMs = 0;
         bot.stuckFrames = 0;
         Sound.playSpatialPing(bot.x, bot.y, this.player.x, this.player.y, this.apt);
@@ -1232,6 +1236,7 @@
 
       if (dist < arrivalRadius) {
         bot.waypointIndex++;
+        bot.stuckTimer = 0;
         bot.stuckTimerMs = 0;
         bot.stuckFrames = 0;
         bot.stuckOriginX = bot.x;
@@ -1243,14 +1248,16 @@
         const prevX = bot.x;
         const prevY = bot.y;
 
-        let resolved = this.apt.resolveMovement(bot.x, bot.y, 12, moveX, moveY);
+        // Collision radius reduced to 9.5 for smooth gliding through all doorways
+        let resolved = this.apt.resolveMovement(bot.x, bot.y, 9.5, moveX, moveY);
         let moved = Math.hypot(resolved.x - prevX, resolved.y - prevY);
 
+        // Slide along wall if forward path is partially blocked
         if (moved < step * 0.25) {
           const perpX = -moveY;
           const perpY = moveX;
-          const slideA = this.apt.resolveMovement(bot.x, bot.y, 12, moveX * 0.5 + perpX * 0.85, moveY * 0.5 + perpY * 0.85);
-          const slideB = this.apt.resolveMovement(bot.x, bot.y, 12, moveX * 0.5 - perpX * 0.85, moveY * 0.5 - perpY * 0.85);
+          const slideA = this.apt.resolveMovement(bot.x, bot.y, 9.5, moveX * 0.5 + perpX * 0.85, moveY * 0.5 + perpY * 0.85);
+          const slideB = this.apt.resolveMovement(bot.x, bot.y, 9.5, moveX * 0.5 - perpX * 0.85, moveY * 0.5 - perpY * 0.85);
           const movedA = Math.hypot(slideA.x - prevX, slideA.y - prevY);
           const movedB = Math.hypot(slideB.x - prevX, slideB.y - prevY);
           if (movedA >= movedB && movedA > moved) {
@@ -1267,32 +1274,44 @@
         bot.angle = Math.atan2(dy, dx);
         bot.isMoving = moved > 0.05;
 
-        // Fast anti-stuck re-pathing (~100ms)
-        if (moved < 0.15) {
-          bot.stuckFrames = (bot.stuckFrames || 0) + 1;
-          if (bot.stuckFrames >= 6) {
+        // Unstuck maneuver tracking: track whenever moved distance per frame is < 0.35 * step
+        if (moved < 0.35 * step) {
+          bot.stuckTimer = (bot.stuckTimer || 0) + (dt * 0.01667);
+
+          if (bot.stuckTimer > 1.1) {
+            // Hard stuck recovery: snap smoothly to closest valid nav node and recalculate path
+            const closestNodeId = this.apt.findClosestNode(bot.x, bot.y);
+            const node = closestNodeId ? this.apt.navNodes[closestNodeId] : null;
+            if (node) {
+              bot.x = node.x;
+              bot.y = node.y;
+            }
             bot.waypoints = this.apt.findPathToSpot(bot.x, bot.y, currentSpot);
             bot.waypointIndex = 0;
-            bot.stuckFrames = 0;
-            bot.stuckTimerMs = 0;
-            bot.stuckOriginX = bot.x;
-            bot.stuckOriginY = bot.y;
+            bot.stuckTimer = 0;
+          } else if (bot.stuckTimer > 0.45) {
+            // Perpendicular sidestep nudge (90 degrees left or right relative to target direction)
+            const nudgeDist = step * 1.5;
+            const nudgeLeft = this.apt.resolveMovement(bot.x, bot.y, 9.5, (-dy / dist) * nudgeDist, (dx / dist) * nudgeDist);
+            const nudgeRight = this.apt.resolveMovement(bot.x, bot.y, 9.5, (dy / dist) * nudgeDist, (-dx / dist) * nudgeDist);
+            const distLeft = Math.hypot(nudgeLeft.x - prevX, nudgeLeft.y - prevY);
+            const distRight = Math.hypot(nudgeRight.x - prevX, nudgeRight.y - prevY);
+
+            if (distLeft >= distRight && distLeft > 0.2) {
+              bot.x = nudgeLeft.x;
+              bot.y = nudgeLeft.y;
+            } else if (distRight > 0.2) {
+              bot.x = nudgeRight.x;
+              bot.y = nudgeRight.y;
+            } else {
+              // Both sides blocked, recalculate path from current spot
+              bot.waypoints = this.apt.findPathToSpot(bot.x, bot.y, currentSpot);
+              bot.waypointIndex = 0;
+            }
           }
         } else {
-          bot.stuckFrames = 0;
-        }
-
-        // Secondary fallback stuck timer
-        bot.stuckTimerMs += dt * 16.67;
-        if (bot.stuckTimerMs >= 600) {
-          const netMoved = Math.hypot(bot.x - bot.stuckOriginX, bot.y - bot.stuckOriginY);
-          bot.stuckTimerMs = 0;
-          bot.stuckOriginX = bot.x;
-          bot.stuckOriginY = bot.y;
-          if (netMoved < 18) {
-            bot.waypoints = this.apt.findPathToSpot(bot.x, bot.y, currentSpot);
-            bot.waypointIndex = 0;
-          }
+          // Reset stuckTimer once freed
+          bot.stuckTimer = 0;
         }
 
         const botRoom = this.apt.getRoomAt(bot.x, bot.y);
