@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Peekko</title>
+  <link rel="icon" type="image/svg+xml" href="assets/peekko-icon.svg">
+  <link rel="stylesheet" href="css/style.css?v=6.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="app">
+    <!-- TOP HUD BAR -->
+    <header id="top-hud" class="top-hud hidden">
+      <div class="hud-left">
+        <div class="brand-badge">
+          <img src="assets/peekko-icon.svg" alt="Peekko Icon" class="brand-icon">
+          <span class="brand-title">Peekko</span>
+        </div>
+        <div id="map-pill" class="map-pill hidden">SKYGLASS PENTHOUSE</div>
+        <div id="role-pill" class="role-pill hidden">ROLE: HIDER</div>
+        <div id="phase-pill" class="phase-pill hidden">EXPLORING</div>
+      </div>
+
+      <div class="hud-center">
+        <div class="stat-box">
+          <span class="stat-label">SCORE</span>
+          <span id="score-value" class="stat-value">0</span>
+        </div>
+        <div id="attempts-box" class="stat-box hidden">
+          <span class="stat-label" id="attempts-label">ATTEMPTS LEFT</span>
+          <span id="attempts-value" class="stat-value accent">10 / 10</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">WINS</span>
+          <span id="wins-value" class="stat-value">0</span>
+        </div>
+      </div>
+
+      <div class="hud-right">
+        <button id="btn-pause-hud" class="hud-btn" title="Pause Game (Esc)" aria-label="Pause Game">⏸</button>
+        <button id="btn-fullscreen" class="hud-btn" title="Toggle Fullscreen" aria-label="Toggle Fullscreen">⛶</button>
+        <button id="btn-theme-toggle" class="hud-btn" title="Switch Dark / Light Mode" aria-label="Switch Dark or Light Mode">
+          <span id="theme-icon">☀️</span>
+          <span id="theme-text">Light</span>
+        </button>
+        <button id="btn-sound-toggle" class="hud-btn" title="Mute / Unmute Sound" aria-label="Toggle Sound">
+          <span id="sound-icon">🔊</span>
+        </button>
+        <button id="btn-menu" class="hud-btn secondary" title="Back to Menu">Menu</button>
+      </div>
+    </header>
+
+    <!-- MAIN CANVAS VIEWPORT -->
+    <main class="canvas-stage" role="region" aria-label="Game Canvas">
+      <canvas id="gameCanvas"></canvas>
+
+      <!-- FLOATING INTERACTION PROMPT & READY CONTROLS -->
+      <div id="action-bar" class="action-bar hidden">
+        <div id="interaction-prompt" class="interaction-prompt hidden">
+          <kbd>SPACE</kbd> <span id="prompt-text">Hide in Wardrobe</span>
+        </div>
+
+        <button id="btn-ready" class="btn-ready hidden">
+          <span class="ready-pulse"></span>
+          <span>I'm Ready</span>
+          <kbd>ENTER</kbd>
+        </button>
+      </div>
+
+      <!-- LIVE FEEDBACK TOAST -->
+      <div id="status-toast" class="status-toast hidden" aria-live="polite">
+        Checking...
+      </div>
+
+      <!-- KEYBOARD CONTROLS LEGEND -->
+      <div id="controls-footer" class="controls-footer hidden">
+        <span><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> Move</span>
+        <span><kbd>SPACE</kbd> <span id="space-legend">Hide / Switch Spot</span></span>
+        <span id="enter-legend-wrap"><kbd>ENTER</kbd> Ready</span>
+      </div>
+
+      <!-- TOUCH / MOBILE CONTROLS -->
+      <div id="touch-pad" class="touch-pad hidden">
+        <div class="dpad">
+          <button class="dpad-btn up" data-key="ArrowUp">▲</button>
+          <div class="dpad-mid">
+            <button class="dpad-btn left" data-key="ArrowLeft">◀</button>
+            <button class="dpad-btn down" data-key="ArrowDown">▼</button>
+            <button class="dpad-btn right" data-key="ArrowRight">▶</button>
+          </div>
+        </div>
+        <div class="touch-right-actions">
+          <button id="btn-touch-ready" class="touch-ready-btn hidden">READY</button>
+          <button id="btn-touch-space" class="touch-action-btn">SPACE</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- FULL-SCREEN START / ROLE & MAP SELECTION SCREEN -->
+    <section id="menu-screen" class="menu-screen">
+      <div class="menu-topbar">
+        <div class="menu-stats-inline">
+          <span>Score: <strong id="menu-score">0</strong></span>
+          <span>Wins: <strong id="menu-wins">0</strong></span>
+          <span>Losses: <strong id="menu-losses">0</strong></span>
+        </div>
+        <div class="menu-top-actions">
+          <button id="btn-modal-theme" class="hud-btn small">
+            <span id="modal-theme-icon">☀️</span> <span id="modal-theme-label">Light Mode</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="menu-center-stage">
+        <div id="intro-logo-wrap" class="intro-logo-wrap blinking">
+          <img src="assets/peekko-icon.svg" alt="Peekko" class="intro-logo-icon">
+          <h1 id="game-title-logo" class="game-title-logo">Peekko</h1>
+        </div>
+
+        <div id="menu-options-panel" class="menu-options-panel pre-reveal">
+          <!-- STEP 1: CHOOSE MAP -->
+          <div class="selection-block">
+            <div class="section-label">SELECT MAP</div>
+            <div class="map-selector-grid">
+              <button class="map-option active" data-map="1">
+                <div class="map-opt-head">
+                  <span class="map-num">MAP 1</span>
+                  <span class="map-spots">20 Spots</span>
+                </div>
+                <div class="map-opt-name">Skyglass Penthouse</div>
+                <div class="map-opt-desc">Terrace, Master Suite, Lounge Bar, Cinema & Kitchen</div>
+              </button>
+
+              <button class="map-option" data-map="2">
+                <div class="map-opt-head">
+                  <span class="map-num">MAP 2</span>
+                  <span class="map-spots">20 Spots</span>
+                </div>
+                <div class="map-opt-name">Heritage Manor</div>
+                <div class="map-opt-desc">Atrium, Banquet Hall, Parlor, Suites & Library</div>
+              </button>
+
+              <button class="map-option" data-map="3">
+                <div class="map-opt-head">
+                  <span class="map-num">MAP 3</span>
+                  <span class="map-spots">26 Spots</span>
+                </div>
+                <div class="map-opt-name">Underground Basement</div>
+                <div class="map-opt-desc">10 Parked Cars, Elevators, Boiler, Lockers & Pillars</div>
+              </button>
+
+              <button class="map-option" data-map="4">
+                <div class="map-opt-head">
+                  <span class="map-num">MAP 4</span>
+                  <span class="map-spots">26 Spots</span>
+                </div>
+                <div class="map-opt-name">Grand Shopping Mall</div>
+                <div class="map-opt-desc">Glass Storefronts, Escalators, Fountain, Kiosks & Aisles</div>
+              </button>
+            </div>
+          </div>
+
+          <!-- STEP 2: CHOOSE ROLE -->
+          <div class="selection-block">
+            <div class="section-label">CHOOSE YOUR ROLE</div>
+            <div class="role-grid">
+              <button id="btn-choose-hider" class="role-card hider-card active" data-role="hider">
+                <h3>Hider</h3>
+                <p id="hider-desc">
+                  Explore with Arrow Keys, press Spacebar to hide, then confirm Ready. Stay still for bonus points or relocate carefully mid-search.
+                </p>
+                <div class="role-meta">
+                  <span>+100 pts (+25 unmoved)</span>
+                  <span>-50 pts if caught</span>
+                </div>
+              </button>
+
+              <button id="btn-choose-seeker" class="role-card seeker-card" data-role="seeker">
+                <h3>Seeker</h3>
+                <p id="seeker-desc">
+                  The Bot hides inside the map. Move with Arrow Keys and inspect spots with Spacebar before running out of attempts.
+                </p>
+                <div class="role-meta">
+                  <span>+100 pts + bonus if found</span>
+                  <span>-50 pts if missed</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- STEP 3: CHOOSE DIFFICULTY -->
+          <div class="selection-block">
+            <div class="section-label">SELECT DIFFICULTY</div>
+            <div class="diff-selector-row" role="radiogroup" aria-label="Select Game Difficulty">
+              <button class="diff-btn" data-diff="easy" role="radio" aria-checked="false">
+                <span class="diff-name">Easy</span>
+                <span class="diff-sub">Relaxed • 13 Checks</span>
+              </button>
+              <button class="diff-btn active" data-diff="normal" role="radio" aria-checked="true">
+                <span class="diff-name">Normal</span>
+                <span class="diff-sub">Balanced • 10 Checks</span>
+              </button>
+              <button class="diff-btn" data-diff="hard" role="radio" aria-checked="false">
+                <span class="diff-name">Hard</span>
+                <span class="diff-sub">Sharp • 7 Checks</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- STEP 4: EXPLICIT START BUTTON -->
+          <div class="start-action-row">
+            <button id="btn-start-game" class="btn-start-game">Start</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTTOM NAVBAR WITH ABOUT CREATOR ON LEFT -->
+      <footer class="menu-bottom-nav">
+        <button id="btn-about-creator" class="creator-nav-btn">About Creator</button>
+        <div class="nav-hint">Desktop & Mobile Landscape Supported</div>
+      </footer>
+    </section>
+
+    <!-- ABOUT CREATOR MODAL -->
+    <div id="creator-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="creator-title">
+      <div class="modal-card creator-card">
+        <h2 id="creator-title">Meet the Creator</h2>
+        <div class="creator-info-box">
+          <a href="https://www.linkedin.com/in/redwanul-rimon/" target="_blank" rel="noopener noreferrer" class="creator-name-link" title="Open LinkedIn Profile">
+            Redwanul Islam Rimon
+          </a>
+        </div>
+        <button id="btn-close-creator" class="btn-primary compact-btn">Close</button>
+      </div>
+    </div>
+
+    <!-- PAUSE MODAL -->
+    <div id="pause-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+      <div class="modal-card pause-card">
+        <h2 id="pause-title">Game Paused</h2>
+        <div class="volume-control-box">
+          <div class="volume-label-row">
+            <span id="volume-label">Master Volume</span>
+            <span id="volume-val-display">75%</span>
+          </div>
+          <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.75" aria-labelledby="volume-label">
+        </div>
+        <div class="pause-actions">
+          <button id="btn-pause-resume" class="btn-primary">Resume</button>
+          <button id="btn-pause-restart" class="btn-secondary">Restart Round</button>
+          <button id="btn-pause-menu" class="btn-ghost">Main Menu</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROUND RESULT OVERLAY -->
+    <div id="result-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="result-title">
+      <div class="modal-card result-card">
+        <div id="result-badge" class="result-badge win">VICTORY</div>
+        <h2 id="result-title">You Remained Hidden</h2>
+        <p id="result-desc">The Seeker searched 10 places and never found you.</p>
+
+        <div class="result-score-box">
+          <div class="delta-row">
+            <span>Round Points</span>
+            <strong id="result-delta" class="positive">+125</strong>
+          </div>
+          <div class="delta-row">
+            <span>Total Score</span>
+            <strong id="result-total">125</strong>
+          </div>
+        </div>
+
+        <div class="result-actions">
+          <button id="btn-play-again" class="btn-primary">Play Again</button>
+          <button id="btn-switch-role" class="btn-secondary">Switch Role</button>
+          <button id="btn-result-menu" class="btn-ghost">Main Menu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js?v=6.0"></script>
+  <script src="js/audio.js?v=6.0"></script>
+  <script src="js/apartment.js?v=6.0"></script>
+  <script src="js/renderer.js?v=6.0"></script>
+  <script src="js/game.js?v=6.0"></script>
+</body>
+</html>
