@@ -361,6 +361,7 @@ The implementation was developed with AI coding assistance and refined through i
 
 **Connect with me:**
 
+- Portfolio: [redwanulrimon.vercel.app](https://redwanulrimon.vercel.app/)
 - LinkedIn: [Redwanul Islam Rimon](https://www.linkedin.com/in/redwanul-rimon/)
 - GitHub: [RI-Rimon](https://github.com/RI-Rimon)
 
