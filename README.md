@@ -9,12 +9,9 @@ Choose your role, explore handcrafted maps, use strategic hiding spots, and outs
 Built with HTML5 Canvas, vanilla JavaScript, and CSS, Peekko delivers an interactive gaming experience without relying on external game engines or JavaScript frameworks.
 
 <p align="center">
-  <img src="assets/screenshot-menu.png" alt="Peekko main menu" width="860">
+  <img src="assets/screenshot.png" alt="Peekko Game Preview" width="850" />
 </p>
 
-<p align="center">
-  **▶ Play Peekko** · Live demo coming soon
-</p>
 
 ---
 
