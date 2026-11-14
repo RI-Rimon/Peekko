@@ -20,7 +20,7 @@
     syncHz: 25
   };
 
-  // Cross-Network STUN & Free Open TURN Relay Configuration
+  // Cross-Network Global STUN Relay Configuration
   const PEER_CONFIG = {
     debug: 1,
     config: {
@@ -31,16 +31,8 @@
         { urls: 'stun:stun3.l.google.com:19302' },
         { urls: 'stun:stun4.l.google.com:19302' },
         { urls: 'stun:stun.cloudflare.com:3478' },
-        { urls: 'stun:openrelay.metered.ca:80' },
-        {
-          urls: [
-            'turn:openrelay.metered.ca:80',
-            'turn:openrelay.metered.ca:443',
-            'turn:openrelay.metered.ca:443?transport=tcp'
-          ],
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        }
+        { urls: 'stun:stun.services.mozilla.com' },
+        { urls: 'stun:stun.sipgate.net:3478' }
       ],
       iceCandidatePoolSize: 10
     }
@@ -55,8 +47,17 @@
     return code;
   }
 
+  function normalizeRoomCode(raw) {
+    if (!raw) return '';
+    let code = raw.toUpperCase().trim();
+    if (code.length === 3 && !code.startsWith('PK')) {
+      code = 'PK' + code;
+    }
+    return code;
+  }
+
   function getHostPeerId(code) {
-    return 'peekko-v7-' + code.toUpperCase().trim();
+    return 'peekko-v7-' + normalizeRoomCode(code);
   }
 
   class MultiplayerManager {
@@ -214,17 +215,42 @@
           this.createRoom(name);
         });
       }
+      if (this.inputHostName) {
+        this.inputHostName.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            if (this.btnCreateSubmit) this.btnCreateSubmit.click();
+          }
+        });
+      }
 
       // Submit Join
       if (this.btnJoinSubmit) {
         this.btnJoinSubmit.addEventListener('click', () => {
           const name = (this.inputJoinName && this.inputJoinName.value.trim()) || 'Guest';
-          const code = (this.inputJoinCode && this.inputJoinCode.value.trim().toUpperCase()) || '';
+          const rawCode = (this.inputJoinCode && this.inputJoinCode.value.trim().toUpperCase()) || '';
+          const code = normalizeRoomCode(rawCode);
           if (!code || code.length < 3) {
             this.showJoinError('Please enter a valid room code.');
             return;
           }
           this.joinRoom(name, code);
+        });
+      }
+      if (this.inputJoinCode) {
+        this.inputJoinCode.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            if (this.btnJoinSubmit) this.btnJoinSubmit.click();
+          }
+        });
+      }
+      if (this.inputJoinName) {
+        this.inputJoinName.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            if (this.btnJoinSubmit) this.btnJoinSubmit.click();
+          }
         });
       }
 
@@ -405,8 +431,13 @@
       });
 
       this.peer.on('connection', (conn) => {
+        // Attach data listener immediately to avoid race conditions
+        conn.on('data', (data) => this.handleHostMessage(conn, data));
+
         conn.on('open', () => {
-          conn.on('data', (data) => this.handleHostMessage(conn, data));
+          if (this.phase === 'lobby') {
+            this.broadcastLobbyUpdate();
+          }
         });
 
         conn.on('close', () => {
@@ -483,25 +514,37 @@
         this.localPlayerId = id;
         this.hostConn = this.peer.connect(hostPeerId, { reliable: true });
 
+        // Attach data listener immediately so incoming responses are never missed
+        this.hostConn.on('data', (data) => this.handleClientMessage(data));
+
         this.hostConn.on('open', () => {
           connected = true;
           clearTimeout(connectTimeout);
           this.status = 'lobby';
 
-          // Send JOIN handshake
-          this.hostConn.send({
-            type: 'JOIN',
-            id: id,
-            name: this.localPlayerName
-          });
+          const sendHandshake = () => {
+            if (this.hostConn && this.hostConn.open) {
+              this.hostConn.send({
+                type: 'JOIN',
+                id: id,
+                name: this.localPlayerName
+              });
+            }
+          };
+
+          sendHandshake();
+          // Retry handshake after 1s if host update not yet received
+          this.handshakeRetryTimer = setTimeout(() => {
+            if (this.status === 'lobby' && (!this.players || this.players.length === 0)) {
+              sendHandshake();
+            }
+          }, 1000);
 
           if (this.btnJoinSubmit) {
             this.btnJoinSubmit.disabled = false;
             this.btnJoinSubmit.textContent = 'JOIN ROOM';
           }
         });
-
-        this.hostConn.on('data', (data) => this.handleClientMessage(data));
 
         this.hostConn.on('close', () => {
           this.game.showToast('Disconnected from Host.');
@@ -521,7 +564,13 @@
       this.peer.on('error', (err) => {
         clearTimeout(connectTimeout);
         console.error('PeerJS Client Error:', err);
-        this.showJoinError('Connection error: ' + (err.message || err.type));
+        let errorMsg = 'Connection error: ' + (err.message || err.type);
+        if (err.type === 'peer-unavailable') {
+          errorMsg = `Room '${this.roomCode}' not found. Make sure Host created the room first.`;
+        } else if (err.type === 'network') {
+          errorMsg = 'Network connectivity issue. Please check your data/Wi-Fi connection.';
+        }
+        this.showJoinError(errorMsg);
         if (this.btnJoinSubmit) {
           this.btnJoinSubmit.disabled = false;
           this.btnJoinSubmit.textContent = 'JOIN ROOM';
@@ -617,6 +666,11 @@
        ======================================================== */
     handleClientMessage(msg) {
       if (!msg || !msg.type) return;
+
+      if (this.handshakeRetryTimer) {
+        clearTimeout(this.handshakeRetryTimer);
+        this.handshakeRetryTimer = null;
+      }
 
       if (msg.type === 'WELCOME') {
         this.roomCode = msg.roomCode;

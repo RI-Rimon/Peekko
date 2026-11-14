@@ -229,13 +229,13 @@ class ApartmentMap {
       { x: 40, y: 786, w: 590, h: 14 },
       { x: 730, y: 786, w: 590, h: 14 },
 
-      { x: 403, y: 40, w: 14, h: 210 },
-      { x: 403, y: 330, w: 14, h: 190 },
+      { x: 403, y: 40, w: 14, h: 170 },
+      { x: 403, y: 293, w: 14, h: 227 },
       { x: 403, y: 600, w: 14, h: 200 },
       { x: 40, y: 403, w: 370, h: 14 },
 
-      { x: 943, y: 40, w: 14, h: 210 },
-      { x: 943, y: 330, w: 14, h: 190 },
+      { x: 943, y: 40, w: 14, h: 170 },
+      { x: 943, y: 293, w: 14, h: 227 },
       { x: 943, y: 600, w: 14, h: 200 },
       { x: 950, y: 403, w: 370, h: 14 },
 
@@ -252,9 +252,9 @@ class ApartmentMap {
     ];
 
     this.doors = [
-      { hingeX: 410, hingeY: 250, radius: 75, startAngle: Math.PI / 2, endAngle: 0, leafAngle: 0.35 },
+      { hingeX: 410, hingeY: 210, radius: 80, startAngle: Math.PI / 2, endAngle: 0, leafAngle: 0.35 },
       { hingeX: 410, hingeY: 520, radius: 75, startAngle: Math.PI / 2, endAngle: 0, leafAngle: 0.35 },
-      { hingeX: 950, hingeY: 250, radius: 75, startAngle: Math.PI / 2, endAngle: Math.PI, leafAngle: 2.75 },
+      { hingeX: 950, hingeY: 210, radius: 80, startAngle: Math.PI / 2, endAngle: Math.PI, leafAngle: 2.75 },
       { hingeX: 950, hingeY: 520, radius: 75, startAngle: Math.PI / 2, endAngle: Math.PI, leafAngle: 2.75 },
       { hingeX: 640, hingeY: 300, radius: 75, startAngle: 0, endAngle: -Math.PI / 2, leafAngle: -0.35 }
     ];
@@ -338,14 +338,14 @@ class ApartmentMap {
       banquet_west: { x: 480, y: 225, neighbors: ['banquet_door_north', 'banquet_center', 'west_bed_door_out'] },
       banquet_east: { x: 880, y: 225, neighbors: ['banquet_door_north', 'banquet_center', 'east_bed_door_out'] },
 
-      west_bed_door_out: { x: 440, y: 265, neighbors: ['banquet_west', 'west_bed_door_in'] },
-      west_bed_door_in: { x: 370, y: 265, neighbors: ['west_bed_door_out', 'west_bed_center'] },
-      west_bed_center: { x: 260, y: 265, neighbors: ['west_bed_door_in', 'west_bed_north'] },
+      west_bed_door_out: { x: 450, y: 250, neighbors: ['banquet_west', 'west_bed_door_in'] },
+      west_bed_door_in: { x: 360, y: 250, neighbors: ['west_bed_door_out', 'west_bed_center'] },
+      west_bed_center: { x: 260, y: 250, neighbors: ['west_bed_door_in', 'west_bed_north'] },
       west_bed_north: { x: 260, y: 140, neighbors: ['west_bed_center'] },
 
-      east_bed_door_out: { x: 910, y: 265, neighbors: ['banquet_east', 'east_bed_door_in'] },
-      east_bed_door_in: { x: 980, y: 265, neighbors: ['east_bed_door_out', 'east_bed_center'] },
-      east_bed_center: { x: 1080, y: 265, neighbors: ['east_bed_door_in', 'east_bed_north'] },
+      east_bed_door_out: { x: 900, y: 250, neighbors: ['banquet_east', 'east_bed_door_in'] },
+      east_bed_door_in: { x: 990, y: 250, neighbors: ['east_bed_door_out', 'east_bed_center'] },
+      east_bed_center: { x: 1080, y: 250, neighbors: ['east_bed_door_in', 'east_bed_north'] },
       east_bed_north: { x: 1080, y: 140, neighbors: ['east_bed_center'] }
     };
 
@@ -840,23 +840,41 @@ class ApartmentMap {
     const targetX = targetSpot.ix;
     const targetY = targetSpot.iy;
 
-    if (this.hasWalkClearance(fromX, fromY, targetX, targetY, 9.5)) {
+    if (this.hasWalkClearance(fromX, fromY, targetX, targetY, 14)) {
       return [{ x: targetX, y: targetY }];
     }
 
-    const startNodeId = this.findBestNodeWithClearance(fromX, fromY, 9.5);
-    const goalNodeId = this.findBestNodeWithClearance(targetX, targetY, 9.5);
+    const startNodeId = this.findBestNodeWithClearance(fromX, fromY, 12);
+    const goalNodeId = this.findBestNodeWithClearance(targetX, targetY, 12);
 
     const nodePath = this.dijkstra(startNodeId, goalNodeId);
-    const waypoints = nodePath.map(id => ({ x: this.navNodes[id].x, y: this.navNodes[id].y }));
 
+    // Doorway, entry and gate nodes must be stepped through perpendicularly, not skipped diagonally
+    const unskippable = new Set();
+    for (let i = 0; i < nodePath.length; i++) {
+      const id = nodePath[i];
+      if (id.includes('door') || id.includes('entry') || id.includes('gate') || id.includes('portal')) {
+        unskippable.add(i + 1);
+      }
+    }
+
+    const waypoints = nodePath.map(id => ({ x: this.navNodes[id].x, y: this.navNodes[id].y }));
     const full = [{ x: fromX, y: fromY }, ...waypoints, { x: targetX, y: targetY }];
     const smoothed = [full[0]];
     let currIdx = 0;
     while (currIdx < full.length - 1) {
       let nextIdx = full.length - 1;
       for (; nextIdx > currIdx + 1; nextIdx--) {
-        if (this.hasWalkClearance(full[currIdx].x, full[currIdx].y, full[nextIdx].x, full[nextIdx].y, 9.5)) {
+        let skipsDoorway = false;
+        for (let k = currIdx + 1; k < nextIdx; k++) {
+          if (unskippable.has(k)) {
+            skipsDoorway = true;
+            break;
+          }
+        }
+        if (skipsDoorway) continue;
+
+        if (this.hasWalkClearance(full[currIdx].x, full[currIdx].y, full[nextIdx].x, full[nextIdx].y, 14)) {
           break;
         }
       }

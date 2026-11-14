@@ -1405,65 +1405,76 @@
         bot.angle = Math.atan2(dy, dx);
         bot.isMoving = moved > 0.05;
 
-        // Guaranteed Unstuck Fail-Safe: Max stuck duration strictly <= 0.50 seconds
-        if (moved < 0.45 * step) {
+        // Guaranteed Unstuck Fail-Safe: Max stuck duration strictly <= 0.35 seconds
+        // Also tracks real displacement to detect corner oscillation and wall scraping
+        bot.displacementTimer = (bot.displacementTimer || 0) + (dt * 0.01667);
+        if (bot.displacementTimer >= 0.20) {
+          const distDisplaced = Math.hypot(bot.x - (bot.lastTrackedX ?? bot.x), bot.y - (bot.lastTrackedY ?? bot.y));
+          if (distDisplaced < 10) {
+            bot.stuckTimer = (bot.stuckTimer || 0) + 0.20;
+          } else {
+            bot.stuckTimer = Math.max(0, (bot.stuckTimer || 0) - 0.12);
+          }
+          bot.lastTrackedX = bot.x;
+          bot.lastTrackedY = bot.y;
+          bot.displacementTimer = 0;
+        }
+
+        if (moved < 0.35 * step) {
           bot.stuckTimer = (bot.stuckTimer || 0) + (dt * 0.01667);
+        }
 
-          if (bot.stuckTimer >= 0.45) {
-            // If already in the general vicinity of the target spot (< 50px), trigger scan
-            if (distToSpotIx < 50 || distToSpotHide < 50 || isLastWp) {
-              bot.scanningSpotId = currentSpot.id;
-              bot.scanTimer = CFG.scanDuration;
-              bot.stuckTimer = 0;
-              bot.waypoints = [];
-              bot.waypointIndex = 0;
-              Sound.playSpatialPing(bot.x, bot.y, this.player.x, this.player.y, this.apt);
-              return;
-            }
-
-            // Hard recovery: snap smoothly to closest valid corridor node and advance path
-            const closestNodeId = this.apt.findClosestNode(bot.x, bot.y);
-            const node = closestNodeId ? this.apt.navNodes[closestNodeId] : null;
-            if (node) {
-              bot.x = node.x;
-              bot.y = node.y;
-            }
-            if (bot.waypointIndex + 1 < bot.waypoints.length) {
-              bot.waypointIndex++;
-            } else {
-              bot.waypoints = this.apt.findPathToSpot(bot.x, bot.y, currentSpot);
-              bot.waypointIndex = 0;
-            }
+        if (bot.stuckTimer >= 0.35) {
+          // If already in the general vicinity of the target spot (< 55px), trigger scan
+          if (distToSpotIx < 55 || distToSpotHide < 55 || isLastWp) {
+            bot.scanningSpotId = currentSpot.id;
+            bot.scanTimer = CFG.scanDuration;
             bot.stuckTimer = 0;
-          } else if (bot.stuckTimer >= 0.18) {
-            // Minor snag recovery: try skipping intermediate waypoint if close
-            if (bot.waypointIndex + 1 < bot.waypoints.length) {
-              const nextWp = bot.waypoints[bot.waypointIndex + 1];
-              const dNext = Math.hypot(nextWp.x - bot.x, nextWp.y - bot.y);
-              if (dNext < 75) {
-                bot.waypointIndex++;
-                bot.stuckTimer = 0;
-              }
-            }
+            bot.waypoints = [];
+            bot.waypointIndex = 0;
+            Sound.playSpatialPing(bot.x, bot.y, this.player.x, this.player.y, this.apt);
+            return;
+          }
 
-            // Perpendicular sidestep nudge (90 degrees left or right relative to target direction)
-            const nudgeDist = step * 2.2;
-            const nudgeLeft = this.apt.resolveMovement(bot.x, bot.y, 9.5, (-dy / dist) * nudgeDist, (dx / dist) * nudgeDist);
-            const nudgeRight = this.apt.resolveMovement(bot.x, bot.y, 9.5, (dy / dist) * nudgeDist, (-dx / dist) * nudgeDist);
-            const distLeft = Math.hypot(nudgeLeft.x - prevX, nudgeLeft.y - prevY);
-            const distRight = Math.hypot(nudgeRight.x - prevX, nudgeRight.y - prevY);
-
-            if (distLeft >= distRight && distLeft > 0.25) {
-              bot.x = nudgeLeft.x;
-              bot.y = nudgeLeft.y;
-            } else if (distRight > 0.25) {
-              bot.x = nudgeRight.x;
-              bot.y = nudgeRight.y;
+          // Hard recovery: snap smoothly to closest valid corridor node and re-path
+          const closestNodeId = this.apt.findClosestNode(bot.x, bot.y);
+          const node = closestNodeId ? this.apt.navNodes[closestNodeId] : null;
+          if (node) {
+            bot.x = node.x;
+            bot.y = node.y;
+          }
+          if (bot.waypointIndex + 1 < bot.waypoints.length) {
+            bot.waypointIndex++;
+          } else {
+            bot.waypoints = this.apt.findPathToSpot(bot.x, bot.y, currentSpot);
+            bot.waypointIndex = 0;
+          }
+          bot.stuckTimer = 0;
+        } else if (bot.stuckTimer >= 0.16) {
+          // Minor snag recovery: try skipping intermediate waypoint if close
+          if (bot.waypointIndex + 1 < bot.waypoints.length) {
+            const nextWp = bot.waypoints[bot.waypointIndex + 1];
+            const dNext = Math.hypot(nextWp.x - bot.x, nextWp.y - bot.y);
+            if (dNext < 80) {
+              bot.waypointIndex++;
+              bot.stuckTimer = 0;
             }
           }
-        } else {
-          // Reset stuckTimer once freed
-          bot.stuckTimer = 0;
+
+          // Perpendicular sidestep nudge (90 degrees left or right relative to target direction)
+          const nudgeDist = step * 2.5;
+          const nudgeLeft = this.apt.resolveMovement(bot.x, bot.y, 9.5, (-dy / dist) * nudgeDist, (dx / dist) * nudgeDist);
+          const nudgeRight = this.apt.resolveMovement(bot.x, bot.y, 9.5, (dy / dist) * nudgeDist, (-dx / dist) * nudgeDist);
+          const distLeft = Math.hypot(nudgeLeft.x - prevX, nudgeLeft.y - prevY);
+          const distRight = Math.hypot(nudgeRight.x - prevX, nudgeRight.y - prevY);
+
+          if (distLeft >= distRight && distLeft > 0.25) {
+            bot.x = nudgeLeft.x;
+            bot.y = nudgeLeft.y;
+          } else if (distRight > 0.25) {
+            bot.x = nudgeRight.x;
+            bot.y = nudgeRight.y;
+          }
         }
 
         const botRoom = this.apt.getRoomAt(bot.x, bot.y);
