@@ -450,9 +450,19 @@
         return;
       }
 
-      const clientId = 'peekko_' + (isHost ? 'h_' : 'c_') + Math.random().toString(16).slice(2, 10);
-      const brokerHost = 'broker.emqx.io';
-      const brokerPort = 8084;
+      if (this.mqtt) {
+        try {
+          if (this.mqtt.isConnected && this.mqtt.isConnected()) {
+            this.mqtt.disconnect();
+          }
+        } catch (_) {}
+        this.mqtt = null;
+        this.mqttConnected = false;
+      }
+
+      const clientId = 'pk_' + (isHost ? 'h_' : 'c_') + Math.random().toString(16).slice(2, 10);
+      const brokerHost = 'broker.hivemq.com';
+      const brokerPort = 8884;
       const brokerPath = '/mqtt';
 
       try {
@@ -463,8 +473,8 @@
             console.warn('MQTT Connection lost:', resp.errorMessage);
             if (this.roomCode && (this.status === 'lobby' || this.game.isMultiplayer)) {
               setTimeout(() => {
-                if (this.roomCode && !this.mqttConnected) this.connectMqtt(isHost);
-              }, 2000);
+                if (this.roomCode && !this.mqttConnected) this.initMqtt(isHost);
+              }, 1200);
             }
           }
         };
@@ -501,13 +511,18 @@
       if (!this.mqtt) return;
       this.mqtt.connect({
         useSSL: true,
-        timeout: 5,
-        keepAliveInterval: 15,
+        timeout: 6,
+        keepAliveInterval: 10,
         cleanSession: true,
         onSuccess: () => {
           this.mqttConnected = true;
           const topicPrefix = `peekko/v10/room/${this.roomCode}`;
           this.mqtt.subscribe(`${topicPrefix}/#`);
+          this.mqtt.subscribe(`${topicPrefix}/h2c`);
+          this.mqtt.subscribe(`${topicPrefix}/c2h`);
+          if (this.localPlayerId) {
+            this.mqtt.subscribe(`${topicPrefix}/client/${this.localPlayerId}`);
+          }
           if (!isHost) {
             // Send instant handshake over MQTT
             this.sendToHost({
@@ -518,48 +533,12 @@
           }
         },
         onFailure: (err) => {
-          console.warn('EMQX MQTT failed, trying HiveMQ fallback...', err);
-          try {
-            const fbId = 'pk_fb_' + Math.random().toString(16).slice(2, 10);
-            this.mqtt = new Paho.MQTT.Client('broker.hivemq.com', 8884, '/mqtt', fbId);
-            this.mqtt.onMessageArrived = (message) => {
-              try {
-                const data = JSON.parse(message.payloadString);
-                if (data.senderId && data.senderId === this.localPlayerId) return;
-                if (data.type === 'LOBBY_PING') return;
-                if (this.isHost) {
-                  if (data.isHost) return;
-                  const senderId = data.senderId || data.id || 'guest';
-                  this.handleHostMessage({
-                    peer: senderId,
-                    open: true,
-                    send: (reply) => this.sendToClient(senderId, reply),
-                    close: () => {}
-                  }, data);
-                } else {
-                  this.handleClientMessage(data);
-                }
-              } catch (e) {}
-            };
-            this.mqtt.connect({
-              useSSL: true,
-              timeout: 5,
-              keepAliveInterval: 15,
-              cleanSession: true,
-              onSuccess: () => {
-                this.mqttConnected = true;
-                const topicPrefix = `peekko/v10/room/${this.roomCode}`;
-                this.mqtt.subscribe(`${topicPrefix}/#`);
-                if (!isHost) {
-                  this.sendToHost({
-                    type: 'JOIN',
-                    id: this.localPlayerId,
-                    name: this.localPlayerName
-                  });
-                }
-              }
-            });
-          } catch (e) {}
+          console.warn('HiveMQ connect failed, retrying...', err);
+          setTimeout(() => {
+            if (this.roomCode && !this.mqttConnected) {
+              this.initMqtt(isHost);
+            }
+          }, 1500);
         }
       });
     }
@@ -1212,10 +1191,11 @@
 
       this.game.apt.loadMap(this.settings.mapId);
       const mapSpawn = this.game.apt.spawn || { x: 680, y: 725 };
+      const numPlayers = this.players.length;
 
-      // Set spawn coordinates in chosen map foyer with spacing
+      // Set spawn coordinates in chosen map foyer with collision-free spacing
       this.players.forEach((p, i) => {
-        p.x = mapSpawn.x + (i * 28 - (this.players.length * 14));
+        p.x = mapSpawn.x + (i * 16 - (numPlayers - 1) * 8);
         p.y = mapSpawn.y;
         p.angle = -Math.PI / 2;
         p.isMoving = false;
@@ -1231,6 +1211,7 @@
       // Broadcast MATCH_START with immediate send + redundancy pulses across all channels
       const startPayload = {
         type: 'MATCH_START',
+        phase: 'mp_hiding_countdown',
         settings: this.settings,
         players: this.players,
         countdown: this.countdown,
@@ -1316,12 +1297,16 @@
         this.game.player.angle = me.angle;
         this.game.player.isHidden = false;
         this.game.player.hiddenSpot = null;
+        this.game.player.speed = (typeof CFG !== 'undefined' && CFG.playerSpeed) ? CFG.playerSpeed : 3.4;
       } else {
         this.game.role = this.isHost ? 'seeker' : 'hider';
+        this.game.player.speed = (typeof CFG !== 'undefined' && CFG.playerSpeed) ? CFG.playerSpeed : 3.4;
       }
 
       this.game.phase = this.phase || 'mp_hiding_countdown';
+      this.game.lastTime = performance.now();
       this.game.topHud.classList.remove('hidden');
+      this.game.topHud.style.display = 'flex';
       this.game.attemptsBox.classList.remove('hidden');
       this.game.attemptsLabel.textContent = 'SEEKER CHECKS';
       this.game.attemptsValue.textContent = `${this.attemptsLeft} / ${this.settings.attemptsLimit}`;
@@ -1824,7 +1809,7 @@
       if (!sync || this.isHost) return;
 
       // Auto-start match on client if match is active on server but client is still in lobby/menu/modal
-      const clientNotInGame = !this.game.isMultiplayer || this.phase === 'lobby' || this.game.phase === 'menu' || (this.modal && this.modal.style.display !== 'none');
+      const clientNotInGame = !this.game.isMultiplayer || this.phase === 'lobby' || this.game.phase === 'menu' || (this.modal && (!this.modal.classList.contains('hidden') || this.modal.style.display !== 'none'));
       const serverMatchActive = !!(sync.matchActive || sync.phase === 'mp_hiding_countdown' || sync.phase === 'mp_hunting');
 
       if (clientNotInGame && serverMatchActive) {

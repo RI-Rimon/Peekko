@@ -202,11 +202,14 @@ class ApartmentRenderer {
       const seeker = gameState.mpPlayers.find(pl => pl.role === 'seeker');
       if (seeker && this.theme === 'dark') {
         if (isMeSeeker || !isHidingCountdown || isMeEliminated) {
+          const sx = isMeSeeker ? gameState.player.x : seeker.x;
+          const sy = isMeSeeker ? gameState.player.y : seeker.y;
+          const sAngle = isMeSeeker ? gameState.player.angle : seeker.angle;
           this.drawFlashlightCone(
             ctx,
-            seeker.x,
-            seeker.y,
-            seeker.angle,
+            sx,
+            sy,
+            sAngle,
             'rgba(245, 158, 11, 0.22)'
           );
         }
@@ -216,10 +219,14 @@ class ApartmentRenderer {
       for (const pl of gameState.mpPlayers) {
         const isLocal = pl.id === gameState.mpLocalId;
         const label = isLocal ? `YOU (${pl.name})` : pl.name;
+        const posX = isLocal ? gameState.player.x : pl.x;
+        const posY = isLocal ? gameState.player.y : pl.y;
+        const posAngle = isLocal ? gameState.player.angle : pl.angle;
+        const posMoving = isLocal ? gameState.player.isMoving : pl.isMoving;
 
         if (pl.role === 'seeker') {
           if (isMeSeeker || !isHidingCountdown || isMeEliminated) {
-            this.drawCharacter(ctx, pl.x, pl.y, pl.angle, pl.color, label, false, pl.isMoving);
+            this.drawCharacter(ctx, posX, posY, posAngle, pl.color, label, false, posMoving);
           }
         } else {
           // Character is a Hider
@@ -228,24 +235,24 @@ class ApartmentRenderer {
             if (!isMeSeeker || isMeEliminated) {
               ctx.save();
               ctx.globalAlpha = 0.35;
-              this.drawCharacter(ctx, pl.x, pl.y, pl.angle, '#94a3b8', `[OUT] ${pl.name}`, false, false);
+              this.drawCharacter(ctx, posX, posY, posAngle, '#94a3b8', `[OUT] ${pl.name}`, false, false);
               ctx.restore();
             }
             continue;
           }
 
           if (isHidingCountdown) {
-            // In 25s Countdown Phase: Seeker cannot see any Hiders!
+            // In 20s Countdown Phase: Seeker cannot see any Hiders!
             if (isMeSeeker) {
               continue;
             } else {
               if (pl.isHidden && pl.hiddenSpotId) {
                 const spot = this.apt.hidingSpots.find(s => s.id === pl.hiddenSpotId);
-                const hx = spot ? spot.hideX : pl.x;
-                const hy = spot ? spot.hideY : pl.y;
-                this.drawCharacter(ctx, hx, hy, pl.angle, pl.color, label, true, false);
+                const hx = spot ? spot.hideX : posX;
+                const hy = spot ? spot.hideY : posY;
+                this.drawCharacter(ctx, hx, hy, posAngle, pl.color, label, true, false);
               } else {
-                this.drawCharacter(ctx, pl.x, pl.y, pl.angle, pl.color, label, false, pl.isMoving);
+                this.drawCharacter(ctx, posX, posY, posAngle, pl.color, label, false, posMoving);
               }
             }
           } else {
@@ -254,21 +261,21 @@ class ApartmentRenderer {
               // Spectator sees everyone
               if (pl.isHidden && pl.hiddenSpotId) {
                 const spot = this.apt.hidingSpots.find(s => s.id === pl.hiddenSpotId);
-                const hx = spot ? spot.hideX : pl.x;
-                const hy = spot ? spot.hideY : pl.y;
-                this.drawCharacter(ctx, hx, hy, pl.angle, pl.color, label, true, false);
+                const hx = spot ? spot.hideX : posX;
+                const hy = spot ? spot.hideY : posY;
+                this.drawCharacter(ctx, hx, hy, posAngle, pl.color, label, true, false);
               } else {
-                this.drawCharacter(ctx, pl.x, pl.y, pl.angle, pl.color, label, false, pl.isMoving);
+                this.drawCharacter(ctx, posX, posY, posAngle, pl.color, label, false, posMoving);
               }
             } else if (!isMeSeeker) {
               // Local player is a Hider: can see fellow Hiders (stealth if hidden)
               if (pl.isHidden && pl.hiddenSpotId) {
                 const spot = this.apt.hidingSpots.find(s => s.id === pl.hiddenSpotId);
-                const hx = spot ? spot.hideX : pl.x;
-                const hy = spot ? spot.hideY : pl.y;
-                this.drawCharacter(ctx, hx, hy, pl.angle, pl.color, label, true, false);
+                const hx = spot ? spot.hideX : posX;
+                const hy = spot ? spot.hideY : posY;
+                this.drawCharacter(ctx, hx, hy, posAngle, pl.color, label, true, false);
               } else {
-                this.drawCharacter(ctx, pl.x, pl.y, pl.angle, pl.color, label, false, pl.isMoving);
+                this.drawCharacter(ctx, posX, posY, posAngle, pl.color, label, false, posMoving);
               }
             } else {
               // Local player is the Seeker!
@@ -277,7 +284,7 @@ class ApartmentRenderer {
                 continue;
               }
               // Rule 2: CANNOT see Hiders blocked behind walls
-              const hasLOS = this.apt.hasLineOfSight(me.x, me.y, pl.x, pl.y);
+              const hasLOS = this.apt.hasLineOfSight(gameState.player.x, gameState.player.y, pl.x, pl.y);
               if (!hasLOS) {
                 continue;
               }

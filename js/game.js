@@ -1333,6 +1333,18 @@
         this.player.isMoving = false;
       }
 
+      if (this.isMultiplayer && this.mpManager && this.mpManager.players) {
+        const me = this.mpManager.players.find(p => p.id === this.mpManager.localPlayerId);
+        if (me) {
+          me.x = this.player.x;
+          me.y = this.player.y;
+          me.angle = this.player.angle;
+          me.isMoving = this.player.isMoving;
+          me.isHidden = this.player.isHidden;
+          me.hiddenSpotId = this.player.hiddenSpot ? this.player.hiddenSpot.id : null;
+        }
+      }
+
       this.nearestSpot = this.apt.getNearestSpot(this.player.x, this.player.y);
     }
 
