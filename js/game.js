@@ -303,28 +303,77 @@
         this.revealMenuOptions();
       });
 
-      // Touch D-pad
+      // High-performance Mobile Touch D-pad & Actions
       document.querySelectorAll('.dpad-btn').forEach(btn => {
         const code = btn.dataset.key;
-        btn.addEventListener('pointerdown', (e) => { e.preventDefault(); Sound.init(); this.keys[code] = true; });
-        btn.addEventListener('pointerup', () => { this.keys[code] = false; });
-        btn.addEventListener('pointerleave', () => { this.keys[code] = false; });
-        btn.addEventListener('pointercancel', () => { this.keys[code] = false; });
+        const pressStart = (e) => {
+          e.preventDefault();
+          Sound.init();
+          this.keys[code] = true;
+          btn.classList.add('active');
+        };
+        const pressEnd = (e) => {
+          e.preventDefault();
+          this.keys[code] = false;
+          btn.classList.remove('active');
+        };
+
+        btn.addEventListener('touchstart', pressStart, { passive: false });
+        btn.addEventListener('touchend', pressEnd, { passive: false });
+        btn.addEventListener('touchcancel', pressEnd, { passive: false });
+
+        btn.addEventListener('pointerdown', (e) => {
+          try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
+          pressStart(e);
+        });
+        btn.addEventListener('pointerup', pressEnd);
+        btn.addEventListener('pointercancel', pressEnd);
       });
 
-      document.getElementById('btn-touch-space').addEventListener('click', () => {
-        Sound.init();
-        if (!this.isPaused) this.handleSpaceAction();
-      });
+      const touchSpace = document.getElementById('btn-touch-space');
+      if (touchSpace) {
+        touchSpace.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          Sound.init();
+          touchSpace.classList.add('active');
+          if (!this.isPaused) this.handleSpaceAction();
+        }, { passive: false });
+        touchSpace.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          touchSpace.classList.remove('active');
+        }, { passive: false });
+        touchSpace.addEventListener('click', (e) => {
+          e.preventDefault();
+          Sound.init();
+          if (!this.isPaused) this.handleSpaceAction();
+        });
+      }
 
-      this.btnTouchReady.addEventListener('click', () => {
-        if (this.isPaused) return;
-        if (this.isMultiplayer && this.role === 'hider' && this.phase === 'mp_hiding_countdown') {
-          this.confirmHiderReady();
-        } else if (this.role === 'hider' && this.phase === 'hider_ready') {
-          this.confirmHiderReady();
-        }
-      });
+      if (this.btnTouchReady) {
+        this.btnTouchReady.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          this.btnTouchReady.classList.add('active');
+          if (this.isPaused) return;
+          if (this.isMultiplayer && this.role === 'hider' && this.phase === 'mp_hiding_countdown') {
+            this.confirmHiderReady();
+          } else if (this.role === 'hider' && this.phase === 'hider_ready') {
+            this.confirmHiderReady();
+          }
+        }, { passive: false });
+        this.btnTouchReady.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          this.btnTouchReady.classList.remove('active');
+        }, { passive: false });
+        this.btnTouchReady.addEventListener('click', (e) => {
+          e.preventDefault();
+          if (this.isPaused) return;
+          if (this.isMultiplayer && this.role === 'hider' && this.phase === 'mp_hiding_countdown') {
+            this.confirmHiderReady();
+          } else if (this.role === 'hider' && this.phase === 'hider_ready') {
+            this.confirmHiderReady();
+          }
+        });
+      }
 
       // Map selection cards
       document.querySelectorAll('.map-option').forEach(card => {
