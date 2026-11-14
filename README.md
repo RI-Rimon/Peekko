@@ -90,9 +90,12 @@ When playing as the Seeker, empty searches provide tactile proximity hints:
 | Setting | Easy | Normal | Hard |
 |---|---:|---:|---:|
 | Seeker Attempts | 13 | 10 | 7 |
-| Bot Checks as Hider | 7 | 10 | 13 |
+| Bot Checks as Hider | 7 (1 Bot) | 10 (1 Bot) | 14 (2 Bots: 7 each) |
+| Active Seekers as Hider | 1 | 1 | 2 (Alpha & Beta) |
 | Bot Speed | Slower | Standard | Faster |
 | Search Hints | Hot, Warm, Cool | Hot, Warm, Cool | Hot only |
+
+- **Hard Mode Dual Seekers:** In Hard Mode when playing as Hider, two seeker bots (Amber Seeker Alpha and Crimson Seeker Beta) hunt simultaneously across different rooms with independent search paths and 14 combined checks. When playing as Seeker, the challenge remains 7 strategic attempts to locate the hidden bot.
 
 ### 🔊 Procedural Web Audio Engine
 

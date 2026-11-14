@@ -20,8 +20,8 @@
     syncHz: 25
   };
 
-  // Cross-Network Global STUN & Metered TURN Relay Configuration
-  // Enables seamless P2P WebRTC traversal across Cellular 4G/5G Mobile Data (CGNAT/Symmetric NAT) & Wi-Fi
+  // Cross-Network Fast Global STUN Configuration (Google, Cloudflare, Nextcloud)
+  // Ensures instant ICE gathering and robust cross-network P2P connections
   const PEER_CONFIG = {
     debug: 1,
     config: {
@@ -32,55 +32,11 @@
         { urls: 'stun:stun3.l.google.com:19302' },
         { urls: 'stun:stun4.l.google.com:19302' },
         { urls: 'stun:stun.cloudflare.com:3478' },
-        { urls: 'stun:openrelay.metered.ca:80' },
-        {
-          urls: 'turn:openrelay.metered.ca:80',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        },
-        {
-          urls: 'turn:openrelay.metered.ca:443',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        },
-        {
-          urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        },
-        {
-          urls: 'turns:openrelay.metered.ca:443?transport=tcp',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        }
+        { urls: 'stun:stun.nextcloud.com:443' }
       ],
-      iceCandidatePoolSize: 10,
-      iceTransportPolicy: 'all'
+      iceCandidatePoolSize: 10
     }
   };
-
-  // Dynamically refresh TURN relay tokens from Metered API if reachable
-  let turnCredentialsRefreshed = false;
-  async function refreshTurnCredentials() {
-    if (turnCredentialsRefreshed) return;
-    try {
-      const res = await fetch('https://openrelay.metered.ca/api/v1/turn/credentials?apiKey=openrelayproject');
-      if (res.ok) {
-        const dynamicServers = await res.json();
-        if (Array.isArray(dynamicServers) && dynamicServers.length > 0) {
-          PEER_CONFIG.config.iceServers = [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            ...dynamicServers
-          ];
-          turnCredentialsRefreshed = true;
-          console.log('[PeerJS WebRTC] Acquired fresh TURN relay credentials for CGNAT traversal.');
-        }
-      }
-    } catch (_) {
-      // Fallback: static Metered OpenRelay servers in PEER_CONFIG remain active
-    }
-  }
 
   function generateRoomCode() {
     const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -101,7 +57,7 @@
   }
 
   function getHostPeerId(code) {
-    return 'peekko-v8-' + normalizeRoomCode(code);
+    return 'peekko-v9-' + normalizeRoomCode(code);
   }
 
   class MultiplayerManager {
@@ -348,7 +304,6 @@
         if (this.lobbyView) this.lobbyView.classList.add('hidden');
         if (this.panelCreate) this.panelCreate.classList.remove('hidden');
       }
-      refreshTurnCredentials();
     }
 
     closeModal() {
@@ -421,7 +376,6 @@
         return;
       }
 
-      refreshTurnCredentials();
       this.showCreateError('');
       if (this.btnCreateSubmit) {
         this.btnCreateSubmit.disabled = true;
@@ -482,19 +436,7 @@
       });
 
       this.peer.on('connection', (conn) => {
-        conn.serialization = 'json';
-
-        // Monitor underlying RTCPeerConnection for ICE logging and recovery
-        const checkPeerConnection = () => {
-          if (conn.peerConnection) {
-            conn.peerConnection.addEventListener('iceconnectionstatechange', () => {
-              console.log('[Host WebRTC] ICE state with ' + conn.peer + ':', conn.peerConnection.iceConnectionState);
-            });
-          }
-        };
-        setTimeout(checkPeerConnection, 100);
-
-        // Attach data listener immediately to avoid race conditions
+        // Attach data listener immediately so incoming responses are never missed
         conn.on('data', (data) => this.handleHostMessage(conn, data));
 
         conn.on('open', () => {
@@ -538,11 +480,10 @@
         return;
       }
 
-      refreshTurnCredentials();
       this.showJoinError('');
       if (this.btnJoinSubmit) {
         this.btnJoinSubmit.disabled = true;
-        this.btnJoinSubmit.textContent = 'Locating Room & Relay...';
+        this.btnJoinSubmit.textContent = 'Connecting to Room...';
       }
 
       this.cleanup();
@@ -565,47 +506,22 @@
       let connected = false;
       const connectTimeout = setTimeout(() => {
         if (!connected) {
-          this.showJoinError('Connection timeout. Please verify Room Code and ensure Host is currently in the lobby.');
+          this.showJoinError(`Could not reach Room '${this.roomCode}'. Please verify the Room Code and ensure Host is currently in the lobby.`);
           if (this.btnJoinSubmit) {
             this.btnJoinSubmit.disabled = false;
             this.btnJoinSubmit.textContent = 'JOIN ROOM';
           }
           this.cleanup();
         }
-      }, 26000); // 26s for cellular symmetric CGNAT STUN/TURN negotiation
+      }, 18000);
 
       this.peer.on('open', (id) => {
         this.localPlayerId = id;
         if (this.btnJoinSubmit) {
-          this.btnJoinSubmit.textContent = 'Traversing NAT / TURN...';
+          this.btnJoinSubmit.textContent = 'Establishing P2P link...';
         }
 
-        this.hostConn = this.peer.connect(hostPeerId, {
-          reliable: true,
-          serialization: 'json'
-        });
-
-        // Monitor ICE connection state changes for live feedback and automatic recovery
-        const monitorICE = () => {
-          if (this.hostConn && this.hostConn.peerConnection) {
-            const pc = this.hostConn.peerConnection;
-            pc.addEventListener('iceconnectionstatechange', () => {
-              const state = pc.iceConnectionState;
-              console.log('[Client WebRTC] ICE state:', state);
-              if (!connected && this.btnJoinSubmit) {
-                if (state === 'checking') {
-                  this.btnJoinSubmit.textContent = 'Crossing NAT / TURN Relay...';
-                } else if (state === 'connected' || state === 'completed') {
-                  this.btnJoinSubmit.textContent = 'Synchronizing Lobby...';
-                } else if (state === 'failed') {
-                  console.warn('[Client WebRTC] ICE failed. Retrying candidate pair via TURN...');
-                  if (pc.restartIce) pc.restartIce();
-                }
-              }
-            });
-          }
-        };
-        setTimeout(monitorICE, 120);
+        this.hostConn = this.peer.connect(hostPeerId, { reliable: true });
 
         // Attach data listener immediately so incoming responses are never missed
         this.hostConn.on('data', (data) => this.handleClientMessage(data));
@@ -616,7 +532,7 @@
           this.status = 'lobby';
 
           const sendHandshake = () => {
-            if (this.hostConn && this.hostConn.open) {
+            if (this.hostConn && this.status === 'lobby' && (!this.players || this.players.length === 0)) {
               this.hostConn.send({
                 type: 'JOIN',
                 id: id,
@@ -625,13 +541,11 @@
             }
           };
 
+          // Send handshake immediately and with retry pulses
           sendHandshake();
-          // Retry handshake after 1s if host update not yet received
-          this.handshakeRetryTimer = setTimeout(() => {
-            if (this.status === 'lobby' && (!this.players || this.players.length === 0)) {
-              sendHandshake();
-            }
-          }, 1000);
+          this.handshakeTimer1 = setTimeout(sendHandshake, 350);
+          this.handshakeTimer2 = setTimeout(sendHandshake, 850);
+          this.handshakeTimer3 = setTimeout(sendHandshake, 1600);
 
           if (this.btnJoinSubmit) {
             this.btnJoinSubmit.disabled = false;
@@ -661,7 +575,7 @@
         if (err.type === 'peer-unavailable') {
           errorMsg = `Room '${this.roomCode}' not found. Make sure Host created the room first and is in the lobby.`;
         } else if (err.type === 'network') {
-          errorMsg = 'Network connectivity issue. Please check your data/Wi-Fi connection.';
+          errorMsg = 'Network connectivity issue. Please check your internet connection.';
         }
         this.showJoinError(errorMsg);
         if (this.btnJoinSubmit) {
@@ -760,6 +674,9 @@
     handleClientMessage(msg) {
       if (!msg || !msg.type) return;
 
+      if (this.handshakeTimer1) clearTimeout(this.handshakeTimer1);
+      if (this.handshakeTimer2) clearTimeout(this.handshakeTimer2);
+      if (this.handshakeTimer3) clearTimeout(this.handshakeTimer3);
       if (this.handshakeRetryTimer) {
         clearTimeout(this.handshakeRetryTimer);
         this.handshakeRetryTimer = null;
@@ -1734,6 +1651,10 @@
     }
 
     cleanup() {
+      if (this.handshakeTimer1) clearTimeout(this.handshakeTimer1);
+      if (this.handshakeTimer2) clearTimeout(this.handshakeTimer2);
+      if (this.handshakeTimer3) clearTimeout(this.handshakeTimer3);
+      if (this.handshakeRetryTimer) clearTimeout(this.handshakeRetryTimer);
       clearInterval(this.syncInterval);
       clearInterval(this.inputInterval);
 

@@ -160,7 +160,8 @@ class ApartmentRenderer {
       const isNearest = gameState.nearestSpot && gameState.nearestSpot.id === spot.id;
       const isPlayerHere = gameState.player && gameState.player.hiddenSpot && gameState.player.hiddenSpot.id === spot.id;
       const isBotRevealedHere = gameState.revealBotSpot && gameState.botHiddenSpot && gameState.botHiddenSpot.id === spot.id;
-      const isBeingScanned = gameState.botSeeker && gameState.botSeeker.scanningSpotId === spot.id;
+      const isBeingScanned = (gameState.botSeekers && gameState.botSeekers.some(b => b.active && b.scanningSpotId === spot.id)) ||
+        (gameState.botSeeker && gameState.botSeeker.active && gameState.botSeeker.scanningSpotId === spot.id);
       const isSeekerRole = gameState.role === 'seeker' || (gameState.isMultiplayer && gameState.mpRole === 'seeker');
 
       this.drawHidingSpot(ctx, spot, p, {
@@ -277,8 +278,12 @@ class ApartmentRenderer {
         }
       }
     } else {
-      // 7. SOLO MODE CHARACTERS (Bot Seeker, Bot Hider when revealed, Player)
-      if (gameState.botSeeker && gameState.botSeeker.active) {
+      // 7. SOLO MODE CHARACTERS (Bot Seekers, Bot Hider when revealed, Player)
+      if (gameState.botSeekers && gameState.botSeekers.length > 0) {
+        gameState.botSeekers.forEach(bot => {
+          if (bot && bot.active) this.drawSeekerBot(ctx, bot);
+        });
+      } else if (gameState.botSeeker && gameState.botSeeker.active) {
         this.drawSeekerBot(ctx, gameState.botSeeker);
       }
 
@@ -1193,19 +1198,20 @@ class ApartmentRenderer {
 
   drawSeekerBot(ctx, bot) {
     // Flashlight cone
+    const defaultCone = this.theme === 'dark' ? 'rgba(245, 158, 11, 0.24)' : 'rgba(245, 158, 11, 0.16)';
     this.drawFlashlightCone(
       ctx,
       bot.x,
       bot.y,
       bot.angle,
-      this.theme === 'dark' ? 'rgba(245, 158, 11, 0.24)' : 'rgba(245, 158, 11, 0.16)'
+      bot.coneColor || defaultCone
     );
-    this.drawCharacter(ctx, bot.x, bot.y, bot.angle, '#f59e0b', 'SEEKER BOT', false, bot.isMoving);
+    this.drawCharacter(ctx, bot.x, bot.y, bot.angle, bot.color || '#f59e0b', bot.name || 'SEEKER BOT', false, bot.isMoving);
 
     // Alert indicator badge above bot
     if (bot.isAlerted || (bot.alertTimer && bot.alertTimer > 0)) {
       ctx.save();
-      ctx.fillStyle = '#f59e0b';
+      ctx.fillStyle = bot.color || '#f59e0b';
       ctx.beginPath();
       ctx.arc(bot.x, bot.y - 28, 12, 0, Math.PI * 2);
       ctx.fill();

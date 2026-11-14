@@ -111,28 +111,8 @@
       // Bot State
       this.botHiddenSpot = null;
       this.revealBotSpot = false;
-      this.botSeeker = {
-        active: false,
-        x: 680,
-        y: 755,
-        angle: -Math.PI / 2,
-        speed: this.botSpeed,
-        targets: [],
-        checkedHistory: [],
-        currentTargetIndex: 0,
-        waypoints: [],
-        waypointIndex: 0,
-        scanningSpotId: null,
-        scanTimer: 0,
-        stuckTimer: 0,
-        stuckTimerMs: 0,
-        stuckFrames: 0,
-        stuckOriginX: 680,
-        stuckOriginY: 755,
-        isMoving: false,
-        isAlerted: false,
-        alertTimer: 0
-      };
+      this.botSeeker = this.createBotSeekerInstance('SEEKER BOT', '#f59e0b', null);
+      this.botSeekers = [this.botSeeker];
 
       this.toastTimeout = null;
       this.introTimer = null;
@@ -151,6 +131,35 @@
 
       this.lastTime = performance.now();
       requestAnimationFrame((t) => this.loop(t));
+    }
+
+    createBotSeekerInstance(name = 'SEEKER BOT', color = '#f59e0b', coneColor = null) {
+      return {
+        name: name,
+        color: color,
+        coneColor: coneColor,
+        active: false,
+        x: 680,
+        y: 755,
+        angle: -Math.PI / 2,
+        speed: this.botSpeed || 4.15,
+        targets: [],
+        checkedHistory: [],
+        currentTargetIndex: 0,
+        waypoints: [],
+        waypointIndex: 0,
+        scanningSpotId: null,
+        scanTimer: 0,
+        stuckTimer: 0,
+        stuckTimerMs: 0,
+        stuckFrames: 0,
+        stuckOriginX: 680,
+        stuckOriginY: 755,
+        isMoving: false,
+        isAlerted: false,
+        alertTimer: 0,
+        done: false
+      };
     }
 
     loadStats() {
@@ -673,6 +682,9 @@
       this.isMultiplayer = false;
       this.phase = 'menu';
       this.isPaused = false;
+      if (this.botSeekers) {
+        this.botSeekers.forEach(b => { if (b) b.active = false; });
+      }
       this.botSeeker.active = false;
       this.topHud.classList.add('hidden');
       this.menuScreen.classList.remove('hidden');
@@ -707,7 +719,11 @@
       this.losConeHalfAngle = diffCfg.losConeHalfAngle;
       this.hearingRadius = diffCfg.hearingRadius;
       this.hintBands = diffCfg.hintBands;
-      this.maxAttempts = role === 'seeker' ? diffCfg.maxAttemptsSeeker : diffCfg.maxAttemptsHider;
+      if (role === 'hider' && this.selectedDifficulty === 'hard') {
+        this.maxAttempts = 14;
+      } else {
+        this.maxAttempts = role === 'seeker' ? diffCfg.maxAttemptsSeeker : diffCfg.maxAttemptsHider;
+      }
       this.attemptsLeft = this.maxAttempts;
 
       // Resize after HUD becomes visible so canvas fits exact stage dimensions
@@ -724,13 +740,9 @@
       this.hasRelocatedDuringSeek = false;
       this.lastRelocateRoomId = null;
 
-      // Reset bot seeker
-      this.botSeeker.active = false;
-      this.botSeeker.speed = this.botSpeed;
-      this.botSeeker.checkedHistory = [];
-      this.botSeeker.scanningSpotId = null;
-      this.botSeeker.isAlerted = false;
-      this.botSeeker.alertTimer = 0;
+      // Reset bot seeker(s)
+      this.botSeeker = this.createBotSeekerInstance('SEEKER BOT', '#f59e0b');
+      this.botSeekers = [this.botSeeker];
       this.botHiddenSpot = null;
       this.revealBotSpot = false;
 
@@ -969,35 +981,67 @@
       this.btnTouchReady.classList.add('hidden');
       Sound.playReady();
 
-      const chosenSpots = this.pickBotSearchSpots(this.maxAttempts);
+      const isHardHider = (this.role === 'hider' && this.selectedDifficulty === 'hard');
 
-      this.botSeeker.active = true;
-      this.botSeeker.speed = this.botSpeed;
-      this.botSeeker.x = this.apt.botSpawn.x;
-      this.botSeeker.y = this.apt.botSpawn.y;
-      this.botSeeker.angle = -Math.PI / 2;
-      this.botSeeker.targets = chosenSpots;
-      this.botSeeker.checkedHistory = [];
-      this.botSeeker.currentTargetIndex = 0;
-      this.botSeeker.scanningSpotId = null;
-      this.botSeeker.scanTimer = 0;
-      this.botSeeker.stuckTimer = 0;
-      this.botSeeker.stuckTimerMs = 0;
-      this.botSeeker.stuckFrames = 0;
-      this.botSeeker.stuckOriginX = this.botSeeker.x;
-      this.botSeeker.stuckOriginY = this.botSeeker.y;
-      this.botSeeker.isAlerted = false;
-      this.botSeeker.alertTimer = 0;
-      this.botSeeker.waypoints = this.apt.findPathToSpot(this.botSeeker.x, this.botSeeker.y, chosenSpots[0]);
-      this.botSeeker.waypointIndex = 0;
+      if (isHardHider) {
+        // HARD MODE: 2 Seeker Bots searching the apartment simultaneously
+        // Bot Alpha: Amber (#f59e0b) - 7 spots
+        // Bot Beta: Crimson (#ef4444) - 7 distinct spots
+        const spotsAlpha = this.pickBotSearchSpots(7);
+        const excludeForBeta = new Set(spotsAlpha.map(s => s.id));
+        const spotsBeta = this.pickBotSearchSpots(7, excludeForBeta);
 
-      this.attemptsValue.textContent = `${this.maxAttempts} / ${this.maxAttempts}`;
-      this.showToast(`Seeker entered! Stay still for +${CFG.pointsUnmovedBonus} bonus, or press SPACE to relocate.`);
+        const botAlpha = this.createBotSeekerInstance('SEEKER ALPHA', '#f59e0b', 'rgba(245, 158, 11, 0.24)');
+        botAlpha.active = true;
+        botAlpha.x = this.apt.botSpawn.x;
+        botAlpha.y = this.apt.botSpawn.y;
+        botAlpha.angle = -Math.PI / 2;
+        botAlpha.targets = spotsAlpha;
+        botAlpha.waypoints = this.apt.findPathToSpot(botAlpha.x, botAlpha.y, spotsAlpha[0]);
+        botAlpha.waypointIndex = 0;
+
+        let spawnBetaX = this.apt.botSpawn.x + 24;
+        let spawnBetaY = this.apt.botSpawn.y;
+        if (!this.apt.hasWalkClearance(spawnBetaX, spawnBetaY, spawnBetaX, spawnBetaY, 10)) {
+          spawnBetaX = this.apt.botSpawn.x - 24;
+        }
+        const botBeta = this.createBotSeekerInstance('SEEKER BETA', '#ef4444', 'rgba(239, 68, 68, 0.24)');
+        botBeta.active = true;
+        botBeta.x = spawnBetaX;
+        botBeta.y = spawnBetaY;
+        botBeta.angle = -Math.PI / 2;
+        botBeta.targets = spotsBeta;
+        botBeta.waypoints = this.apt.findPathToSpot(botBeta.x, botBeta.y, spotsBeta[0]);
+        botBeta.waypointIndex = 0;
+
+        this.botSeekers = [botAlpha, botBeta];
+        this.botSeeker = botAlpha;
+
+        this.maxAttempts = 14;
+        this.attemptsValue.textContent = '14 / 14';
+        this.showToast(`HARD MODE: 2 Seekers hunting together! (14 checks total). Stay still for +${CFG.pointsUnmovedBonus} bonus!`);
+      } else {
+        const chosenSpots = this.pickBotSearchSpots(this.maxAttempts);
+
+        this.botSeeker = this.createBotSeekerInstance('SEEKER BOT', '#f59e0b', null);
+        this.botSeeker.active = true;
+        this.botSeeker.x = this.apt.botSpawn.x;
+        this.botSeeker.y = this.apt.botSpawn.y;
+        this.botSeeker.angle = -Math.PI / 2;
+        this.botSeeker.targets = chosenSpots;
+        this.botSeeker.waypoints = this.apt.findPathToSpot(this.botSeeker.x, this.botSeeker.y, chosenSpots[0]);
+        this.botSeeker.waypointIndex = 0;
+        this.botSeekers = [this.botSeeker];
+
+        this.attemptsValue.textContent = `${this.maxAttempts} / ${this.maxAttempts}`;
+        this.showToast(`Seeker entered! Stay still for +${CFG.pointsUnmovedBonus} bonus, or press SPACE to relocate.`);
+      }
     }
 
-    pickBotSearchSpots(count) {
+    pickBotSearchSpots(count, excludeSpotIds = null) {
       const byRoom = {};
       for (const s of this.apt.hidingSpots) {
+        if (excludeSpotIds && excludeSpotIds.has(s.id)) continue;
         if (!byRoom[s.roomId]) byRoom[s.roomId] = [];
         byRoom[s.roomId].push(s);
       }
@@ -1022,7 +1066,11 @@
         }
       }
 
-      const remaining = this.apt.hidingSpots.filter(s => !queuedIds.has(s.id));
+      const pool = (excludeSpotIds && this.apt.hidingSpots.some(s => !excludeSpotIds.has(s.id)))
+        ? this.apt.hidingSpots.filter(s => !excludeSpotIds.has(s.id))
+        : this.apt.hidingSpots;
+
+      const remaining = pool.filter(s => !queuedIds.has(s.id));
       while (remaining.length > 0) {
         const idx = Math.floor(Math.random() * remaining.length);
         orderedCandidates.push(remaining.splice(idx, 1)[0]);
@@ -1051,7 +1099,7 @@
         } else if (cursor < orderedCandidates.length) {
           selected.push(orderedCandidates[cursor++]);
         } else {
-          const allSpots = this.apt.hidingSpots;
+          const allSpots = pool.length > 0 ? pool : this.apt.hidingSpots;
           selected.push(allSpots[Math.floor(Math.random() * allSpots.length)]);
         }
       }
@@ -1080,25 +1128,30 @@
     }
 
     scheduleBotRecheck(activityRoomId) {
-      const bot = this.botSeeker;
-      if (this.role !== 'hider' || this.phase !== 'bot_seeking' || !bot.active) return;
-      if (!bot.checkedHistory || bot.checkedHistory.length === 0) return;
+      const activeBots = (this.botSeekers && this.botSeekers.length > 0)
+        ? this.botSeekers
+        : [this.botSeeker];
 
-      const nextIdx = bot.currentTargetIndex + 1;
-      if (nextIdx >= bot.targets.length) return;
+      for (const bot of activeBots) {
+        if (this.role !== 'hider' || this.phase !== 'bot_seeking' || !bot.active || bot.done) continue;
+        if (!bot.checkedHistory || bot.checkedHistory.length === 0) continue;
 
-      const currentSpot = bot.targets[bot.currentTargetIndex];
-      const currentId = currentSpot ? currentSpot.id : null;
-      const alreadyQueued = new Set(bot.targets.slice(nextIdx, nextIdx + 2).map(s => s.id));
-      const candidates = bot.checkedHistory.filter(s => s.id !== currentId && !alreadyQueued.has(s.id));
-      const chosen = this.pickWeightedRecheckCandidate(
-        candidates.length > 0 ? candidates : bot.checkedHistory,
-        currentId,
-        activityRoomId
-      );
-      if (!chosen) return;
+        const nextIdx = bot.currentTargetIndex + 1;
+        if (nextIdx >= bot.targets.length) continue;
 
-      bot.targets[nextIdx] = chosen;
+        const currentSpot = bot.targets[bot.currentTargetIndex];
+        const currentId = currentSpot ? currentSpot.id : null;
+        const alreadyQueued = new Set(bot.targets.slice(nextIdx, nextIdx + 2).map(s => s.id));
+        const candidates = bot.checkedHistory.filter(s => s.id !== currentId && !alreadyQueued.has(s.id));
+        const chosen = this.pickWeightedRecheckCandidate(
+          candidates.length > 0 ? candidates : bot.checkedHistory,
+          currentId,
+          activityRoomId
+        );
+        if (!chosen) continue;
+
+        bot.targets[nextIdx] = chosen;
+      }
     }
 
     endRound(won, title, desc, delta) {
@@ -1166,6 +1219,7 @@
         player: this.player,
         nearestSpot: this.nearestSpot,
         botSeeker: this.botSeeker,
+        botSeekers: this.botSeekers,
         botHiddenSpot: this.botHiddenSpot,
         revealBotSpot: this.revealBotSpot,
         proximityHint: this.proximityHint,
@@ -1244,23 +1298,28 @@
         const currentRoom = this.apt.getRoomAt(this.player.x, this.player.y);
         Sound.playStep(currentRoom ? currentRoom.floor : 'wood', false);
 
-        // Alert Bot if player moves unhidden within Hearing Radius
-        if (this.role === 'hider' && this.phase === 'bot_seeking' && this.botSeeker.active && !this.player.isHidden) {
-          const distToBot = Math.hypot(this.player.x - this.botSeeker.x, this.player.y - this.botSeeker.y);
-          const hasLOS = this.apt.hasLineOfSight(this.player.x, this.player.y, this.botSeeker.x, this.botSeeker.y);
-          const effectiveRadius = hasLOS ? this.hearingRadius : this.hearingRadius * 0.65;
+        // Alert Bot(s) if player moves unhidden within Hearing Radius
+        if (this.role === 'hider' && this.phase === 'bot_seeking' && !this.player.isHidden) {
+          const botsToCheck = (this.botSeekers && this.botSeekers.length > 0) ? this.botSeekers : [this.botSeeker];
+          for (const b of botsToCheck) {
+            if (!b || !b.active || b.done) continue;
+            const distToBot = Math.hypot(this.player.x - b.x, this.player.y - b.y);
+            const hasLOS = this.apt.hasLineOfSight(this.player.x, this.player.y, b.x, b.y);
+            const effectiveRadius = hasLOS ? this.hearingRadius : this.hearingRadius * 0.65;
 
-          if (distToBot < effectiveRadius && (!this.botSeeker.isAlerted || this.botSeeker.alertTimer <= 0)) {
-            this.botSeeker.isAlerted = true;
-            this.botSeeker.alertTimer = 65; // ~1.1s alert pause with '?'
-            Sound.playAlert();
-            this.botSeeker.angle = Math.atan2(this.player.y - this.botSeeker.y, this.player.x - this.botSeeker.x);
+            if (distToBot < effectiveRadius && (!b.isAlerted || b.alertTimer <= 0)) {
+              b.isAlerted = true;
+              b.alertTimer = 65; // ~1.1s alert pause with '?'
+              Sound.playAlert();
+              b.angle = Math.atan2(this.player.y - b.y, this.player.x - b.x);
 
-            const nearest = this.apt.getNearestSpot(this.player.x, this.player.y);
-            if (nearest) {
-              this.botSeeker.targets.splice(this.botSeeker.currentTargetIndex + 1, 0, nearest);
+              const nearest = this.apt.getNearestSpot(this.player.x, this.player.y);
+              if (nearest) {
+                b.targets.splice(b.currentTargetIndex + 1, 0, nearest);
+              }
+              this.showToast(`${b.name || 'The Seeker'} heard your footsteps!`);
+              break;
             }
-            this.showToast('The Seeker heard your footsteps!');
           }
         }
       } else {
@@ -1336,9 +1395,10 @@
       }
     }
 
-    checkSeekerLineOfSight() {
+    checkSeekerLineOfSight(botInstance = null) {
       if (this.player.isHidden) return false;
-      const bot = this.botSeeker;
+      const bot = botInstance || this.botSeeker;
+      if (!bot || !bot.active || bot.done) return false;
       const dx = this.player.x - bot.x;
       const dy = this.player.y - bot.y;
       const dist = Math.hypot(dx, dy);
@@ -1355,256 +1415,286 @@
     }
 
     updateBotSeeker(dt) {
-      const bot = this.botSeeker;
-      if (!bot.active) return;
+      const activeBots = (this.botSeekers && this.botSeekers.length > 0)
+        ? this.botSeekers.filter(b => b && b.active && !b.done)
+        : (this.botSeeker && this.botSeeker.active && !this.botSeeker.done ? [this.botSeeker] : []);
 
-      // Hider-only proximity double-thump heartbeat
+      if (activeBots.length === 0) return;
+
+      // Hider-only proximity double-thump heartbeat (tracks closest active seeker bot)
       if (this.role === 'hider' && this.phase === 'bot_seeking') {
-        const distToPlayer = Math.hypot(this.player.x - bot.x, this.player.y - bot.y);
-        if (distToPlayer < CFG.heartbeatMaxDist) {
-          Sound.playHeartbeat(distToPlayer, CFG.heartbeatMaxDist);
+        let minPlayerDist = Infinity;
+        for (const bot of activeBots) {
+          const d = Math.hypot(this.player.x - bot.x, this.player.y - bot.y);
+          if (d < minPlayerDist) minPlayerDist = d;
+        }
+        if (minPlayerDist < CFG.heartbeatMaxDist) {
+          Sound.playHeartbeat(minPlayerDist, CFG.heartbeatMaxDist);
         }
       }
 
-      if (this.checkSeekerLineOfSight()) {
-        this.endRound(
-          false,
-          'Spotted in the Open',
-          'The Seeker caught sight of you moving out of cover before you could hide.',
-          CFG.pointsCaughtPenalty
-        );
-        return;
-      }
-
-      // If Bot is in alerted state, pause and orient towards the noise
-      if (bot.alertTimer > 0) {
-        bot.alertTimer -= dt;
-        bot.isMoving = false;
-        if (bot.alertTimer <= 0) {
-          bot.isAlerted = false;
-          const nextTarget = bot.targets[bot.currentTargetIndex];
-          if (nextTarget) {
-            bot.waypoints = this.apt.findPathToSpot(bot.x, bot.y, nextTarget);
-            bot.waypointIndex = 0;
-          }
+      // Check line of sight for each active bot
+      for (const bot of activeBots) {
+        if (this.checkSeekerLineOfSight(bot)) {
+          this.endRound(
+            false,
+            'Spotted in the Open',
+            `${bot.name || 'The Seeker'} caught sight of you moving out of cover before you could hide.`,
+            CFG.pointsCaughtPenalty
+          );
+          return;
         }
-        return;
       }
 
-      const currentSpot = bot.targets[bot.currentTargetIndex];
-      if (!currentSpot) return;
-
-      if (bot.scanningSpotId) {
-        bot.isMoving = false;
-        bot.scanTimer -= dt;
-        const targetAngle = Math.atan2(currentSpot.hideY - bot.y, currentSpot.hideX - bot.x);
-        bot.angle = targetAngle + Math.sin(performance.now() * 0.015) * 0.25;
-
-        if (bot.scanTimer <= 0) {
-          bot.scanningSpotId = null;
-
-          if (this.player.isHidden && this.player.hiddenSpot && currentSpot.id === this.player.hiddenSpot.id) {
-            this.player.isHidden = false;
-            this.endRound(
-              false,
-              'You Were Found',
-              `The Seeker checked ${currentSpot.name} (${currentSpot.roomName}) and caught you hiding there.`,
-              CFG.pointsCaughtPenalty
-            );
-            return;
-          }
-
-          // In Hider mode, do not lock spot.checked permanently so Bot can re-check spots
-          if (!bot.checkedHistory.some(s => s.id === currentSpot.id)) {
-            bot.checkedHistory.push(currentSpot);
-          }
-          Sound.playEmpty();
-
-          const remaining = bot.targets.length - (bot.currentTargetIndex + 1);
-          this.attemptsValue.textContent = `${remaining} / ${this.maxAttempts}`;
-
-          bot.currentTargetIndex++;
-          if (bot.currentTargetIndex >= bot.targets.length) {
-            const stayedStillBonus = !this.hasRelocatedDuringSeek ? CFG.pointsUnmovedBonus : 0;
-            const totalGain = CFG.pointsWinBase + stayedStillBonus;
-            const desc = stayedStillBonus > 0
-              ? `The Seeker searched ${this.maxAttempts} spots and missed you! You earned +${CFG.pointsUnmovedBonus} extra points for staying in your original spot.`
-              : `The Seeker searched ${this.maxAttempts} spots and missed you after you switched spots mid-search.`;
-
-            this.endRound(true, 'You Outsmarted the Seeker', desc, totalGain);
-            return;
-          }
-
-          let nextSpot = bot.targets[bot.currentTargetIndex];
-          if (this.hasRelocatedDuringSeek && bot.checkedHistory.length >= 2) {
-            const isNextAlreadyRecheck = bot.checkedHistory.some(s => s.id === nextSpot.id);
-            if (!isNextAlreadyRecheck && Math.random() < CFG.botRecheckChance) {
-              const recheck = this.pickWeightedRecheckCandidate(
-                bot.checkedHistory,
-                currentSpot.id,
-                this.lastRelocateRoomId || currentSpot.roomId
-              );
-              if (recheck) {
-                bot.targets[bot.currentTargetIndex] = recheck;
-                nextSpot = recheck;
-              }
+      // Update movement / scanning for each active bot
+      for (const bot of activeBots) {
+        // If Bot is in alerted state, pause and orient towards the noise
+        if (bot.alertTimer > 0) {
+          bot.alertTimer -= dt;
+          bot.isMoving = false;
+          if (bot.alertTimer <= 0) {
+            bot.isAlerted = false;
+            const nextTarget = bot.targets[bot.currentTargetIndex];
+            if (nextTarget) {
+              bot.waypoints = this.apt.findPathToSpot(bot.x, bot.y, nextTarget);
+              bot.waypointIndex = 0;
             }
           }
-          bot.waypoints = this.apt.findPathToSpot(bot.x, bot.y, nextSpot);
-          bot.waypointIndex = 0;
+          continue;
+        }
+
+        const currentSpot = bot.targets[bot.currentTargetIndex];
+        if (!currentSpot) {
+          bot.done = true;
+          bot.active = false;
+          continue;
+        }
+
+        if (bot.scanningSpotId) {
+          bot.isMoving = false;
+          bot.scanTimer -= dt;
+          const targetAngle = Math.atan2(currentSpot.hideY - bot.y, currentSpot.hideX - bot.x);
+          bot.angle = targetAngle + Math.sin(performance.now() * 0.015) * 0.25;
+
+          if (bot.scanTimer <= 0) {
+            bot.scanningSpotId = null;
+
+            if (this.player.isHidden && this.player.hiddenSpot && currentSpot.id === this.player.hiddenSpot.id) {
+              this.player.isHidden = false;
+              this.endRound(
+                false,
+                'You Were Found',
+                `${bot.name || 'The Seeker'} checked ${currentSpot.name} (${currentSpot.roomName}) and caught you hiding there.`,
+                CFG.pointsCaughtPenalty
+              );
+              return;
+            }
+
+            // In Hider mode, do not lock spot.checked permanently so Bot can re-check spots
+            if (!bot.checkedHistory.some(s => s.id === currentSpot.id)) {
+              bot.checkedHistory.push(currentSpot);
+            }
+            Sound.playEmpty();
+
+            bot.currentTargetIndex++;
+
+            const allConfiguredBots = (this.botSeekers && this.botSeekers.length > 0) ? this.botSeekers : [bot];
+            const remaining = allConfiguredBots.reduce((sum, b) => {
+              if (b.done) return sum;
+              return sum + Math.max(0, b.targets.length - b.currentTargetIndex);
+            }, 0);
+            this.attemptsValue.textContent = `${remaining} / ${this.maxAttempts}`;
+
+            if (bot.currentTargetIndex >= bot.targets.length) {
+              bot.done = true;
+              bot.active = false;
+
+              const allBotsDone = allConfiguredBots.every(b => b.done || !b.active);
+              if (allBotsDone) {
+                const stayedStillBonus = !this.hasRelocatedDuringSeek ? CFG.pointsUnmovedBonus : 0;
+                const totalGain = CFG.pointsWinBase + stayedStillBonus;
+                const botLabel = allConfiguredBots.length > 1 ? 'Both Seekers' : 'The Seeker';
+                const desc = stayedStillBonus > 0
+                  ? `${botLabel} searched all spots (${this.maxAttempts} checks) and missed you! You earned +${CFG.pointsUnmovedBonus} extra points for staying in your original spot.`
+                  : `${botLabel} searched all spots (${this.maxAttempts} checks) and missed you after you switched spots mid-search.`;
+
+                this.endRound(true, 'You Outsmarted the Seeker', desc, totalGain);
+                return;
+              }
+              continue;
+            }
+
+            let nextSpot = bot.targets[bot.currentTargetIndex];
+            if (this.hasRelocatedDuringSeek && bot.checkedHistory.length >= 2) {
+              const isNextAlreadyRecheck = bot.checkedHistory.some(s => s.id === nextSpot.id);
+              if (!isNextAlreadyRecheck && Math.random() < CFG.botRecheckChance) {
+                const recheck = this.pickWeightedRecheckCandidate(
+                  bot.checkedHistory,
+                  currentSpot.id,
+                  this.lastRelocateRoomId || currentSpot.roomId
+                );
+                if (recheck) {
+                  bot.targets[bot.currentTargetIndex] = recheck;
+                  nextSpot = recheck;
+                }
+              }
+            }
+            bot.waypoints = this.apt.findPathToSpot(bot.x, bot.y, nextSpot);
+            bot.waypointIndex = 0;
+            bot.stuckTimer = 0;
+            bot.stuckTimerMs = 0;
+            bot.stuckFrames = 0;
+            bot.stuckOriginX = bot.x;
+            bot.stuckOriginY = bot.y;
+          }
+          continue;
+        }
+
+        // Smooth corner-cutting: skip intermediate waypoint early if line-of-clearance to next exists
+        if (bot.waypointIndex + 1 < bot.waypoints.length) {
+          const nextWp = bot.waypoints[bot.waypointIndex + 1];
+          if (this.apt.hasWalkClearance(bot.x, bot.y, nextWp.x, nextWp.y, 9.5)) {
+            bot.waypointIndex++;
+          }
+        }
+
+        const wp = bot.waypoints[bot.waypointIndex];
+        const distToSpotIx = Math.hypot(currentSpot.ix - bot.x, currentSpot.iy - bot.y);
+        const distToSpotHide = Math.hypot(currentSpot.hideX - bot.x, currentSpot.hideY - bot.y);
+
+        // If no more waypoints or bot has reached the spot directly, start scanning
+        if (!wp || distToSpotIx < 28 || distToSpotHide < 36) {
+          bot.scanningSpotId = currentSpot.id;
+          bot.scanTimer = CFG.scanDuration;
+          bot.stuckTimer = 0;
+          bot.stuckTimerMs = 0;
+          bot.stuckFrames = 0;
+          Sound.playSpatialPing(bot.x, bot.y, this.player.x, this.player.y, this.apt);
+          this.showToast(`${bot.name || 'Seeker'} checking ${currentSpot.name} (${currentSpot.roomName})...`);
+          continue;
+        }
+
+        const dx = wp.x - bot.x;
+        const dy = wp.y - bot.y;
+        const dist = Math.hypot(dx, dy);
+        const isLastWp = (bot.waypointIndex === bot.waypoints.length - 1);
+        const arrivalRadius = isLastWp ? 22 : 22;
+
+        if (dist < arrivalRadius) {
+          bot.waypointIndex++;
           bot.stuckTimer = 0;
           bot.stuckTimerMs = 0;
           bot.stuckFrames = 0;
           bot.stuckOriginX = bot.x;
           bot.stuckOriginY = bot.y;
-        }
-        return;
-      }
+        } else {
+          const step = Math.min(dist, bot.speed * dt);
+          const moveX = (dx / dist) * step;
+          const moveY = (dy / dist) * step;
+          const prevX = bot.x;
+          const prevY = bot.y;
 
-      // Smooth corner-cutting: skip intermediate waypoint early if line-of-clearance to next exists
-      if (bot.waypointIndex + 1 < bot.waypoints.length) {
-        const nextWp = bot.waypoints[bot.waypointIndex + 1];
-        if (this.apt.hasWalkClearance(bot.x, bot.y, nextWp.x, nextWp.y, 9.5)) {
-          bot.waypointIndex++;
-        }
-      }
+          // Collision radius reduced to 9.5 for smooth gliding through all doorways
+          let resolved = this.apt.resolveMovement(bot.x, bot.y, 9.5, moveX, moveY);
+          let moved = Math.hypot(resolved.x - prevX, resolved.y - prevY);
 
-      const wp = bot.waypoints[bot.waypointIndex];
-      const distToSpotIx = Math.hypot(currentSpot.ix - bot.x, currentSpot.iy - bot.y);
-      const distToSpotHide = Math.hypot(currentSpot.hideX - bot.x, currentSpot.hideY - bot.y);
-
-      // If no more waypoints or bot has reached the spot directly, start scanning
-      if (!wp || distToSpotIx < 28 || distToSpotHide < 36) {
-        bot.scanningSpotId = currentSpot.id;
-        bot.scanTimer = CFG.scanDuration;
-        bot.stuckTimer = 0;
-        bot.stuckTimerMs = 0;
-        bot.stuckFrames = 0;
-        Sound.playSpatialPing(bot.x, bot.y, this.player.x, this.player.y, this.apt);
-        this.showToast(`Seeker checking ${currentSpot.name} (${currentSpot.roomName})...`);
-        return;
-      }
-
-      const dx = wp.x - bot.x;
-      const dy = wp.y - bot.y;
-      const dist = Math.hypot(dx, dy);
-      const isLastWp = (bot.waypointIndex === bot.waypoints.length - 1);
-      const arrivalRadius = isLastWp ? 22 : 22;
-
-      if (dist < arrivalRadius) {
-        bot.waypointIndex++;
-        bot.stuckTimer = 0;
-        bot.stuckTimerMs = 0;
-        bot.stuckFrames = 0;
-        bot.stuckOriginX = bot.x;
-        bot.stuckOriginY = bot.y;
-      } else {
-        const step = Math.min(dist, bot.speed * dt);
-        const moveX = (dx / dist) * step;
-        const moveY = (dy / dist) * step;
-        const prevX = bot.x;
-        const prevY = bot.y;
-
-        // Collision radius reduced to 9.5 for smooth gliding through all doorways
-        let resolved = this.apt.resolveMovement(bot.x, bot.y, 9.5, moveX, moveY);
-        let moved = Math.hypot(resolved.x - prevX, resolved.y - prevY);
-
-        // Slide along wall if forward path is partially blocked
-        if (moved < step * 0.25) {
-          const perpX = -moveY;
-          const perpY = moveX;
-          const slideA = this.apt.resolveMovement(bot.x, bot.y, 9.5, moveX * 0.5 + perpX * 0.85, moveY * 0.5 + perpY * 0.85);
-          const slideB = this.apt.resolveMovement(bot.x, bot.y, 9.5, moveX * 0.5 - perpX * 0.85, moveY * 0.5 - perpY * 0.85);
-          const movedA = Math.hypot(slideA.x - prevX, slideA.y - prevY);
-          const movedB = Math.hypot(slideB.x - prevX, slideB.y - prevY);
-          if (movedA >= movedB && movedA > moved) {
-            resolved = slideA;
-            moved = movedA;
-          } else if (movedB > moved) {
-            resolved = slideB;
-            moved = movedB;
-          }
-        }
-
-        bot.x = resolved.x;
-        bot.y = resolved.y;
-        bot.angle = Math.atan2(dy, dx);
-        bot.isMoving = moved > 0.05;
-
-        // Guaranteed Unstuck Fail-Safe: Max stuck duration strictly <= 0.35 seconds
-        // Also tracks real displacement to detect corner oscillation and wall scraping
-        bot.displacementTimer = (bot.displacementTimer || 0) + (dt * 0.01667);
-        if (bot.displacementTimer >= 0.20) {
-          const distDisplaced = Math.hypot(bot.x - (bot.lastTrackedX ?? bot.x), bot.y - (bot.lastTrackedY ?? bot.y));
-          if (distDisplaced < 10) {
-            bot.stuckTimer = (bot.stuckTimer || 0) + 0.20;
-          } else {
-            bot.stuckTimer = Math.max(0, (bot.stuckTimer || 0) - 0.12);
-          }
-          bot.lastTrackedX = bot.x;
-          bot.lastTrackedY = bot.y;
-          bot.displacementTimer = 0;
-        }
-
-        if (moved < 0.35 * step) {
-          bot.stuckTimer = (bot.stuckTimer || 0) + (dt * 0.01667);
-        }
-
-        if (bot.stuckTimer >= 0.35) {
-          // If already in the general vicinity of the target spot (< 55px), trigger scan
-          if (distToSpotIx < 55 || distToSpotHide < 55 || isLastWp) {
-            bot.scanningSpotId = currentSpot.id;
-            bot.scanTimer = CFG.scanDuration;
-            bot.stuckTimer = 0;
-            bot.waypoints = [];
-            bot.waypointIndex = 0;
-            Sound.playSpatialPing(bot.x, bot.y, this.player.x, this.player.y, this.apt);
-            return;
-          }
-
-          // Hard recovery: snap smoothly to closest valid corridor node and re-path
-          const closestNodeId = this.apt.findClosestNode(bot.x, bot.y);
-          const node = closestNodeId ? this.apt.navNodes[closestNodeId] : null;
-          if (node) {
-            bot.x = node.x;
-            bot.y = node.y;
-          }
-          if (bot.waypointIndex + 1 < bot.waypoints.length) {
-            bot.waypointIndex++;
-          } else {
-            bot.waypoints = this.apt.findPathToSpot(bot.x, bot.y, currentSpot);
-            bot.waypointIndex = 0;
-          }
-          bot.stuckTimer = 0;
-        } else if (bot.stuckTimer >= 0.16) {
-          // Minor snag recovery: try skipping intermediate waypoint if close
-          if (bot.waypointIndex + 1 < bot.waypoints.length) {
-            const nextWp = bot.waypoints[bot.waypointIndex + 1];
-            const dNext = Math.hypot(nextWp.x - bot.x, nextWp.y - bot.y);
-            if (dNext < 80) {
-              bot.waypointIndex++;
-              bot.stuckTimer = 0;
+          // Slide along wall if forward path is partially blocked
+          if (moved < step * 0.25) {
+            const perpX = -moveY;
+            const perpY = moveX;
+            const slideA = this.apt.resolveMovement(bot.x, bot.y, 9.5, moveX * 0.5 + perpX * 0.85, moveY * 0.5 + perpY * 0.85);
+            const slideB = this.apt.resolveMovement(bot.x, bot.y, 9.5, moveX * 0.5 - perpX * 0.85, moveY * 0.5 - perpY * 0.85);
+            const movedA = Math.hypot(slideA.x - prevX, slideA.y - prevY);
+            const movedB = Math.hypot(slideB.x - prevX, slideB.y - prevY);
+            if (movedA >= movedB && movedA > moved) {
+              resolved = slideA;
+              moved = movedA;
+            } else if (movedB > moved) {
+              resolved = slideB;
+              moved = movedB;
             }
           }
 
-          // Perpendicular sidestep nudge (90 degrees left or right relative to target direction)
-          const nudgeDist = step * 2.5;
-          const nudgeLeft = this.apt.resolveMovement(bot.x, bot.y, 9.5, (-dy / dist) * nudgeDist, (dx / dist) * nudgeDist);
-          const nudgeRight = this.apt.resolveMovement(bot.x, bot.y, 9.5, (dy / dist) * nudgeDist, (-dx / dist) * nudgeDist);
-          const distLeft = Math.hypot(nudgeLeft.x - prevX, nudgeLeft.y - prevY);
-          const distRight = Math.hypot(nudgeRight.x - prevX, nudgeRight.y - prevY);
+          bot.x = resolved.x;
+          bot.y = resolved.y;
+          bot.angle = Math.atan2(dy, dx);
+          bot.isMoving = moved > 0.05;
 
-          if (distLeft >= distRight && distLeft > 0.25) {
-            bot.x = nudgeLeft.x;
-            bot.y = nudgeLeft.y;
-          } else if (distRight > 0.25) {
-            bot.x = nudgeRight.x;
-            bot.y = nudgeRight.y;
+          // Guaranteed Unstuck Fail-Safe: Max stuck duration strictly <= 0.35 seconds
+          // Also tracks real displacement to detect corner oscillation and wall scraping
+          bot.displacementTimer = (bot.displacementTimer || 0) + (dt * 0.01667);
+          if (bot.displacementTimer >= 0.20) {
+            const distDisplaced = Math.hypot(bot.x - (bot.lastTrackedX ?? bot.x), bot.y - (bot.lastTrackedY ?? bot.y));
+            if (distDisplaced < 10) {
+              bot.stuckTimer = (bot.stuckTimer || 0) + 0.20;
+            } else {
+              bot.stuckTimer = Math.max(0, (bot.stuckTimer || 0) - 0.12);
+            }
+            bot.lastTrackedX = bot.x;
+            bot.lastTrackedY = bot.y;
+            bot.displacementTimer = 0;
           }
-        }
 
-        const botRoom = this.apt.getRoomAt(bot.x, bot.y);
-        Sound.playSpatialStep(botRoom ? botRoom.floor : 'wood', bot.x, bot.y, this.player.x, this.player.y, this.apt);
+          if (moved < 0.35 * step) {
+            bot.stuckTimer = (bot.stuckTimer || 0) + (dt * 0.01667);
+          }
+
+          if (bot.stuckTimer >= 0.35) {
+            // If already in the general vicinity of the target spot (< 55px), trigger scan
+            if (distToSpotIx < 55 || distToSpotHide < 55 || isLastWp) {
+              bot.scanningSpotId = currentSpot.id;
+              bot.scanTimer = CFG.scanDuration;
+              bot.stuckTimer = 0;
+              bot.waypoints = [];
+              bot.waypointIndex = 0;
+              Sound.playSpatialPing(bot.x, bot.y, this.player.x, this.player.y, this.apt);
+              continue;
+            }
+
+            // Hard recovery: snap smoothly to closest valid corridor node and re-path
+            const closestNodeId = this.apt.findClosestNode(bot.x, bot.y);
+            const node = closestNodeId ? this.apt.navNodes[closestNodeId] : null;
+            if (node) {
+              bot.x = node.x;
+              bot.y = node.y;
+            }
+            if (bot.waypointIndex + 1 < bot.waypoints.length) {
+              bot.waypointIndex++;
+            } else {
+              bot.waypoints = this.apt.findPathToSpot(bot.x, bot.y, currentSpot);
+              bot.waypointIndex = 0;
+            }
+            bot.stuckTimer = 0;
+          } else if (bot.stuckTimer >= 0.16) {
+            // Minor snag recovery: try skipping intermediate waypoint if close
+            if (bot.waypointIndex + 1 < bot.waypoints.length) {
+              const nextWp = bot.waypoints[bot.waypointIndex + 1];
+              const dNext = Math.hypot(nextWp.x - bot.x, nextWp.y - bot.y);
+              if (dNext < 80) {
+                bot.waypointIndex++;
+                bot.stuckTimer = 0;
+              }
+            }
+
+            // Perpendicular sidestep nudge (90 degrees left or right relative to target direction)
+            const nudgeDist = step * 2.5;
+            const nudgeLeft = this.apt.resolveMovement(bot.x, bot.y, 9.5, (-dy / dist) * nudgeDist, (dx / dist) * nudgeDist);
+            const nudgeRight = this.apt.resolveMovement(bot.x, bot.y, 9.5, (dy / dist) * nudgeDist, (-dx / dist) * nudgeDist);
+            const distLeft = Math.hypot(nudgeLeft.x - prevX, nudgeLeft.y - prevY);
+            const distRight = Math.hypot(nudgeRight.x - prevX, nudgeRight.y - prevY);
+
+            if (distLeft >= distRight && distLeft > 0.25) {
+              bot.x = nudgeLeft.x;
+              bot.y = nudgeLeft.y;
+            } else if (distRight > 0.25) {
+              bot.x = nudgeRight.x;
+              bot.y = nudgeRight.y;
+            }
+          }
+
+          const botRoom = this.apt.getRoomAt(bot.x, bot.y);
+          Sound.playSpatialStep(botRoom ? botRoom.floor : 'wood', bot.x, bot.y, this.player.x, this.player.y, this.apt);
+        }
       }
     }
   }
