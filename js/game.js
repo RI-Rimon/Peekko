@@ -894,8 +894,9 @@
           this.showToast('Move close to an object and press SPACE to hide.');
         }
       } else if (this.role === 'seeker') {
-        if (this.phase === 'mp_hiding_countdown') {
-          this.showToast('Hunters must wait for the 25-second hiding phase to end!');
+        const isCountdown = (this.phase === 'mp_hiding_countdown') || (this.mpManager && this.mpManager.phase === 'mp_hiding_countdown');
+        if (isCountdown) {
+          this.showToast('Hunters must wait for the 20-second hiding phase to end!');
           return;
         }
         if (!this.nearestSpot) {
@@ -1271,7 +1272,8 @@
           this.player.isMoving = false;
           return;
         }
-        if (this.role === 'seeker' && this.phase === 'mp_hiding_countdown') {
+        const isCountdown = (this.phase === 'mp_hiding_countdown') || (this.mpManager && this.mpManager.phase === 'mp_hiding_countdown');
+        if (this.role === 'seeker' && isCountdown) {
           this.player.isMoving = false;
           return;
         }

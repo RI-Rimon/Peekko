@@ -17,7 +17,7 @@
     allowedAttempts: [7, 10, 15, 20],
     hiderPalette: ['#38bdf8', '#10b981', '#a855f7', '#ec4899', '#f43f5e'],
     seekerColor: '#f59e0b',
-    syncHz: 25
+    syncHz: 8
   };
 
   // Cross-Network Fast Global STUN Configuration (Google, Cloudflare, Nextcloud)
@@ -362,14 +362,24 @@
     openModal() {
       if (this.modal) {
         this.modal.classList.remove('hidden');
+        this.modal.style.display = '';
         this.switchTab('create');
-        if (this.lobbyView) this.lobbyView.classList.add('hidden');
-        if (this.panelCreate) this.panelCreate.classList.remove('hidden');
+        if (this.lobbyView) {
+          this.lobbyView.classList.add('hidden');
+          this.lobbyView.style.display = 'none';
+        }
+        if (this.panelCreate) {
+          this.panelCreate.classList.remove('hidden');
+          this.panelCreate.style.display = '';
+        }
       }
     }
 
     closeModal() {
-      if (this.modal) this.modal.classList.add('hidden');
+      if (this.modal) {
+        this.modal.classList.add('hidden');
+        this.modal.style.display = 'none';
+      }
       if (this.createError) this.createError.textContent = '';
       if (this.joinError) this.joinError.textContent = '';
     }
@@ -1025,9 +1035,22 @@
        LOBBY UI RENDERING
        ======================================================== */
     showLobbyView() {
-      if (this.panelCreate) this.panelCreate.classList.add('hidden');
-      if (this.panelJoin) this.panelJoin.classList.add('hidden');
-      if (this.lobbyView) this.lobbyView.classList.remove('hidden');
+      if (this.modal) {
+        this.modal.classList.remove('hidden');
+        this.modal.style.display = '';
+      }
+      if (this.panelCreate) {
+        this.panelCreate.classList.add('hidden');
+        this.panelCreate.style.display = 'none';
+      }
+      if (this.panelJoin) {
+        this.panelJoin.classList.add('hidden');
+        this.panelJoin.style.display = 'none';
+      }
+      if (this.lobbyView) {
+        this.lobbyView.classList.remove('hidden');
+        this.lobbyView.style.display = '';
+      }
 
       if (this.lobbyRoomCode) this.lobbyRoomCode.textContent = this.roomCode;
       this.renderLobbyUI();
@@ -1173,7 +1196,7 @@
         p.hasRelocated = false;
       });
 
-      // Broadcast MATCH_START with immediate send + redundancy pulses
+      // Broadcast MATCH_START with immediate send + redundancy pulses across all channels
       const startPayload = {
         type: 'MATCH_START',
         settings: this.settings,
@@ -1181,13 +1204,19 @@
         countdown: this.countdown,
         attemptsLimit: this.attemptsLeft
       };
-      this.broadcast(startPayload);
-      setTimeout(() => {
-        if (this.phase === 'mp_hiding_countdown') this.broadcast(startPayload);
-      }, 120);
-      setTimeout(() => {
-        if (this.phase === 'mp_hiding_countdown') this.broadcast(startPayload);
-      }, 300);
+      const sendStartPulses = () => {
+        if (this.phase !== 'mp_hiding_countdown') return;
+        this.broadcast(startPayload);
+        this.players.forEach(p => {
+          if (!p.isHost) {
+            this.sendToClient(p.id, startPayload);
+          }
+        });
+      };
+      sendStartPulses();
+      setTimeout(sendStartPulses, 150);
+      setTimeout(sendStartPulses, 350);
+      setTimeout(sendStartPulses, 650);
 
       this.clientStartMatch();
       this.startHostAuthoritativeLoop();
@@ -1195,12 +1224,30 @@
 
     clientStartMatch() {
       this.closeModal();
-      if (this.modal) this.modal.classList.add('hidden');
-      if (this.lobbyView) this.lobbyView.classList.add('hidden');
-      if (this.panelJoin) this.panelJoin.classList.add('hidden');
-      if (this.panelCreate) this.panelCreate.classList.add('hidden');
-      if (this.resultModal) this.resultModal.classList.add('hidden');
-      if (this.game.pauseModal) this.game.pauseModal.classList.add('hidden');
+      if (this.modal) {
+        this.modal.classList.add('hidden');
+        this.modal.style.display = 'none';
+      }
+      if (this.lobbyView) {
+        this.lobbyView.classList.add('hidden');
+        this.lobbyView.style.display = 'none';
+      }
+      if (this.panelJoin) {
+        this.panelJoin.classList.add('hidden');
+        this.panelJoin.style.display = 'none';
+      }
+      if (this.panelCreate) {
+        this.panelCreate.classList.add('hidden');
+        this.panelCreate.style.display = 'none';
+      }
+      if (this.resultModal) {
+        this.resultModal.classList.add('hidden');
+        this.resultModal.style.display = 'none';
+      }
+      if (this.game.pauseModal) {
+        this.game.pauseModal.classList.add('hidden');
+        this.game.pauseModal.style.display = 'none';
+      }
 
       // Setup game instance
       this.game.isMultiplayer = true;
@@ -1318,7 +1365,17 @@
 
       this.broadcast(syncData);
 
-      this.applyGameSync(syncData);
+      // On host, update local player entity and refresh multiplayer HUD directly
+      const me = this.players.find(p => p.id === this.localPlayerId);
+      if (me) {
+        me.x = this.game.player.x;
+        me.y = this.game.player.y;
+        me.angle = this.game.player.angle;
+        me.isMoving = this.game.player.isMoving;
+        me.isHidden = this.game.player.isHidden;
+        me.hiddenSpotId = this.game.player.hiddenSpot ? this.game.player.hiddenSpot.id : null;
+      }
+      this.updateMultiplayerHUD();
     }
 
     transitionToHuntPhase() {
@@ -1657,8 +1714,15 @@
        ======================================================== */
     startClientInputLoop() {
       clearInterval(this.inputInterval);
+      const intervalMs = Math.round(1000 / MP_CFG.syncHz);
       this.inputInterval = setInterval(() => {
         if (this.phase === 'lobby' || this.phase === 'mp_ended') return;
+
+        // Smooth local client countdown prediction for 20s hiding timer
+        if (!this.isHost && this.phase === 'mp_hiding_countdown' && this.countdown > 0) {
+          this.countdown = Math.max(0, this.countdown - (intervalMs / 1000));
+          this.updateMultiplayerHUD();
+        }
 
         const me = this.players.find(p => p.id === this.localPlayerId);
         if (!me) return;
@@ -1685,7 +1749,7 @@
             hasRelocated: me.hasRelocated
           });
         }
-      }, 40); // 25Hz
+      }, intervalMs);
     }
 
     sendSeekerSearch(spotId) {
@@ -1716,7 +1780,7 @@
     }
 
     applyGameSync(sync) {
-      if (!sync) return;
+      if (!sync || this.isHost) return;
 
       // Auto-start match on client if match is active but client is still in lobby
       if ((!this.game.isMultiplayer || this.phase === 'lobby' || this.game.phase === 'menu') &&
@@ -1797,18 +1861,24 @@
     }
 
     updateMultiplayerHUD() {
-      const me = this.players.find(p => p.id === this.localPlayerId);
-      if (!me) return;
+      let me = this.players.find(p => p.id === this.localPlayerId);
+      if (!me && this.localPlayerName) {
+        me = this.players.find(p => p.name === this.localPlayerName);
+      }
+      if (!me) {
+        me = this.isHost ? this.players.find(p => p.isHost) : this.players.find(p => !p.isHost);
+      }
+      const myRole = (me && me.role) || this.game.role || (this.isHost ? 'seeker' : 'hider');
 
       if (this.game.attemptsValue) {
         this.game.attemptsValue.textContent = `${this.attemptsLeft} / ${this.settings.attemptsLimit}`;
       }
 
-      // 25s Countdown Phase Overlays
+      // 20s Countdown Phase Overlays
       if (this.phase === 'mp_hiding_countdown') {
-        const sec = Math.ceil(this.countdown);
+        const sec = Math.max(0, Math.ceil(this.countdown));
 
-        if (me.role === 'seeker') {
+        if (myRole === 'seeker') {
           // Seeker sees centered lock banner
           if (this.countdownOverlay) this.countdownOverlay.classList.add('hidden');
           if (this.countdownSeekerBanner) this.countdownSeekerBanner.classList.remove('hidden');
@@ -1828,17 +1898,17 @@
       }
 
       // Spectator mode banner
-      if (me.eliminated && this.phase === 'mp_hunting') {
+      if (me && me.eliminated && this.phase === 'mp_hunting') {
         if (this.spectatorBanner) this.spectatorBanner.classList.remove('hidden');
       } else {
         if (this.spectatorBanner) this.spectatorBanner.classList.add('hidden');
       }
 
       // Proximity heartbeat sound for living Hiders
-      if (this.phase === 'mp_hunting' && me.role === 'hider' && !me.eliminated) {
+      if (this.phase === 'mp_hunting' && myRole === 'hider' && me && !me.eliminated) {
         const seeker = this.players.find(p => p.role === 'seeker');
         if (seeker) {
-          const d = Math.hypot(me.x - seeker.x, me.y - seeker.y);
+          const d = Math.hypot((me.x || this.game.player.x) - seeker.x, (me.y || this.game.player.y) - seeker.y);
           if (d < 230 && typeof Sound !== 'undefined' && Sound.playHeartbeat) {
             Sound.playHeartbeat(d, 230);
           }
@@ -1896,8 +1966,14 @@
       this.game.phase = 'menu';
       this.phase = 'lobby';
 
-      if (this.modal) this.modal.classList.add('hidden');
-      if (this.lobbyView) this.lobbyView.classList.add('hidden');
+      if (this.modal) {
+        this.modal.classList.add('hidden');
+        this.modal.style.display = 'none';
+      }
+      if (this.lobbyView) {
+        this.lobbyView.classList.add('hidden');
+        this.lobbyView.style.display = 'none';
+      }
       if (this.resultModal) this.resultModal.classList.add('hidden');
       if (this.spectatorBanner) this.spectatorBanner.classList.add('hidden');
       if (this.countdownOverlay) this.countdownOverlay.classList.add('hidden');

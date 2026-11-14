@@ -58,7 +58,7 @@ const PEEKKO_CONFIG = Object.freeze({
     allowedAttempts: [7, 10, 15, 20],
     hiderPalette: ['#38bdf8', '#10b981', '#a855f7', '#ec4899', '#f43f5e'],
     seekerColor: '#f59e0b',
-    syncHz: 25
+    syncHz: 8
   }
 });
 
