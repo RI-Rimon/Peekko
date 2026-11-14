@@ -409,6 +409,20 @@
         this.startRound(this.selectedRole);
       });
 
+      // Multiplayer Custom Rooms Button
+      const btnMp = document.getElementById('btn-open-multiplayer');
+      if (btnMp) {
+        btnMp.addEventListener('click', () => {
+          Sound.init();
+          if (this.mpManager) {
+            this.mpManager.openModal();
+          } else {
+            const modal = document.getElementById('custom-room-modal');
+            if (modal) modal.classList.remove('hidden');
+          }
+        });
+      }
+
       // Ready button
       this.btnReady.addEventListener('click', () => {
         if (this.role === 'hider' && this.phase === 'hider_ready' && !this.isPaused) {

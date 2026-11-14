@@ -208,6 +208,11 @@
       if (this.btnCloseModal) {
         this.btnCloseModal.addEventListener('click', () => this.closeModal());
       }
+      if (this.modal) {
+        this.modal.addEventListener('click', (e) => {
+          if (e.target === this.modal) this.closeModal();
+        });
+      }
 
       // Tab switching
       if (this.tabCreate && this.tabJoin) {
@@ -344,7 +349,6 @@
         if (this.panelCreate) this.panelCreate.classList.remove('hidden');
       }
       refreshTurnCredentials();
-    }
     }
 
     closeModal() {
