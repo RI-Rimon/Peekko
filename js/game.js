@@ -449,7 +449,11 @@
       }
 
       // Fullscreen, Theme & Sound
-      document.getElementById('btn-fullscreen').addEventListener('click', () => this.toggleFullscreen());
+      const btnFs = document.getElementById('btn-fullscreen');
+      if (btnFs) btnFs.addEventListener('click', () => this.toggleFullscreen());
+      const btnMenuFs = document.getElementById('btn-menu-fullscreen');
+      if (btnMenuFs) btnMenuFs.addEventListener('click', () => this.toggleFullscreen());
+
       document.getElementById('btn-theme-toggle').addEventListener('click', () => this.toggleTheme());
       document.getElementById('btn-modal-theme').addEventListener('click', () => this.toggleTheme());
 
@@ -457,6 +461,31 @@
         const muted = Sound.toggleMute();
         document.getElementById('sound-icon').textContent = muted ? '🔇' : '🔊';
       });
+
+      // Orientation Prompt Overlay
+      this.rotatePrompt = document.getElementById('rotate-device-prompt');
+      this.btnForceLandscape = document.getElementById('btn-force-landscape');
+      this.btnDismissRotate = document.getElementById('btn-dismiss-rotate');
+      this.rotatePromptDismissed = false;
+
+      if (this.btnForceLandscape) {
+        this.btnForceLandscape.addEventListener('click', () => {
+          this.tryFullscreenAndLandscape();
+          if (this.rotatePrompt) this.rotatePrompt.classList.add('hidden');
+        });
+      }
+      if (this.btnDismissRotate) {
+        this.btnDismissRotate.addEventListener('click', () => {
+          this.rotatePromptDismissed = true;
+          if (this.rotatePrompt) this.rotatePrompt.classList.add('hidden');
+        });
+      }
+
+      window.addEventListener('resize', () => this.checkOrientationPrompt());
+      window.addEventListener('orientationchange', () => {
+        setTimeout(() => this.checkOrientationPrompt(), 150);
+      });
+      setTimeout(() => this.checkOrientationPrompt(), 300);
 
       // Creator Modal
       document.getElementById('btn-about-creator').addEventListener('click', () => {
@@ -504,33 +533,67 @@
       this.startRound(this.role);
     }
 
+    checkOrientationPrompt() {
+      if (!this.rotatePrompt) return;
+      const isMobileDevice = ('ontouchstart' in window) || (window.innerWidth < 960);
+      const isPortrait = window.innerHeight > window.innerWidth;
+      if (isMobileDevice && isPortrait && !this.rotatePromptDismissed) {
+        this.rotatePrompt.classList.remove('hidden');
+      } else {
+        this.rotatePrompt.classList.add('hidden');
+      }
+    }
+
     tryFullscreenAndLandscape() {
       try {
         const el = document.documentElement;
-        if (!document.fullscreenElement && el.requestFullscreen) {
-          const req = el.requestFullscreen();
-          if (req && req.then) {
-            req.then(() => {
+        const requestFS = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+        if (requestFS && !document.fullscreenElement) {
+          const res = requestFS.call(el);
+          if (res && res.then) {
+            res.then(() => {
               if (screen.orientation && screen.orientation.lock) {
                 screen.orientation.lock('landscape').catch(() => {});
               }
-              this.renderer.resize();
+              if (this.renderer) this.renderer.resize();
             }).catch(() => {});
           }
+        } else if (screen.orientation && screen.orientation.lock) {
+          screen.orientation.lock('landscape').catch(() => {});
         }
-      } catch (e) {}
+      } catch (_) {}
     }
 
     toggleFullscreen() {
       try {
+        const el = document.documentElement;
         if (!document.fullscreenElement) {
-          if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen().then(() => this.renderer.resize()).catch(() => {});
+          const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+          if (req) {
+            const res = req.call(el);
+            if (res && res.then) {
+              res.then(() => {
+                if (screen.orientation && screen.orientation.lock) {
+                  screen.orientation.lock('landscape').catch(() => {});
+                }
+                if (this.renderer) this.renderer.resize();
+              }).catch(() => {});
+            }
+          } else if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').catch(() => {});
           }
-        } else if (document.exitFullscreen) {
-          document.exitFullscreen().then(() => this.renderer.resize()).catch(() => {});
+        } else {
+          const exitFS = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+          if (exitFS) {
+            const res = exitFS.call(document);
+            if (res && res.then) {
+              res.then(() => {
+                if (this.renderer) this.renderer.resize();
+              }).catch(() => {});
+            }
+          }
         }
-      } catch (e) {}
+      } catch (_) {}
     }
 
     selectMap(mapId) {

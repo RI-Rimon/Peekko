@@ -2028,3 +2028,217 @@ html[data-theme="light"] .my-role-pill.active[data-role="seeker"] {
   justify-content: flex-end;
   gap: 12px;
 }
+
+/* ========================================================
+   MOBILE ORIENTATION PROMPT & LANDSCAPE OPTIMIZATIONS
+   ======================================================== */
+.rotate-device-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(8, 17, 36, 0.94);
+  backdrop-filter: blur(14px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: modal-pop 0.25s ease-out;
+}
+
+@media (orientation: landscape), (min-width: 960px) {
+  .rotate-device-overlay {
+    display: none !important;
+  }
+}
+
+.rotate-prompt-box {
+  background: var(--bg-surface-solid);
+  border: 1px solid var(--border-strong);
+  border-radius: 18px;
+  padding: 24px 26px;
+  max-width: 360px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+}
+
+.rotate-phone-icon {
+  font-size: 2.4rem;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.rotate-arrow {
+  animation: spin-rotate 2.5s ease-in-out infinite;
+}
+
+@keyframes spin-rotate {
+  0% { transform: rotate(0deg); }
+  50% { transform: rotate(90deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.rotate-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.rotate-desc {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin-bottom: 20px;
+}
+
+.rotate-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-rotate-primary {
+  width: 100%;
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: 2px solid var(--accent-hider);
+  background: linear-gradient(135deg, #eadbc2, #f6efe2);
+  color: #0b162c;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(246, 239, 226, 0.25);
+  transition: transform 0.15s ease;
+}
+
+.btn-rotate-primary:active {
+  transform: scale(0.96);
+}
+
+html[data-theme="light"] .btn-rotate-primary {
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  color: #ffffff;
+  border-color: #38bdf8;
+}
+
+.btn-rotate-ghost {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.btn-rotate-ghost:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+/* Landscape Mode Responsive Rules for Mobile */
+@media (max-height: 520px) {
+  .top-hud {
+    height: 38px;
+    padding: 0 12px;
+  }
+  .brand-badge {
+    gap: 6px;
+  }
+  .brand-icon {
+    width: 20px;
+    height: 20px;
+  }
+  .brand-title {
+    font-size: 0.95rem;
+  }
+  .hud-btn {
+    height: 28px;
+    padding: 0 8px;
+    font-size: 0.76rem;
+    gap: 4px;
+  }
+  .canvas-stage {
+    height: calc(100% - 38px);
+  }
+  .touch-pad {
+    bottom: 8px;
+    left: 12px;
+    right: 12px;
+  }
+  .dpad-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 1rem;
+    border-radius: 10px;
+    background: rgba(16, 31, 61, 0.82);
+    backdrop-filter: blur(4px);
+  }
+  .touch-action-btn {
+    height: 44px;
+    padding: 0 16px;
+    font-size: 0.82rem;
+    border-radius: 10px;
+    background: rgba(16, 31, 61, 0.82);
+    backdrop-filter: blur(4px);
+  }
+  .touch-ready-btn {
+    height: 44px;
+    padding: 0 14px;
+    font-size: 0.8rem;
+    border-radius: 10px;
+  }
+  .modal-card {
+    max-height: 96vh;
+    padding: 12px 18px;
+  }
+  .mp-custom-room-card {
+    max-width: 520px;
+  }
+  .mp-modal-header {
+    margin-bottom: 8px;
+  }
+  .mp-modal-header h2 {
+    font-size: 1.15rem;
+  }
+  .mp-modal-tabs {
+    margin-bottom: 8px;
+  }
+  .mp-tab-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+  .mp-form-group {
+    margin-bottom: 8px;
+  }
+  .mp-input {
+    padding: 8px 12px;
+    font-size: 0.92rem;
+  }
+  .lobby-table th, .lobby-table td {
+    padding: 6px 10px;
+    font-size: 0.78rem;
+  }
+  .seeker-banner-box {
+    padding: 14px 18px;
+    max-width: 380px;
+  }
+  .seeker-banner-box .lock-icon {
+    font-size: 2rem;
+    margin-bottom: 6px;
+  }
+  .seeker-banner-box h3 {
+    font-size: 1.15rem;
+    margin-bottom: 4px;
+  }
+  .seeker-banner-box p {
+    font-size: 0.85rem;
+  }
+}

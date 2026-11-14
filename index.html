@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Peekko</title>
   <link rel="icon" type="image/svg+xml" href="assets/peekko-icon.svg">
-  <link rel="stylesheet" href="css/style.css?v=6.0">
+  <link rel="stylesheet" href="css/style.css?v=8.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" media="print" onload="this.media='all'">
@@ -135,6 +135,9 @@
         <div class="menu-top-actions">
           <button id="btn-modal-theme" class="hud-btn small">
             <span id="modal-theme-icon">☀️</span> <span id="modal-theme-label">Light Mode</span>
+          </button>
+          <button id="btn-menu-fullscreen" class="hud-btn small" title="Toggle Fullscreen Landscape">
+            <span>⛶</span> <span class="fs-text">Fullscreen</span>
           </button>
         </div>
       </div>
@@ -492,14 +495,30 @@
         </div>
       </div>
     </div>
+
+    <!-- MOBILE ORIENTATION PROMPT (Landscape Mode Recommendation) -->
+    <div id="rotate-device-prompt" class="rotate-device-overlay hidden">
+      <div class="rotate-prompt-box">
+        <div class="rotate-phone-icon">
+          <span class="phone-glyph">📱</span>
+          <span class="rotate-arrow">🔄</span>
+        </div>
+        <h3 class="rotate-title">Rotate Phone to Landscape</h3>
+        <p class="rotate-desc">For the best full-screen stealth action, please hold your phone horizontally in landscape mode.</p>
+        <div class="rotate-actions">
+          <button id="btn-force-landscape" class="btn-rotate-primary">⛶ Play Fullscreen Landscape</button>
+          <button id="btn-dismiss-rotate" class="btn-rotate-ghost">Continue in Portrait</button>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <script src="js/config.js?v=7.0"></script>
-  <script src="js/audio.js?v=7.0"></script>
-  <script src="js/apartment.js?v=7.0"></script>
-  <script src="js/renderer.js?v=7.0"></script>
-  <script src="js/multiplayer.js?v=7.0"></script>
-  <script src="js/game.js?v=7.0"></script>
+  <script src="js/config.js?v=8.0"></script>
+  <script src="js/audio.js?v=8.0"></script>
+  <script src="js/apartment.js?v=8.0"></script>
+  <script src="js/renderer.js?v=8.0"></script>
+  <script src="js/multiplayer.js?v=8.0"></script>
+  <script src="js/game.js?v=8.0"></script>
   <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
 </body>
 </html>

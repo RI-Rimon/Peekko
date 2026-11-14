@@ -37,14 +37,15 @@ class ApartmentRenderer {
     this.canvas.height = Math.max(1, Math.floor(ph * dpr));
 
     const isMobile = pw < 960 || ('ontouchstart' in window);
-    const padX = isMobile ? 12 : 24;
-    const padY = isMobile ? 20 : 34;
+    const isLandscape = pw >= ph;
+    const padX = isMobile ? (isLandscape ? 8 : 6) : 24;
+    const padY = isMobile ? (isLandscape ? 6 : 8) : 24;
     const availW = Math.max(100, pw - padX);
     const availH = Math.max(100, ph - padY);
 
     this.scale = Math.min(availW / this.apt.width, availH / this.apt.height);
     this.offsetX = Math.max(0, (pw - this.apt.width * this.scale) / 2);
-    this.offsetY = Math.max(2, (ph - this.apt.height * this.scale) / 2 - (isMobile ? 2 : 6));
+    this.offsetY = Math.max(0, (ph - this.apt.height * this.scale) / 2);
     this.dpr = dpr;
   }
 
