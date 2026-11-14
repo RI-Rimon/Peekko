@@ -94,8 +94,32 @@
       // Intervals & Timers
       this.syncInterval = null;
       this.inputInterval = null;
+      this.mqtt = null;
+      this.mqttConnected = false;
+      this.connectTimeout = null;
 
       this.bindDOM();
+
+      // Check for ?room=PKXYZ in URL to auto-join
+      try {
+        if (typeof window !== 'undefined' && window.location) {
+          const urlParams = new URLSearchParams(window.location.search);
+          const roomParam = urlParams.get('room');
+          if (roomParam) {
+            setTimeout(() => {
+              this.openModal();
+              this.switchTab('join');
+              if (this.inputJoinCode) {
+                this.inputJoinCode.value = roomParam.toUpperCase().slice(0, 5);
+                if (this.inputJoinName) this.inputJoinName.focus();
+              }
+              if (this.game && this.game.showToast) {
+                this.game.showToast(`Room '${roomParam.toUpperCase()}' detected! Click Join Room.`);
+              }
+            }, 350);
+          }
+        }
+      } catch (e) {}
     }
 
     bindDOM() {
@@ -118,6 +142,7 @@
       // Join View inputs
       this.inputJoinName = document.getElementById('mp-join-name');
       this.inputJoinCode = document.getElementById('mp-join-code');
+      this.btnPasteCode = document.getElementById('btn-paste-code');
       this.btnJoinSubmit = document.getElementById('btn-join-room-submit');
       this.joinError = document.getElementById('mp-join-error');
 
@@ -125,6 +150,7 @@
       this.lobbyView = document.getElementById('mp-lobby-view');
       this.lobbyRoomCode = document.getElementById('lobby-room-code');
       this.btnCopyCode = document.getElementById('btn-copy-code');
+      this.btnCopyLink = document.getElementById('btn-copy-link');
       this.lobbyMapName = document.getElementById('lobby-map-name');
       this.lobbyLighting = document.getElementById('lobby-lighting');
       this.lobbyAttempts = document.getElementById('lobby-attempts');
@@ -259,9 +285,45 @@
         });
       }
 
+      // Paste Code
+      if (this.btnPasteCode) {
+        this.btnPasteCode.addEventListener('click', async () => {
+          try {
+            const text = await navigator.clipboard.readText();
+            if (text) {
+              const clean = text.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
+              if (this.inputJoinCode) {
+                this.inputJoinCode.value = clean;
+                this.showJoinError('');
+              }
+            }
+          } catch (e) {
+            this.game.showToast('Please type the Room Code manually.');
+          }
+        });
+      }
+
       // Copy Code
       if (this.btnCopyCode) {
         this.btnCopyCode.addEventListener('click', () => this.copyRoomCode());
+      }
+
+      // Copy Invite Link
+      if (this.btnCopyLink) {
+        this.btnCopyLink.addEventListener('click', () => {
+          const url = `${window.location.origin}${window.location.pathname}?room=${this.roomCode}`;
+          navigator.clipboard.writeText(url).then(() => {
+            this.btnCopyLink.classList.add('copied');
+            this.btnCopyLink.textContent = '✓ Copied!';
+            setTimeout(() => {
+              this.btnCopyLink.classList.remove('copied');
+              this.btnCopyLink.textContent = '🔗 Invite Link';
+            }, 2000);
+            this.game.showToast('Invite link copied! Share with friends to join room.');
+          }).catch(() => {
+            this.game.showToast(`Invite code: ${this.roomCode}`);
+          });
+        });
       }
 
       // Quick Role Selectors for Local Player
@@ -368,14 +430,180 @@
     }
 
     /* ========================================================
-       HOST: CREATE ROOM
+       CROSS-NETWORK MQTT & HYBRID TRANSPORT RELAY
+       Enables 100% reliable zero-configuration communication
+       across Mobile Data (4G/5G CGNAT) and Wi-Fi networks.
        ======================================================== */
-    createRoom(hostName) {
-      if (typeof Peer === 'undefined') {
-        this.showCreateError('PeerJS library not loaded. Check internet connection.');
+    initMqtt(isHost) {
+      if (typeof Paho === 'undefined' || !Paho.MQTT) {
+        console.warn('Paho MQTT library not available. Relying exclusively on WebRTC.');
         return;
       }
 
+      const clientId = 'peekko_' + (isHost ? 'h_' : 'c_') + Math.random().toString(16).slice(2, 10);
+      const brokerHost = 'broker.emqx.io';
+      const brokerPort = 8084;
+      const brokerPath = '/mqtt';
+
+      try {
+        this.mqtt = new Paho.MQTT.Client(brokerHost, brokerPort, brokerPath, clientId);
+        this.mqtt.onConnectionLost = (resp) => {
+          this.mqttConnected = false;
+          if (resp && resp.errorCode !== 0) {
+            console.warn('MQTT Connection lost:', resp.errorMessage);
+            if (this.roomCode && (this.status === 'lobby' || this.game.isMultiplayer)) {
+              setTimeout(() => {
+                if (this.roomCode && !this.mqttConnected) this.connectMqtt(isHost);
+              }, 2000);
+            }
+          }
+        };
+
+        this.mqtt.onMessageArrived = (message) => {
+          try {
+            const data = JSON.parse(message.payloadString);
+            if (this.isHost) {
+              const senderId = data.senderId || data.id || 'guest';
+              this.handleHostMessage({
+                peer: senderId,
+                open: true,
+                send: (reply) => this.sendToClient(senderId, reply),
+                close: () => {}
+              }, data);
+            } else {
+              this.handleClientMessage(data);
+            }
+          } catch (e) {
+            console.error('MQTT payload parsing error:', e);
+          }
+        };
+
+        this.connectMqtt(isHost);
+      } catch (err) {
+        console.warn('Could not initialize MQTT client:', err);
+      }
+    }
+
+    connectMqtt(isHost) {
+      if (!this.mqtt) return;
+      this.mqtt.connect({
+        useSSL: true,
+        timeout: 5,
+        keepAliveInterval: 30,
+        cleanSession: true,
+        onSuccess: () => {
+          this.mqttConnected = true;
+          const topicPrefix = `peekko/v10/room/${this.roomCode}`;
+          if (isHost) {
+            this.mqtt.subscribe(`${topicPrefix}/c2h`);
+          } else {
+            this.mqtt.subscribe(`${topicPrefix}/h2c`);
+            this.mqtt.subscribe(`${topicPrefix}/client/${this.localPlayerId}`);
+            // Send instant handshake over MQTT
+            this.sendToHost({
+              type: 'JOIN',
+              id: this.localPlayerId,
+              name: this.localPlayerName
+            });
+          }
+        },
+        onFailure: (err) => {
+          console.warn('EMQX MQTT failed, trying HiveMQ fallback...', err);
+          try {
+            const fbId = 'pk_fb_' + Math.random().toString(16).slice(2, 10);
+            this.mqtt = new Paho.MQTT.Client('broker.hivemq.com', 8884, '/mqtt', fbId);
+            this.mqtt.onMessageArrived = (message) => {
+              try {
+                const data = JSON.parse(message.payloadString);
+                if (this.isHost) {
+                  const senderId = data.senderId || data.id || 'guest';
+                  this.handleHostMessage({
+                    peer: senderId,
+                    open: true,
+                    send: (reply) => this.sendToClient(senderId, reply),
+                    close: () => {}
+                  }, data);
+                } else {
+                  this.handleClientMessage(data);
+                }
+              } catch (e) {}
+            };
+            this.mqtt.connect({
+              useSSL: true,
+              timeout: 5,
+              keepAliveInterval: 30,
+              cleanSession: true,
+              onSuccess: () => {
+                this.mqttConnected = true;
+                const topicPrefix = `peekko/v10/room/${this.roomCode}`;
+                if (isHost) {
+                  this.mqtt.subscribe(`${topicPrefix}/c2h`);
+                } else {
+                  this.mqtt.subscribe(`${topicPrefix}/h2c`);
+                  this.mqtt.subscribe(`${topicPrefix}/client/${this.localPlayerId}`);
+                  this.sendToHost({
+                    type: 'JOIN',
+                    id: this.localPlayerId,
+                    name: this.localPlayerName
+                  });
+                }
+              }
+            });
+          } catch (e) {}
+        }
+      });
+    }
+
+    mqttPublish(subTopic, payloadObj) {
+      if (this.mqtt && this.mqttConnected) {
+        try {
+          const msg = new Paho.MQTT.Message(JSON.stringify(payloadObj));
+          msg.destinationName = `peekko/v10/room/${this.roomCode}/${subTopic}`;
+          this.mqtt.send(msg);
+        } catch (e) {
+          console.warn('MQTT publish error:', e);
+        }
+      }
+    }
+
+    sendToHost(msg) {
+      if (this.isHost) return;
+      msg.senderId = this.localPlayerId;
+      this.mqttPublish('c2h', msg);
+      if (this.hostConn && this.hostConn.open) {
+        try {
+          this.hostConn.send(msg);
+        } catch (e) {}
+      }
+    }
+
+    broadcast(msg) {
+      if (!this.isHost) return;
+      this.mqttPublish('h2c', msg);
+      this.connections.forEach(conn => {
+        if (conn && conn.open) {
+          try {
+            conn.send(msg);
+          } catch (e) {}
+        }
+      });
+    }
+
+    sendToClient(clientId, msg) {
+      if (!this.isHost) return;
+      this.mqttPublish('client/' + clientId, msg);
+      const conn = this.connections.get(clientId);
+      if (conn && conn.open) {
+        try {
+          conn.send(msg);
+        } catch (e) {}
+      }
+    }
+
+    /* ========================================================
+       HOST: CREATE ROOM
+       ======================================================== */
+    createRoom(hostName) {
       this.showCreateError('');
       if (this.btnCreateSubmit) {
         this.btnCreateSubmit.disabled = true;
@@ -386,100 +614,79 @@
       this.isHost = true;
       this.localPlayerName = hostName || 'Host';
       this.roomCode = generateRoomCode();
+      this.localPlayerId = 'host_' + Math.random().toString(16).slice(2, 10);
       const peerId = getHostPeerId(this.roomCode);
 
-      try {
-        this.peer = new Peer(peerId, PEER_CONFIG);
-      } catch (err) {
-        this.showCreateError('Failed to initialize Peer: ' + err.message);
-        if (this.btnCreateSubmit) {
-          this.btnCreateSubmit.disabled = false;
-          this.btnCreateSubmit.textContent = 'GENERATE ROOM CODE';
-        }
-        return;
+      // Initialize MQTT relay immediately
+      this.initMqtt(true);
+
+      // Initialize Host Player in Lobby
+      const hostRole = this.hostInitialRole || 'hider';
+      const hostColor = hostRole === 'seeker' ? MP_CFG.seekerColor : MP_CFG.hiderPalette[0];
+
+      this.players = [{
+        id: this.localPlayerId,
+        name: this.localPlayerName,
+        isHost: true,
+        role: hostRole,
+        color: hostColor,
+        ready: true,
+        x: 680,
+        y: 725,
+        angle: -Math.PI / 2,
+        isMoving: false,
+        isHidden: false,
+        hiddenSpotId: null,
+        isReady: false,
+        eliminated: false,
+        eliminatedAt: 0,
+        eliminatedReason: '',
+        hasRelocated: false
+      }];
+      this.status = 'lobby';
+
+      if (this.btnCreateSubmit) {
+        this.btnCreateSubmit.disabled = false;
+        this.btnCreateSubmit.textContent = 'GENERATE ROOM CODE';
       }
+      this.showLobbyView();
 
-      this.peer.on('open', (id) => {
-        this.localPlayerId = id;
-        this.status = 'lobby';
-
-        // Initialize Host Player
-        const hostRole = this.hostInitialRole || 'hider';
-        const hostColor = hostRole === 'seeker' ? MP_CFG.seekerColor : MP_CFG.hiderPalette[0];
-
-        this.players = [{
-          id: id,
-          name: this.localPlayerName,
-          isHost: true,
-          role: hostRole,
-          color: hostColor,
-          ready: true,
-          x: 680,
-          y: 725,
-          angle: -Math.PI / 2,
-          isMoving: false,
-          isHidden: false,
-          hiddenSpotId: null,
-          isReady: false,
-          eliminated: false,
-          eliminatedAt: 0,
-          eliminatedReason: '',
-          hasRelocated: false
-        }];
-
-        if (this.btnCreateSubmit) {
-          this.btnCreateSubmit.disabled = false;
-          this.btnCreateSubmit.textContent = 'GENERATE ROOM CODE';
+      // Launch PeerJS in parallel for direct P2P mesh
+      if (typeof Peer !== 'undefined') {
+        try {
+          this.peer = new Peer(peerId, PEER_CONFIG);
+          this.peer.on('open', (id) => {
+            if (this.players && this.players[0]) this.players[0].id = id;
+            this.localPlayerId = id;
+          });
+          this.peer.on('connection', (conn) => {
+            conn.on('data', (data) => this.handleHostMessage(conn, data));
+            conn.on('open', () => {
+              if (this.phase === 'lobby') this.broadcastLobbyUpdate();
+            });
+            conn.on('close', () => this.handlePlayerDisconnect(conn.peer));
+            conn.on('error', (err) => {
+              console.warn('Connection error with peer:', conn.peer, err);
+              this.handlePlayerDisconnect(conn.peer);
+            });
+          });
+          this.peer.on('error', (err) => {
+            console.warn('PeerJS Host notice:', err);
+            if (err.type === 'unavailable-id') {
+              this.cleanup();
+              this.createRoom(hostName);
+            }
+          });
+        } catch (e) {
+          console.warn('PeerJS init failed, running via MQTT relay.');
         }
-
-        this.showLobbyView();
-      });
-
-      this.peer.on('connection', (conn) => {
-        // Attach data listener immediately so incoming responses are never missed
-        conn.on('data', (data) => this.handleHostMessage(conn, data));
-
-        conn.on('open', () => {
-          if (this.phase === 'lobby') {
-            this.broadcastLobbyUpdate();
-          }
-        });
-
-        conn.on('close', () => {
-          this.handlePlayerDisconnect(conn.peer);
-        });
-
-        conn.on('error', (err) => {
-          console.warn('Connection error with peer:', conn.peer, err);
-          this.handlePlayerDisconnect(conn.peer);
-        });
-      });
-
-      this.peer.on('error', (err) => {
-        console.error('PeerJS Host Error:', err);
-        if (err.type === 'unavailable-id') {
-          // Collision on room code, retry with new code
-          this.cleanup();
-          this.createRoom(hostName);
-        } else {
-          this.showCreateError('Network error: ' + (err.message || err.type));
-          if (this.btnCreateSubmit) {
-            this.btnCreateSubmit.disabled = false;
-            this.btnCreateSubmit.textContent = 'GENERATE ROOM CODE';
-          }
-        }
-      });
+      }
     }
 
     /* ========================================================
        CLIENT: JOIN ROOM
        ======================================================== */
     joinRoom(clientName, roomCode) {
-      if (typeof Peer === 'undefined') {
-        this.showJoinError('PeerJS library not loaded. Check internet connection.');
-        return;
-      }
-
       this.showJoinError('');
       if (this.btnJoinSubmit) {
         this.btnJoinSubmit.disabled = true;
@@ -490,22 +697,12 @@
       this.isHost = false;
       this.localPlayerName = clientName || 'Guest';
       this.roomCode = roomCode.toUpperCase().trim();
+      this.localPlayerId = 'usr_' + Math.random().toString(16).slice(2, 10);
       const hostPeerId = getHostPeerId(this.roomCode);
 
-      try {
-        this.peer = new Peer(PEER_CONFIG);
-      } catch (err) {
-        this.showJoinError('Failed to initialize Peer: ' + err.message);
-        if (this.btnJoinSubmit) {
-          this.btnJoinSubmit.disabled = false;
-          this.btnJoinSubmit.textContent = 'JOIN ROOM';
-        }
-        return;
-      }
-
-      let connected = false;
-      const connectTimeout = setTimeout(() => {
-        if (!connected) {
+      // Start 15s timeout
+      this.connectTimeout = setTimeout(() => {
+        if (this.status !== 'lobby') {
           this.showJoinError(`Could not reach Room '${this.roomCode}'. Please verify the Room Code and ensure Host is currently in the lobby.`);
           if (this.btnJoinSubmit) {
             this.btnJoinSubmit.disabled = false;
@@ -513,76 +710,53 @@
           }
           this.cleanup();
         }
-      }, 18000);
+      }, 15000);
 
-      this.peer.on('open', (id) => {
-        this.localPlayerId = id;
-        if (this.btnJoinSubmit) {
-          this.btnJoinSubmit.textContent = 'Establishing P2P link...';
-        }
+      // Initialize MQTT relay immediately
+      this.initMqtt(false);
 
-        this.hostConn = this.peer.connect(hostPeerId, { reliable: true });
-
-        // Attach data listener immediately so incoming responses are never missed
-        this.hostConn.on('data', (data) => this.handleClientMessage(data));
-
-        this.hostConn.on('open', () => {
-          connected = true;
-          clearTimeout(connectTimeout);
-          this.status = 'lobby';
-
-          const sendHandshake = () => {
-            if (this.hostConn && this.status === 'lobby' && (!this.players || this.players.length === 0)) {
-              this.hostConn.send({
+      // Launch PeerJS in parallel
+      if (typeof Peer !== 'undefined') {
+        try {
+          this.peer = new Peer(PEER_CONFIG);
+          this.peer.on('open', (id) => {
+            this.localPlayerId = id;
+            if (this.mqtt && this.mqttConnected) {
+              this.mqtt.subscribe(`peekko/v10/room/${this.roomCode}/client/${id}`);
+            }
+            this.hostConn = this.peer.connect(hostPeerId, { reliable: true });
+            this.hostConn.on('data', (data) => this.handleClientMessage(data));
+            this.hostConn.on('open', () => {
+              if (this.connectTimeout) {
+                clearTimeout(this.connectTimeout);
+                this.connectTimeout = null;
+              }
+              this.status = 'lobby';
+              this.sendToHost({
                 type: 'JOIN',
                 id: id,
                 name: this.localPlayerName
               });
-            }
-          };
-
-          // Send handshake immediately and with retry pulses
-          sendHandshake();
-          this.handshakeTimer1 = setTimeout(sendHandshake, 350);
-          this.handshakeTimer2 = setTimeout(sendHandshake, 850);
-          this.handshakeTimer3 = setTimeout(sendHandshake, 1600);
-
-          if (this.btnJoinSubmit) {
-            this.btnJoinSubmit.disabled = false;
-            this.btnJoinSubmit.textContent = 'JOIN ROOM';
-          }
-        });
-
-        this.hostConn.on('close', () => {
-          this.game.showToast('Disconnected from Host.');
-          this.leaveRoom();
-        });
-
-        this.hostConn.on('error', (err) => {
-          console.warn('Host connection error:', err);
-          this.showJoinError('Could not reach Host: ' + (err.message || 'Check room code'));
-          if (this.btnJoinSubmit) {
-            this.btnJoinSubmit.disabled = false;
-            this.btnJoinSubmit.textContent = 'JOIN ROOM';
-          }
-        });
-      });
-
-      this.peer.on('error', (err) => {
-        clearTimeout(connectTimeout);
-        console.error('PeerJS Client Error:', err);
-        let errorMsg = 'Connection error: ' + (err.message || err.type);
-        if (err.type === 'peer-unavailable') {
-          errorMsg = `Room '${this.roomCode}' not found. Make sure Host created the room first and is in the lobby.`;
-        } else if (err.type === 'network') {
-          errorMsg = 'Network connectivity issue. Please check your internet connection.';
+              if (this.btnJoinSubmit) {
+                this.btnJoinSubmit.disabled = false;
+                this.btnJoinSubmit.textContent = 'JOIN ROOM';
+              }
+            });
+            this.hostConn.on('close', () => {
+              this.game.showToast('Disconnected from Host.');
+              this.leaveRoom();
+            });
+            this.hostConn.on('error', (err) => {
+              console.warn('WebRTC Host connection notice:', err);
+            });
+          });
+          this.peer.on('error', (err) => {
+            console.warn('PeerJS Client notice:', err);
+          });
+        } catch (e) {
+          console.warn('PeerJS client init failed, running via MQTT relay.');
         }
-        this.showJoinError(errorMsg);
-        if (this.btnJoinSubmit) {
-          this.btnJoinSubmit.disabled = false;
-          this.btnJoinSubmit.textContent = 'JOIN ROOM';
-        }
-      });
+      }
     }
 
     /* ========================================================
@@ -592,26 +766,44 @@
       if (!msg || !msg.type) return;
 
       if (msg.type === 'JOIN') {
-        if (this.players.length >= MP_CFG.maxPlayers) {
-          conn.send({ type: 'REJECT', reason: 'Room is full (max 5 players).' });
-          conn.close();
-          return;
-        }
-        if (this.phase !== 'lobby') {
-          conn.send({ type: 'REJECT', reason: 'Match is already in progress.' });
-          conn.close();
+        const clientId = msg.id || (conn && conn.peer) || 'guest_' + Math.random().toString(16).slice(2, 8);
+
+        // Check if player already registered (prevent duplicate rows on handshake retries)
+        const existingPlayer = this.players.find(p => p.id === clientId);
+        if (existingPlayer) {
+          existingPlayer.name = msg.name || existingPlayer.name;
+          if (conn && conn.peer) this.connections.set(conn.peer, conn);
+          this.sendToClient(clientId, {
+            type: 'WELCOME',
+            roomCode: this.roomCode,
+            localId: clientId,
+            settings: this.settings,
+            players: this.players
+          });
+          this.broadcastLobbyUpdate();
           return;
         }
 
-        // Register connection
-        this.connections.set(conn.peer, conn);
+        if (this.players.length >= MP_CFG.maxPlayers) {
+          this.sendToClient(clientId, { type: 'REJECT', reason: 'Room is full (max 5 players).' });
+          return;
+        }
+        if (this.phase !== 'lobby') {
+          this.sendToClient(clientId, { type: 'REJECT', reason: 'Match is already in progress.' });
+          return;
+        }
+
+        // Register connection if WebRTC peer
+        if (conn && conn.peer) {
+          this.connections.set(conn.peer, conn);
+        }
 
         // Assign player role and color
         const usedColors = this.players.filter(p => p.role === 'hider').map(p => p.color);
         const freeColor = MP_CFG.hiderPalette.find(c => !usedColors.includes(c)) || MP_CFG.hiderPalette[0];
 
         const newPlayer = {
-          id: conn.peer,
+          id: clientId,
           name: msg.name || `Player ${this.players.length + 1}`,
           isHost: false,
           role: 'hider',
@@ -633,27 +825,25 @@
         this.players.push(newPlayer);
         this.autoBalanceRoles();
 
-        // Send Welcome to new player
-        conn.send({
+        this.sendToClient(clientId, {
           type: 'WELCOME',
           roomCode: this.roomCode,
-          localId: conn.peer,
+          localId: clientId,
           settings: this.settings,
           players: this.players
         });
 
-        // Broadcast updated lobby to all
         this.broadcastLobbyUpdate();
         this.renderLobbyUI();
       } else if (msg.type === 'PLAYER_INPUT') {
         const p = this.players.find(pl => pl.id === msg.id);
         if (p && !p.eliminated) {
-          p.x = msg.x;
-          p.y = msg.y;
-          p.angle = msg.angle;
-          p.isMoving = msg.isMoving;
-          p.isHidden = msg.isHidden;
-          p.hiddenSpotId = msg.hiddenSpotId;
+          p.x = msg.x !== undefined ? msg.x : p.x;
+          p.y = msg.y !== undefined ? msg.y : p.y;
+          p.angle = msg.angle !== undefined ? msg.angle : p.angle;
+          p.isMoving = !!msg.isMoving;
+          p.isHidden = !!msg.isHidden;
+          p.hiddenSpotId = msg.hiddenSpotId !== undefined ? msg.hiddenSpotId : p.hiddenSpotId;
           p.isReady = !!msg.isReady;
           if (msg.hasRelocated) p.hasRelocated = true;
         }
@@ -664,7 +854,7 @@
         if (p) p.isReady = true;
         this.checkAllHidersReady();
       } else if (msg.type === 'REQUEST_ROLE') {
-        this.applyRoleChange(msg.id, msg.role);
+        this.applyRoleChange(msg.id, msg.role || msg.requestedRole);
       }
     }
 
@@ -674,6 +864,10 @@
     handleClientMessage(msg) {
       if (!msg || !msg.type) return;
 
+      if (this.connectTimeout) {
+        clearTimeout(this.connectTimeout);
+        this.connectTimeout = null;
+      }
       if (this.handshakeTimer1) clearTimeout(this.handshakeTimer1);
       if (this.handshakeTimer2) clearTimeout(this.handshakeTimer2);
       if (this.handshakeTimer3) clearTimeout(this.handshakeTimer3);
@@ -686,10 +880,23 @@
         this.roomCode = msg.roomCode;
         this.settings = msg.settings;
         this.players = msg.players;
+        this.status = 'lobby';
+        if (this.btnJoinSubmit) {
+          this.btnJoinSubmit.disabled = false;
+          this.btnJoinSubmit.textContent = 'JOIN ROOM';
+        }
         this.showLobbyView();
       } else if (msg.type === 'LOBBY_UPDATE') {
         this.players = msg.players;
         this.settings = msg.settings;
+        this.status = 'lobby';
+        if (this.btnJoinSubmit) {
+          this.btnJoinSubmit.disabled = false;
+          this.btnJoinSubmit.textContent = 'JOIN ROOM';
+        }
+        if (this.panelJoin && !this.panelJoin.classList.contains('hidden')) {
+          this.showLobbyView();
+        }
         this.renderLobbyUI();
       } else if (msg.type === 'REJECT') {
         this.showJoinError(msg.reason || 'Join rejected');
@@ -737,11 +944,11 @@
       if (this.phase !== 'lobby') return;
       if (this.isHost) {
         this.applyRoleChange(this.localPlayerId, newRole);
-      } else if (this.hostConn && this.hostConn.open) {
-        this.hostConn.send({
+      } else {
+        this.sendToHost({
           type: 'REQUEST_ROLE',
           id: this.localPlayerId,
-          role: newRole
+          requestedRole: newRole
         });
       }
     }
@@ -809,9 +1016,7 @@
         players: this.players,
         settings: this.settings
       };
-      this.connections.forEach(conn => {
-        if (conn.open) conn.send(payload);
-      });
+      this.broadcast(payload);
     }
 
     /* ========================================================
@@ -832,9 +1037,10 @@
 
       const mapNames = {
         1: 'Skyglass Penthouse',
-        2: 'Heritage Manor',
-        3: 'Underground Basement',
-        4: 'Grand Shopping Mall'
+        2: 'Midnight Manor',
+        3: 'Warehouse Basement',
+        4: 'Grand Shopping Mall',
+        5: 'Wonderland Park'
       };
       if (this.lobbyMapName) this.lobbyMapName.textContent = mapNames[this.settings.mapId] || 'Map 1';
       if (this.lobbyLighting) this.lobbyLighting.textContent = this.settings.lightingMode === 'light' ? 'Day (Light)' : 'Night (Dark)';
@@ -947,10 +1153,13 @@
       this.attemptsLeft = this.settings.attemptsLimit;
       this.checkedSpots = [];
 
-      // Set spawn coordinates in map foyer with offset
+      this.game.apt.loadMap(this.settings.mapId);
+      const mapSpawn = this.game.apt.spawn || { x: 680, y: 725 };
+
+      // Set spawn coordinates in chosen map foyer with spacing
       this.players.forEach((p, i) => {
-        p.x = 640 + (i * 28 - (this.players.length * 14));
-        p.y = 725;
+        p.x = mapSpawn.x + (i * 28 - (this.players.length * 14));
+        p.y = mapSpawn.y;
         p.angle = -Math.PI / 2;
         p.isMoving = false;
         p.isHidden = false;
@@ -970,9 +1179,7 @@
         countdown: this.countdown,
         attemptsLimit: this.attemptsLeft
       };
-      this.connections.forEach(conn => {
-        if (conn.open) conn.send(startPayload);
-      });
+      this.broadcast(startPayload);
 
       this.clientStartMatch();
       this.startHostAuthoritativeLoop();
@@ -1081,9 +1288,7 @@
         proximityHint: this.hostProximityHint || null
       };
 
-      this.connections.forEach(conn => {
-        if (conn.open) conn.send(syncData);
-      });
+      this.broadcast(syncData);
 
       this.applyGameSync(syncData);
     }
@@ -1260,9 +1465,7 @@
         rankings: this.rankings
       };
 
-      this.connections.forEach(conn => {
-        if (conn.open) conn.send(endPayload);
-      });
+      this.broadcast(endPayload);
 
       this.showResultModal(endPayload);
     }
@@ -1440,8 +1643,8 @@
         me.hiddenSpotId = this.game.player.hiddenSpot ? this.game.player.hiddenSpot.id : null;
         if (this.game.hasRelocatedDuringSeek) me.hasRelocated = true;
 
-        if (!this.isHost && this.hostConn && this.hostConn.open) {
-          this.hostConn.send({
+        if (!this.isHost) {
+          this.sendToHost({
             type: 'PLAYER_INPUT',
             id: this.localPlayerId,
             x: me.x,
@@ -1461,8 +1664,8 @@
       if (this.phase !== 'mp_hunting') return;
       if (this.isHost) {
         this.processSeekerSearch(spotId, this.localPlayerId);
-      } else if (this.hostConn && this.hostConn.open) {
-        this.hostConn.send({
+      } else {
+        this.sendToHost({
           type: 'SEEKER_SEARCH',
           spotId: spotId,
           seekerId: this.localPlayerId
@@ -1476,8 +1679,8 @@
 
       if (this.isHost) {
         this.checkAllHidersReady();
-      } else if (this.hostConn && this.hostConn.open) {
-        this.hostConn.send({
+      } else {
+        this.sendToHost({
           type: 'HIDER_READY',
           id: this.localPlayerId
         });
@@ -1604,9 +1807,7 @@
         settings: this.settings
       };
 
-      this.connections.forEach(conn => {
-        if (conn.open) conn.send(payload);
-      });
+      this.broadcast(payload);
 
       this.clientReturnToLobby();
     }
@@ -1651,12 +1852,26 @@
     }
 
     cleanup() {
+      if (this.connectTimeout) {
+        clearTimeout(this.connectTimeout);
+        this.connectTimeout = null;
+      }
       if (this.handshakeTimer1) clearTimeout(this.handshakeTimer1);
       if (this.handshakeTimer2) clearTimeout(this.handshakeTimer2);
       if (this.handshakeTimer3) clearTimeout(this.handshakeTimer3);
       if (this.handshakeRetryTimer) clearTimeout(this.handshakeRetryTimer);
       clearInterval(this.syncInterval);
       clearInterval(this.inputInterval);
+
+      if (this.mqtt) {
+        try {
+          if (this.mqtt.isConnected && this.mqtt.isConnected()) {
+            this.mqtt.disconnect();
+          }
+        } catch (e) {}
+        this.mqtt = null;
+        this.mqttConnected = false;
+      }
 
       if (this.hostConn) {
         this.hostConn.close();

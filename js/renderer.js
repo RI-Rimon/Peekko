@@ -60,6 +60,11 @@ class ApartmentRenderer {
         tileLine: 'rgba(15, 30, 58, 0.12)',
         tileWarm: '#f6efe2',
         mallTerrazzo: '#f7f2e8',
+        parkGrass: '#dcfce7',
+        carnivalDeck: '#fef3c7',
+        amusementTile: '#fdf4ff',
+        bumperFloor: '#e0f2fe',
+        hauntedCobble: '#cbd5e1',
         concrete: '#b8c4d4',
         concreteDark: '#94a3b8',
         parkingLine: '#f59e0b',
@@ -99,6 +104,11 @@ class ApartmentRenderer {
       tileLine: 'rgba(246, 239, 226, 0.07)',
       tileWarm: '#182a4d',
       mallTerrazzo: '#1a2d52',
+      parkGrass: '#0f291e',
+      carnivalDeck: '#2e1c12',
+      amusementTile: '#1f1338',
+      bumperFloor: '#0d233a',
+      hauntedCobble: '#131926',
       concrete: '#16243e',
       concreteDark: '#111c32',
       parkingLine: 'rgba(246, 239, 226, 0.45)',
@@ -354,6 +364,11 @@ class ApartmentRenderer {
       if (r.floor === 'tile') ctx.fillStyle = p.tile;
       else if (r.floor === 'tile_warm') ctx.fillStyle = p.tileWarm;
       else if (r.floor === 'mall_terrazzo') ctx.fillStyle = p.mallTerrazzo;
+      else if (r.floor === 'park_grass') ctx.fillStyle = p.parkGrass;
+      else if (r.floor === 'carnival_deck') ctx.fillStyle = p.carnivalDeck;
+      else if (r.floor === 'amusement_tile') ctx.fillStyle = p.amusementTile;
+      else if (r.floor === 'bumper_floor') ctx.fillStyle = p.bumperFloor;
+      else if (r.floor === 'haunted_cobble') ctx.fillStyle = p.hauntedCobble;
       else if (r.floor === 'wood_dark') ctx.fillStyle = p.woodDark;
       else if (r.floor === 'concrete') ctx.fillStyle = p.concrete;
       else if (r.floor === 'concrete_dark') ctx.fillStyle = p.concreteDark;
@@ -386,6 +401,60 @@ class ApartmentRenderer {
         ctx.strokeStyle = this.theme === 'dark' ? 'rgba(246, 239, 226, 0.14)' : 'rgba(23, 44, 84, 0.14)';
         ctx.lineWidth = 4;
         ctx.strokeRect(r.x + 12, r.y + 12, r.w - 24, r.h - 24);
+      } else if (r.floor === 'park_grass') {
+        // Natural lawn with subtle stipples
+        ctx.fillStyle = this.theme === 'dark' ? 'rgba(34, 197, 94, 0.10)' : 'rgba(22, 101, 52, 0.08)';
+        for (let gx = r.x + 20; gx < r.x + r.w - 10; gx += 40) {
+          for (let gy = r.y + 20; gy < r.y + r.h - 10; gy += 40) {
+            ctx.beginPath();
+            ctx.arc(gx + ((gy % 80 === 0) ? 15 : 0), gy, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      } else if (r.floor === 'carnival_deck') {
+        // Diagonal festive boardwalk wood planks
+        ctx.strokeStyle = this.theme === 'dark' ? 'rgba(245, 158, 11, 0.09)' : 'rgba(180, 83, 9, 0.12)';
+        ctx.lineWidth = 1.2;
+        for (let dx = r.x - r.h; dx <= r.x + r.w + r.h; dx += 24) {
+          ctx.beginPath();
+          ctx.moveTo(dx, r.y);
+          ctx.lineTo(dx + r.h, r.y + r.h);
+          ctx.stroke();
+        }
+      } else if (r.floor === 'amusement_tile') {
+        // Grand amusement plaza decorative grid
+        ctx.strokeStyle = this.theme === 'dark' ? 'rgba(246, 239, 226, 0.08)' : 'rgba(168, 85, 247, 0.14)';
+        ctx.lineWidth = 1.2;
+        const size = 60;
+        for (let tx = r.x; tx <= r.x + r.w; tx += size) {
+          ctx.beginPath(); ctx.moveTo(tx, r.y); ctx.lineTo(tx, r.y + r.h); ctx.stroke();
+        }
+        for (let ty = r.y; ty <= r.y + r.h; ty += size) {
+          ctx.beginPath(); ctx.moveTo(r.x, ty); ctx.lineTo(r.x + r.w, ty); ctx.stroke();
+        }
+      } else if (r.floor === 'bumper_floor') {
+        // High-tech electric grid
+        ctx.strokeStyle = this.theme === 'dark' ? 'rgba(56, 189, 248, 0.14)' : 'rgba(2, 132, 199, 0.16)';
+        ctx.lineWidth = 1;
+        const size = 32;
+        for (let tx = r.x; tx <= r.x + r.w; tx += size) {
+          ctx.beginPath(); ctx.moveTo(tx, r.y); ctx.lineTo(tx, r.y + r.h); ctx.stroke();
+        }
+        for (let ty = r.y; ty <= r.y + r.h; ty += size) {
+          ctx.beginPath(); ctx.moveTo(r.x, ty); ctx.lineTo(r.x + r.w, ty); ctx.stroke();
+        }
+      } else if (r.floor === 'haunted_cobble') {
+        // Cobblestones
+        ctx.strokeStyle = this.theme === 'dark' ? 'rgba(148, 163, 184, 0.12)' : 'rgba(51, 65, 85, 0.18)';
+        ctx.lineWidth = 1.2;
+        const size = 36;
+        for (let cy = r.y; cy <= r.y + r.h; cy += size) {
+          const shift = (Math.floor(cy / size) % 2) * (size / 2);
+          for (let cx = r.x + shift; cx <= r.x + r.w; cx += size) {
+            this.roundRect(ctx, cx, cy, size - 4, size - 4, 6);
+            ctx.stroke();
+          }
+        }
       } else if (r.floor === 'concrete' || r.floor === 'concrete_dark') {
         ctx.strokeStyle = p.tileLine;
         ctx.lineWidth = 1.5;
@@ -1114,6 +1183,565 @@ class ApartmentRenderer {
       ctx.moveTo(spot.x + spot.w, spot.y);
       ctx.lineTo(spot.x, spot.y + spot.h);
       ctx.stroke();
+    } else if (spot.type === 'carousel_ride') {
+      const ccx = spot.x + spot.w / 2;
+      const ccy = spot.y + spot.h / 2;
+      const rad = Math.min(spot.w, spot.h) / 2 - 4;
+      // Scalloped outer circus canopy
+      ctx.fillStyle = '#be123c';
+      ctx.beginPath(); ctx.arc(ccx, ccy, rad, 0, Math.PI * 2); ctx.fill();
+      const numWedges = 12;
+      for (let i = 0; i < numWedges; i++) {
+        const a1 = (i * 2 * Math.PI) / numWedges;
+        const a2 = ((i + 1) * 2 * Math.PI) / numWedges;
+        if (i % 2 === 0) {
+          ctx.fillStyle = '#fef08a';
+          ctx.beginPath();
+          ctx.moveTo(ccx, ccy);
+          ctx.arc(ccx, ccy, rad, a1, a2);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+      // Golden deck rim
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(ccx, ccy, rad - 6, 0, Math.PI * 2); ctx.stroke();
+      // Horses on brass poles
+      const horseColors = ['#ffffff', '#f43f5e', '#38bdf8', '#fbbf24', '#a855f7', '#34d399'];
+      for (let i = 0; i < 6; i++) {
+        const a = (i * 2 * Math.PI) / 6;
+        const hx = ccx + Math.cos(a) * (rad * 0.58);
+        const hy = ccy + Math.sin(a) * (rad * 0.58);
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath(); ctx.arc(hx, hy, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = horseColors[i];
+        ctx.beginPath(); ctx.ellipse(hx, hy, 9, 5, a + Math.PI / 2, 0, Math.PI * 2); ctx.fill();
+      }
+      // Center mirrored pillar
+      ctx.fillStyle = '#e2e8f0';
+      ctx.beginPath(); ctx.arc(ccx, ccy, rad * 0.28, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath(); ctx.arc(ccx, ccy, rad * 0.12, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'ferris_wheel') {
+      const fwx = spot.x + spot.w / 2;
+      const fwy = spot.y + spot.h / 2;
+      const rad = Math.min(spot.w, spot.h) / 2 - 4;
+      // Steel foundation pylons
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(spot.x + 10, spot.y + spot.h - 6); ctx.lineTo(fwx, fwy);
+      ctx.moveTo(spot.x + spot.w - 10, spot.y + spot.h - 6); ctx.lineTo(fwx, fwy);
+      ctx.stroke();
+      // Outer ring
+      ctx.strokeStyle = '#0284c7';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(fwx, fwy, rad, 0, Math.PI * 2); ctx.stroke();
+      // Spokes
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.6)';
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < 8; i++) {
+        const a = (i * Math.PI) / 4;
+        ctx.beginPath();
+        ctx.moveTo(fwx - Math.cos(a) * rad, fwy - Math.sin(a) * rad);
+        ctx.lineTo(fwx + Math.cos(a) * rad, fwy + Math.sin(a) * rad);
+        ctx.stroke();
+      }
+      // Gondola cabins
+      const cabinColors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
+      for (let i = 0; i < 8; i++) {
+        const a = (i * Math.PI) / 4;
+        const gx = fwx + Math.cos(a) * rad;
+        const gy = fwy + Math.sin(a) * rad;
+        ctx.fillStyle = cabinColors[i];
+        this.roundRect(ctx, gx - 8, gy - 8, 16, 16, 4);
+        ctx.fill();
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(gx - 4, gy - 4, 8, 8);
+      }
+      // Hub
+      ctx.fillStyle = '#f1f5f9';
+      ctx.beginPath(); ctx.arc(fwx, fwy, 10, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'coaster_station') {
+      ctx.fillStyle = '#334155';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      // Track rails
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(spot.x + 8, spot.y + spot.h * 0.4); ctx.lineTo(spot.x + spot.w - 8, spot.y + spot.h * 0.4);
+      ctx.moveTo(spot.x + 8, spot.y + spot.h * 0.65); ctx.lineTo(spot.x + spot.w - 8, spot.y + spot.h * 0.65);
+      ctx.stroke();
+      // Yellow hazard caution stripes
+      ctx.fillStyle = '#facc15';
+      for (let sx = spot.x + 12; sx < spot.x + spot.w - 14; sx += 20) {
+        ctx.fillRect(sx, spot.y + 6, 10, 4);
+      }
+    } else if (spot.type === 'coaster_car') {
+      ctx.fillStyle = '#dc2626';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 10);
+      ctx.fill();
+      // Sleek racing stripe
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(spot.x + 6, spot.y + spot.h / 2 - 2, spot.w - 12, 4);
+      // Passenger cockpit bays
+      ctx.fillStyle = '#0f172a';
+      const bays = [0.22, 0.5, 0.78];
+      bays.forEach(rx => {
+        this.roundRect(ctx, spot.x + spot.w * rx - 10, spot.y + 6, 20, spot.h - 12, 3);
+        ctx.fill();
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillRect(spot.x + spot.w * rx - 7, spot.y + spot.h / 2 - 2, 14, 4);
+        ctx.fillStyle = '#0f172a';
+      });
+    } else if (spot.type === 'pirate_ship') {
+      ctx.fillStyle = '#5c3a21';
+      // Ship hull curved profile
+      ctx.beginPath();
+      ctx.moveTo(spot.x + 14, spot.y + spot.h / 2);
+      ctx.lineTo(spot.x + 30, spot.y + 4);
+      ctx.lineTo(spot.x + spot.w - 30, spot.y + 4);
+      ctx.lineTo(spot.x + spot.w - 14, spot.y + spot.h / 2);
+      ctx.lineTo(spot.x + spot.w - 30, spot.y + spot.h - 4);
+      ctx.lineTo(spot.x + 30, spot.y + spot.h - 4);
+      ctx.closePath();
+      ctx.fill();
+      // Timber deck planks
+      ctx.strokeStyle = '#854d27';
+      ctx.lineWidth = 1.5;
+      for (let px = spot.x + 36; px < spot.x + spot.w - 36; px += 16) {
+        ctx.beginPath(); ctx.moveTo(px, spot.y + 8); ctx.lineTo(px, spot.y + spot.h - 8); ctx.stroke();
+      }
+      // Skull medallion at center
+      const pcx = spot.x + spot.w / 2;
+      const pcy = spot.y + spot.h / 2;
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath(); ctx.arc(pcx, pcy, 12, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(pcx, pcy - 2, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillRect(pcx - 4, pcy + 3, 8, 4);
+    } else if (spot.type === 'bumper_arena') {
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 8);
+      ctx.fill();
+      // Outer rubber cushion ring
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8);
+      // Floor charging grid
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+      ctx.lineWidth = 1;
+      for (let bx = spot.x + 20; bx < spot.x + spot.w; bx += 24) {
+        ctx.beginPath(); ctx.moveTo(bx, spot.y + 6); ctx.lineTo(bx, spot.y + spot.h - 6); ctx.stroke();
+      }
+    } else if (spot.type === 'bumper_car') {
+      const bcx = spot.x + spot.w / 2;
+      const bcy = spot.y + spot.h / 2;
+      // Thick rubber bumper
+      ctx.fillStyle = '#090d16';
+      ctx.beginPath(); ctx.ellipse(bcx, bcy, spot.w / 2, spot.h / 2, 0, 0, Math.PI * 2); ctx.fill();
+      // Painted body
+      ctx.fillStyle = (spot.id && spot.id.includes('red')) ? '#ef4444' : '#3b82f6';
+      ctx.beginPath(); ctx.ellipse(bcx, bcy, spot.w / 2 - 5, spot.h / 2 - 5, 0, 0, Math.PI * 2); ctx.fill();
+      // Seat cockpit & steering wheel
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath(); ctx.arc(bcx, bcy + 2, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath(); ctx.arc(bcx, bcy - 5, 5, 0, Math.PI * 2); ctx.fill();
+      // Antenna pole
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath(); ctx.arc(bcx, bcy + spot.h / 2 - 6, 3, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'ticket_booth') {
+      ctx.fillStyle = '#b91c1c';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      // White striped awning
+      ctx.fillStyle = '#fef2f2';
+      for (let tx = spot.x + 6; tx < spot.x + spot.w - 8; tx += 16) {
+        ctx.fillRect(tx, spot.y + 4, 8, spot.h * 0.4);
+      }
+      // Service counter
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(spot.x + 8, spot.y + spot.h * 0.65, spot.w - 16, 6);
+    } else if (spot.type === 'turnstiles') {
+      ctx.fillStyle = '#475569';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      // Chrome metal turnstile arms
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 2.5;
+      [0.25, 0.5, 0.75].forEach(rx => {
+        const gx = spot.x + spot.w * rx;
+        const gy = spot.y + spot.h / 2;
+        ctx.beginPath(); ctx.arc(gx, gy, 5, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(gx - 8, gy); ctx.lineTo(gx + 8, gy); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(gx, gy - 8); ctx.lineTo(gx, gy + 8); ctx.stroke();
+      });
+    } else if (spot.type === 'info_kiosk') {
+      ctx.fillStyle = '#0284c7';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 12);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 16px "Space Grotesk", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('i', spot.x + spot.w / 2, spot.y + spot.h / 2 + 5);
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2;
+      this.roundRect(ctx, spot.x + 3, spot.y + 3, spot.w - 6, spot.h - 6, 10);
+      ctx.stroke();
+    } else if (spot.type === 'mascot_statue') {
+      ctx.fillStyle = '#64748b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 8);
+      ctx.fill();
+      // Polished gold mascot figure
+      const mcx = spot.x + spot.w / 2;
+      const mcy = spot.y + spot.h / 2;
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath(); ctx.arc(mcx, mcy - 6, 12, 0, Math.PI * 2); ctx.fill();
+      // Mascot ears
+      ctx.beginPath(); ctx.arc(mcx - 10, mcy - 16, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(mcx + 10, mcy - 16, 5, 0, Math.PI * 2); ctx.fill();
+      // Star badge on pedestal
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(mcx, mcy + 10, 5, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'balloon_cart') {
+      ctx.fillStyle = '#d97706';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      // Floating cluster of balloons
+      const bColors = ['#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6'];
+      const offsets = [[-12, -8], [0, -12], [12, -8], [-6, 6], [8, 6]];
+      const bcx = spot.x + spot.w / 2;
+      const bcy = spot.y + spot.h / 2;
+      offsets.forEach(([ox, oy], idx) => {
+        ctx.fillStyle = bColors[idx % bColors.length];
+        ctx.beginPath(); ctx.arc(bcx + ox, bcy + oy, 8, 0, Math.PI * 2); ctx.fill();
+      });
+    } else if (spot.type === 'balloon_booth') {
+      ctx.fillStyle = '#b45309';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      // Grid of target balloons on backboard
+      const bColors = ['#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#ec4899'];
+      let ci = 0;
+      for (let bx = spot.x + 10; bx < spot.x + spot.w - 10; bx += 14) {
+        for (let by = spot.y + 8; by < spot.y + spot.h - 10; by += 14) {
+          ctx.fillStyle = bColors[ci++ % bColors.length];
+          ctx.beginPath(); ctx.arc(bx, by, 5, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+      ctx.strokeStyle = '#fef08a';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8);
+    } else if (spot.type === 'ring_toss_booth') {
+      ctx.fillStyle = '#78350f';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      // Array of soda bottles
+      for (let rx = spot.x + 12; rx < spot.x + spot.w - 10; rx += 14) {
+        for (let ry = spot.y + 10; ry < spot.y + spot.h - 10; ry += 14) {
+          ctx.fillStyle = '#059669';
+          ctx.beginPath(); ctx.arc(rx, ry, 4, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = '#ef4444';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.arc(rx, ry, 6, 0, Math.PI * 2); ctx.stroke();
+        }
+      }
+    } else if (spot.type === 'duck_pond') {
+      ctx.fillStyle = '#0284c7';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 14);
+      ctx.fill();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 3;
+      this.roundRect(ctx, spot.x + 2, spot.y + 2, spot.w - 4, spot.h - 4, 12);
+      ctx.stroke();
+      // Floating yellow rubber ducks
+      const ducks = [[0.25, 0.4], [0.65, 0.3], [0.45, 0.7], [0.8, 0.65], [0.18, 0.72]];
+      ducks.forEach(([rx, ry]) => {
+        const dx = spot.x + spot.w * rx;
+        const dy = spot.y + spot.h * ry;
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath(); ctx.arc(dx, dy, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#f97316';
+        ctx.beginPath(); ctx.arc(dx + 3, dy - 1, 2, 0, Math.PI * 2); ctx.fill();
+      });
+    } else if (spot.type === 'popcorn_cart') {
+      ctx.fillStyle = '#dc2626';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      // Glass box full of fluffy popcorn
+      ctx.fillStyle = '#fef08a';
+      this.roundRect(ctx, spot.x + 8, spot.y + 6, spot.w - 16, spot.h - 12, 4);
+      ctx.fill();
+      ctx.fillStyle = '#ca8a04';
+      for (let px = spot.x + 12; px < spot.x + spot.w - 14; px += 8) {
+        ctx.beginPath(); ctx.arc(px, spot.y + spot.h / 2, 3, 0, Math.PI * 2); ctx.fill();
+      }
+      // Red wheels
+      ctx.fillStyle = '#7f1d1d';
+      ctx.beginPath(); ctx.arc(spot.x + 6, spot.y + spot.h / 2, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(spot.x + spot.w - 6, spot.y + spot.h / 2, 5, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'cotton_candy_cart') {
+      ctx.fillStyle = '#38bdf8';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      // Fluffy pastel pink & blue candy clouds
+      const ccx = spot.x + spot.w / 2;
+      const ccy = spot.y + spot.h / 2;
+      ctx.fillStyle = '#f472b6';
+      ctx.beginPath(); ctx.arc(ccx - 10, ccy, 11, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#a5f3fc';
+      ctx.beginPath(); ctx.arc(ccx + 10, ccy, 11, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'ice_cream_stand') {
+      ctx.fillStyle = '#fef3c7';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.fillStyle = '#06b6d4';
+      ctx.fillRect(spot.x + 6, spot.y + 4, spot.w - 12, 6);
+      // Ice cream tubs
+      const tubColors = ['#f43f5e', '#a855f7', '#10b981', '#f59e0b'];
+      tubColors.forEach((col, idx) => {
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(spot.x + 16 + idx * 18, spot.y + spot.h / 2 + 2, 6, 0, Math.PI * 2); ctx.fill();
+      });
+    } else if (spot.type === 'pretzel_cart') {
+      ctx.fillStyle = '#b45309';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.fillStyle = '#fde68a';
+      this.roundRect(ctx, spot.x + 8, spot.y + 6, spot.w - 16, spot.h - 12, 4);
+      ctx.fill();
+      // Twisted pretzel graphics
+      ctx.strokeStyle = '#92400e';
+      ctx.lineWidth = 2;
+      [0.32, 0.68].forEach(rx => {
+        const prx = spot.x + spot.w * rx;
+        const pry = spot.y + spot.h / 2;
+        ctx.beginPath(); ctx.arc(prx, pry, 6, 0, Math.PI * 2); ctx.stroke();
+      });
+    } else if (spot.type === 'park_bench') {
+      ctx.fillStyle = '#78350f';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      // Wood slats
+      ctx.strokeStyle = '#92400e';
+      ctx.lineWidth = 1.5;
+      for (let by = spot.y + 8; by < spot.y + spot.h; by += 9) {
+        ctx.beginPath(); ctx.moveTo(spot.x + 4, by); ctx.lineTo(spot.x + spot.w - 4, by); ctx.stroke();
+      }
+      // Cast iron armrests
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(spot.x + 4, spot.y + 4, 5, spot.h - 8);
+      ctx.fillRect(spot.x + spot.w - 9, spot.y + 4, 5, spot.h - 8);
+    } else if (spot.type === 'tiered_fountain') {
+      const fcx = spot.x + spot.w / 2;
+      const fcy = spot.y + spot.h / 2;
+      const rad = Math.min(spot.w, spot.h) / 2 - 4;
+      // Stone base
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath(); ctx.arc(fcx, fcy, rad, 0, Math.PI * 2); ctx.fill();
+      // Outer water pool
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath(); ctx.arc(fcx, fcy, rad - 6, 0, Math.PI * 2); ctx.fill();
+      // Middle stone tier
+      ctx.fillStyle = '#cbd5e1';
+      ctx.beginPath(); ctx.arc(fcx, fcy, rad * 0.58, 0, Math.PI * 2); ctx.fill();
+      // Middle water tier
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath(); ctx.arc(fcx, fcy, rad * 0.48, 0, Math.PI * 2); ctx.fill();
+      // Center fountain plume
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(fcx, fcy, rad * 0.22, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'park_gazebo') {
+      const gcx = spot.x + spot.w / 2;
+      const gcy = spot.y + spot.h / 2;
+      const rad = Math.min(spot.w, spot.h) / 2 - 4;
+      // Octagonal timber deck
+      ctx.fillStyle = '#a16207';
+      ctx.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const a = (i * Math.PI) / 4;
+        const px = gcx + Math.cos(a) * rad;
+        const py = gcy + Math.sin(a) * rad;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      // Roof struts
+      ctx.strokeStyle = '#451a03';
+      ctx.lineWidth = 2.5;
+      for (let i = 0; i < 8; i++) {
+        const a = (i * Math.PI) / 4;
+        ctx.beginPath();
+        ctx.moveTo(gcx, gcy);
+        ctx.lineTo(gcx + Math.cos(a) * rad, gcy + Math.sin(a) * rad);
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath(); ctx.arc(gcx, gcy, 8, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'operator_booth') {
+      ctx.fillStyle = '#334155';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      // Glass window & console buttons
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(spot.x + 6, spot.y + 4, spot.w - 12, spot.h * 0.35);
+      // Red emergency stop button
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath(); ctx.arc(spot.x + spot.w / 2, spot.y + spot.h * 0.72, 4, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'boarding_ramp') {
+      ctx.fillStyle = '#475569';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      // Tread plates / slats
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1.5;
+      for (let rx = spot.x + 8; rx < spot.x + spot.w - 6; rx += 12) {
+        ctx.beginPath(); ctx.moveTo(rx, spot.y + 4); ctx.lineTo(rx, spot.y + spot.h - 4); ctx.stroke();
+      }
+    } else if (spot.type === 'photo_booth') {
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      // Red curtain
+      ctx.fillStyle = '#dc2626';
+      ctx.fillRect(spot.x + 6, spot.y + spot.h - 10, spot.w - 12, 6);
+      // Camera flash icon
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath(); ctx.arc(spot.x + spot.w / 2, spot.y + spot.h * 0.4, 6, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'souvenir_stall') {
+      ctx.fillStyle = '#7c2d12';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      // Shelves with colorful plushies and souvenirs
+      const itemColors = ['#f43f5e', '#3b82f6', '#fbbf24', '#10b981', '#a855f7'];
+      let ii = 0;
+      for (let sx = spot.x + 10; sx < spot.x + spot.w - 10; sx += 14) {
+        ctx.fillStyle = itemColors[ii++ % itemColors.length];
+        ctx.beginPath(); ctx.arc(sx, spot.y + spot.h / 2, 5, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (spot.type === 'safety_lockers') {
+      ctx.fillStyle = '#ca8a04';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      ctx.strokeStyle = '#713f12';
+      ctx.lineWidth = 1.5;
+      for (let lx = spot.x + 14; lx < spot.x + spot.w - 10; lx += 14) {
+        ctx.strokeRect(lx - 6, spot.y + 4, 12, spot.h - 8);
+      }
+    } else if (spot.type === 'claw_machine') {
+      ctx.fillStyle = '#9333ea';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      // Illuminated showcase window
+      ctx.fillStyle = 'rgba(236, 72, 153, 0.4)';
+      ctx.fillRect(spot.x + 6, spot.y + 6, spot.w - 12, spot.h - 18);
+      // Mechanical claw
+      const cmx = spot.x + spot.w / 2;
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(cmx, spot.y + 6); ctx.lineTo(cmx, spot.y + 16); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cmx, spot.y + 18, 4, 0, Math.PI); ctx.stroke();
+      // Joystick
+      ctx.fillStyle = '#f43f5e';
+      ctx.beginPath(); ctx.arc(cmx, spot.y + spot.h - 6, 3, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'arcade_cabinets') {
+      ctx.fillStyle = '#0f172a';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      // Glowing neon CRT screens
+      const screens = [0.28, 0.72];
+      screens.forEach(rx => {
+        const scx = spot.x + spot.w * rx;
+        ctx.fillStyle = '#06b6d4';
+        ctx.fillRect(scx - 12, spot.y + 6, 24, spot.h - 20);
+        // Illuminated marquee
+        ctx.fillStyle = '#f43f5e';
+        ctx.fillRect(scx - 12, spot.y + 4, 24, 3);
+        // Joystick
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath(); ctx.arc(scx, spot.y + spot.h - 8, 3, 0, Math.PI * 2); ctx.fill();
+      });
+    } else if (spot.type === 'prize_counter') {
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      // Glass display cases with big plush toys
+      ctx.fillStyle = '#f472b6';
+      ctx.beginPath(); ctx.arc(spot.x + 22, spot.y + spot.h / 2, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath(); ctx.arc(spot.x + spot.w - 22, spot.y + spot.h / 2, 9, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'haunted_castle') {
+      ctx.fillStyle = '#1e1b4b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 8);
+      ctx.fill();
+      // Gothic stone battlements
+      ctx.strokeStyle = '#4338ca';
+      ctx.lineWidth = 3;
+      this.roundRect(ctx, spot.x + 3, spot.y + 3, spot.w - 6, spot.h - 6, 6);
+      ctx.stroke();
+      // Glowing eerie doorway
+      ctx.fillStyle = '#a855f7';
+      const hcx = spot.x + spot.w / 2;
+      ctx.beginPath();
+      ctx.arc(hcx, spot.y + spot.h - 8, 10, Math.PI, 0);
+      ctx.fill();
+    } else if (spot.type === 'ghost_cart') {
+      ctx.fillStyle = '#18181b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      // Glowing skull headlights
+      ctx.fillStyle = '#22c55e';
+      ctx.beginPath(); ctx.arc(spot.x + 8, spot.y + 8, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(spot.x + spot.w - 8, spot.y + 8, 4, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'fortune_tent') {
+      const fcx = spot.x + spot.w / 2;
+      const fcy = spot.y + spot.h / 2;
+      ctx.fillStyle = '#581c87';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 12);
+      ctx.fill();
+      // Golden mystical stars
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath(); ctx.arc(spot.x + 12, spot.y + 12, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(spot.x + spot.w - 12, spot.y + 12, 3, 0, Math.PI * 2); ctx.fill();
+      // Glowing crystal ball
+      ctx.fillStyle = '#c084fc';
+      ctx.beginPath(); ctx.arc(fcx, fcy, 12, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(fcx - 3, fcy - 3, 4, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'cemetery_prop') {
+      ctx.fillStyle = '#334155';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      // Gravestones
+      [0.25, 0.72].forEach(rx => {
+        const gx = spot.x + spot.w * rx;
+        ctx.fillStyle = '#64748b';
+        ctx.beginPath();
+        ctx.arc(gx, spot.y + 14, 8, Math.PI, 0);
+        ctx.lineTo(gx + 8, spot.y + spot.h - 6);
+        ctx.lineTo(gx - 8, spot.y + spot.h - 6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillRect(gx - 4, spot.y + 18, 8, 2);
+      });
+    } else if (spot.type === 'cauldron_prop') {
+      const cx = spot.x + spot.w / 2;
+      const cy = spot.y + spot.h / 2;
+      // Black cast-iron pot
+      ctx.fillStyle = '#09090b';
+      ctx.beginPath(); ctx.arc(cx, cy, spot.w / 2 - 2, 0, Math.PI * 2); ctx.fill();
+      // Glowing green bubbling potion
+      ctx.fillStyle = '#22c55e';
+      ctx.beginPath(); ctx.arc(cx, cy, spot.w / 2 - 8, 0, Math.PI * 2); ctx.fill();
+      // Bubbles
+      ctx.fillStyle = '#86efac';
+      ctx.beginPath(); ctx.arc(cx - 5, cy - 4, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + 6, cy + 3, 3, 0, Math.PI * 2); ctx.fill();
     }
 
     // Highlight border if player is right next to this object

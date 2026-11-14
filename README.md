@@ -2,7 +2,7 @@
 
 **Hide smart. Search carefully. Outsmart your opponent.**
 
-Peekko is a fast-paced, browser-based hide-and-seek strategy game where you either hide from an intelligent AI Seeker or hunt it down across four detailed environments — now featuring **"Play with Friends" (Custom Room)** online multiplayer for 2 to 5 players!
+Peekko is a fast-paced, browser-based hide-and-seek strategy game where you either hide from intelligent AI Seekers or hunt them down across five detailed environments — now featuring **"Play with Friends" (Custom Room)** online multiplayer for 2 to 5 players with instant cross-network mobile & Wi-Fi support!
 
 Choose your role, explore handcrafted maps, use strategic hiding spots, and outsmart your opponents through stealth, positioning, and split-second decisions.
 
@@ -40,9 +40,9 @@ Your single-player score, wins, losses, selected map, theme, volume, and difficu
 
 Connect with friends and play private multiplayer matches (2 to 5 players) without requiring any backend server, accounts, or API keys:
 
-- **Serverless WebRTC P2P:** Powered by PeerJS over WebRTC using a resilient Host-Authoritative state sync architecture.
-- **5-Character Room Codes:** Generate short, shareable codes (e.g. `PK492`) with one-click clipboard copying.
-- **Interactive Lobby Table:** Live player list with high-contrast color badges, ready statuses, and host-directed Seeker assignment.
+- **Cross-Network Hybrid Transport (MQTT + WebRTC):** Operates over secure WebSockets with public MQTT relay plus PeerJS WebRTC mesh. 100% reliable connections across Mobile Data (4G/5G CGNAT) and Wi-Fi networks worldwide without timeouts or port blocks!
+- **5-Character Room Codes & Shareable Invite Links:** Generate short room codes (e.g. `PK492`) with "📋 Copy Code", "📋 Paste Code", and "🔗 Invite Link" (`?room=PKXYZ`) for instant one-click auto-joining.
+- **Interactive Lobby Table:** Live player list with high-contrast color badges, ready statuses, map selector, and player-directed role selection (Hider / Seeker).
 - **25-Second Hiding Phase:** Hiders receive 25 seconds to navigate the map and hide in spots. The Seeker's movement is locked and all Hiders remain completely invisible to the Seeker during this countdown.
 - **Fair Asymmetric Visibility:** Hiders can see the Seeker, fellow Hiders, and the Seeker's flashlight cone in Night mode. The Seeker *cannot* see hidden players or players behind walls without direct line-of-sight.
 - **Mid-Hunt Relocation:** Hiders can leave their spot mid-search and sprint to a new location if the Seeker is getting uncomfortably close.
@@ -56,9 +56,9 @@ Connect with friends and play private multiplayer matches (2 to 5 players) witho
 - Each role has its own objectives, scoring rules, and gameplay mechanics.
 - Different strategies are required to survive or successfully locate opponents.
 
-### 🗺️ Four Detailed Maps
+### 🗺️ Five Detailed Maps
 
-Explore four unique environments, each featuring its own atmosphere, layout, obstacles, and hiding locations:
+Explore five unique environments, each featuring its own atmosphere, layout, obstacles, and hiding locations:
 
 | Map | Environment | Hiding Spots |
 |---|---|---:|
@@ -66,6 +66,7 @@ Explore four unique environments, each featuring its own atmosphere, layout, obs
 | Heritage Manor | Grand atrium, banquet hall, parlor, suites, and library | 20 |
 | Underground Basement | Parked cars, elevators, boiler room, lockers, and pillars | 26 |
 | Grand Shopping Mall | Storefronts, concourse, food court, kiosks, and retail aisles | 26 |
+| Wonderland Park | Amusement rides, Ferris wheel, carousel, midway booths & haunted zone | 40 |
 
 ### 🤖 Intelligent AI Seeker (Solo Mode)
 
@@ -92,10 +93,10 @@ When playing as the Seeker, empty searches provide tactile proximity hints:
 | Seeker Attempts | 13 | 10 | 7 |
 | Bot Checks as Hider | 7 (1 Bot) | 10 (1 Bot) | 14 (2 Bots: 7 each) |
 | Active Seekers as Hider | 1 | 1 | 2 (Alpha & Beta) |
-| Bot Speed | Slower | Standard | Faster |
+| Bot Speed | Slower | Standard | Balanced (~1.2x pacing) |
 | Search Hints | Hot, Warm, Cool | Hot, Warm, Cool | Hot only |
 
-- **Hard Mode Dual Seekers:** In Hard Mode when playing as Hider, two seeker bots (Amber Seeker Alpha and Crimson Seeker Beta) hunt simultaneously across different rooms with independent search paths and 14 combined checks. When playing as Seeker, the challenge remains 7 strategic attempts to locate the hidden bot.
+- **Hard Mode Dual Seekers (Full Persistence):** In Hard Mode when playing as Hider, two seeker bots (Amber Seeker Alpha and Crimson Seeker Beta) hunt simultaneously across different rooms with independent search paths and 14 combined checks. Both bots remain actively hunting and visible on screen until the very end of the round with balanced realistic pacing (~1.2x ratio). When playing as Seeker, the challenge remains 7 strategic attempts to locate the hidden bot.
 
 ### 🔊 Procedural Web Audio Engine
 
@@ -188,7 +189,7 @@ Peekko is developed with clean web standards without external game engines or fr
 | HTML5 & Canvas API | Application structure, top-down map, character & visual-effect rendering |
 | CSS3 | Responsive UI, theme variables, glassmorphic HUD styling |
 | Vanilla JavaScript (ES6) | Game state, navigation mesh, bot AI, and collision physics |
-| PeerJS (WebRTC) | Peer-to-peer data mesh for serverless custom room multiplayer |
+| PeerJS & Paho MQTT | Cross-network hybrid WebRTC + WebSocket relay for seamless Mobile Data & Wi-Fi multiplayer |
 | Web Audio API | Procedural sound generation, spatial attenuation, and proximity heartbeat |
 | localStorage | Local progress, high scores, and preference persistence |
 

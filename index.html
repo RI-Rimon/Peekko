@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap">
   </noscript>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 </head>
 <body>
   <div id="app">
@@ -188,6 +189,15 @@
                 <div class="map-opt-name">Grand Shopping Mall</div>
                 <div class="map-opt-desc">Concourse, Food Court & Retail Aisles</div>
               </button>
+
+              <button class="map-option" data-map="5">
+                <div class="map-opt-head">
+                  <span class="map-num">MAP 05</span>
+                  <span class="map-spots">40 Spots</span>
+                </div>
+                <div class="map-opt-name">Wonderland Park</div>
+                <div class="map-opt-desc">Amusement Rides, Midway & Plaza</div>
+              </button>
             </div>
           </div>
 
@@ -351,6 +361,7 @@
                 <button type="button" class="mp-pill mp-setting-map" data-map="2">Map 2</button>
                 <button type="button" class="mp-pill mp-setting-map" data-map="3">Map 3</button>
                 <button type="button" class="mp-pill mp-setting-map" data-map="4">Map 4</button>
+                <button type="button" class="mp-pill mp-setting-map" data-map="5">Map 5</button>
               </div>
             </div>
 
@@ -397,7 +408,10 @@
 
           <div class="mp-form-group">
             <label for="mp-join-code">Enter Room Code</label>
-            <input type="text" id="mp-join-code" class="mp-input code-input" maxlength="5" placeholder="e.g. PK492" autocomplete="off" spellcheck="false">
+            <div class="mp-code-input-row">
+              <input type="text" id="mp-join-code" class="mp-input code-input" maxlength="5" placeholder="e.g. PK492" autocomplete="off" spellcheck="false">
+              <button type="button" id="btn-paste-code" class="btn-paste-code" title="Paste Code from Clipboard">📋 Paste</button>
+            </div>
           </div>
 
           <div id="mp-join-error" class="mp-error-msg"></div>
@@ -414,6 +428,7 @@
               <span class="code-label">ROOM CODE:</span>
               <strong id="lobby-room-code" class="code-val">PK---</strong>
               <button id="btn-copy-code" class="btn-copy-code" type="button" title="Copy Room Code">📋 Copy Code</button>
+              <button id="btn-copy-link" class="btn-copy-link" type="button" title="Copy Shareable Invite Link">🔗 Invite Link</button>
             </div>
             <div class="lobby-meta-chips">
               <span id="lobby-map-name" class="meta-chip">Penthouse</span>
@@ -513,12 +528,12 @@
     </div>
   </div>
 
-  <script src="js/config.js?v=9.0"></script>
-  <script src="js/audio.js?v=9.0"></script>
-  <script src="js/apartment.js?v=9.0"></script>
-  <script src="js/renderer.js?v=9.0"></script>
-  <script src="js/multiplayer.js?v=9.0"></script>
-  <script src="js/game.js?v=9.0"></script>
+  <script src="js/config.js?v=10.0"></script>
+  <script src="js/audio.js?v=10.0"></script>
+  <script src="js/apartment.js?v=10.0"></script>
+  <script src="js/renderer.js?v=10.0"></script>
+  <script src="js/multiplayer.js?v=10.0"></script>
+  <script src="js/game.js?v=10.0"></script>
   <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
 </body>
 </html>

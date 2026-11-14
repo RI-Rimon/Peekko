@@ -1311,6 +1311,45 @@ html[data-theme="light"] .modal-overlay {
   box-shadow: 0 0 12px rgba(168, 85, 247, 0.35);
 }
 
+.mp-code-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.mp-code-input-row .code-input {
+  flex: 1;
+  font-family: 'Space Grotesk', monospace;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.btn-paste-code {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  color: #d8b4fe;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.18s ease;
+}
+
+.btn-paste-code:hover {
+  background: rgba(168, 85, 247, 0.3);
+  border-color: #a855f7;
+  color: #ffffff;
+}
+
 .code-input {
   font-family: 'Space Grotesk', monospace;
   font-size: 1.2rem;
@@ -1471,6 +1510,30 @@ html[data-theme="light"] .modal-overlay {
 }
 
 .btn-copy-code.copied {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #10b981;
+  color: #34d399;
+}
+
+.btn-copy-link {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #7dd3fc;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btn-copy-link:hover {
+  background: rgba(56, 189, 248, 0.24);
+  border-color: #38bdf8;
+  color: #ffffff;
+}
+
+.btn-copy-link.copied {
   background: rgba(16, 185, 129, 0.25);
   border-color: #10b981;
   color: #34d399;

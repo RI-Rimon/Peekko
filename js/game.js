@@ -171,7 +171,7 @@
           const wins = Math.max(0, Math.floor(Number(parsed.wins) || 0));
           const losses = Math.max(0, Math.floor(Number(parsed.losses) || 0));
           const theme = parsed.theme === 'light' ? 'light' : 'dark';
-          const mapId = [1, 2, 3, 4].includes(Number(parsed.mapId)) ? Number(parsed.mapId) : 1;
+          const mapId = [1, 2, 3, 4, 5].includes(Number(parsed.mapId)) ? Number(parsed.mapId) : 1;
           const difficulty = ['easy', 'normal', 'hard'].includes(parsed.difficulty) ? parsed.difficulty : 'normal';
           const volume = typeof parsed.volume === 'number' && !isNaN(parsed.volume)
             ? Math.max(0, Math.min(1, parsed.volume))
@@ -974,6 +974,7 @@
       }
 
       this.phase = 'bot_seeking';
+      this.totalBotChecksDone = 0;
       this.hasRelocatedDuringSeek = false;
       this.lastRelocateRoomId = null;
       this.phasePill.textContent = 'SEEKER HUNTING';
@@ -1416,8 +1417,8 @@
 
     updateBotSeeker(dt) {
       const activeBots = (this.botSeekers && this.botSeekers.length > 0)
-        ? this.botSeekers.filter(b => b && b.active && !b.done)
-        : (this.botSeeker && this.botSeeker.active && !this.botSeeker.done ? [this.botSeeker] : []);
+        ? this.botSeekers.filter(b => b && b.active)
+        : (this.botSeeker && this.botSeeker.active ? [this.botSeeker] : []);
 
       if (activeBots.length === 0) return;
 
@@ -1463,11 +1464,20 @@
           continue;
         }
 
-        const currentSpot = bot.targets[bot.currentTargetIndex];
+        let currentSpot = bot.targets[bot.currentTargetIndex];
         if (!currentSpot) {
-          bot.done = true;
-          bot.active = false;
-          continue;
+          // If bot reached end of targets, pick another spot so it never vanishes or stalls
+          const otherTargetIds = new Set();
+          for (const ob of activeBots) {
+            if (ob !== bot && ob.targets[ob.currentTargetIndex]) {
+              otherTargetIds.add(ob.targets[ob.currentTargetIndex].id);
+            }
+          }
+          const freshPool = this.apt.hidingSpots.filter(s => !otherTargetIds.has(s.id));
+          currentSpot = freshPool[Math.floor(Math.random() * freshPool.length)] || this.apt.hidingSpots[0];
+          bot.targets.push(currentSpot);
+          bot.waypoints = this.apt.findPathToSpot(bot.x, bot.y, currentSpot);
+          bot.waypointIndex = 0;
         }
 
         if (bot.scanningSpotId) {
@@ -1497,31 +1507,35 @@
             Sound.playEmpty();
 
             bot.currentTargetIndex++;
+            this.totalBotChecksDone = (this.totalBotChecksDone || 0) + 1;
 
             const allConfiguredBots = (this.botSeekers && this.botSeekers.length > 0) ? this.botSeekers : [bot];
-            const remaining = allConfiguredBots.reduce((sum, b) => {
-              if (b.done) return sum;
-              return sum + Math.max(0, b.targets.length - b.currentTargetIndex);
-            }, 0);
+            const remaining = Math.max(0, this.maxAttempts - this.totalBotChecksDone);
             this.attemptsValue.textContent = `${remaining} / ${this.maxAttempts}`;
 
+            if (remaining <= 0) {
+              const stayedStillBonus = !this.hasRelocatedDuringSeek ? CFG.pointsUnmovedBonus : 0;
+              const totalGain = CFG.pointsWinBase + stayedStillBonus;
+              const botLabel = allConfiguredBots.length > 1 ? 'Both Seekers' : 'The Seeker';
+              const desc = stayedStillBonus > 0
+                ? `${botLabel} searched all spots (${this.maxAttempts} checks) and missed you! You earned +${CFG.pointsUnmovedBonus} extra points for staying in your original spot.`
+                : `${botLabel} searched all spots (${this.maxAttempts} checks) and missed you after you switched spots mid-search.`;
+
+              this.endRound(true, 'You Outsmarted the Seeker', desc, totalGain);
+              return;
+            }
+
+            // Ensure this bot always has a next target so it keeps hunting alongside the other bot
             if (bot.currentTargetIndex >= bot.targets.length) {
-              bot.done = true;
-              bot.active = false;
-
-              const allBotsDone = allConfiguredBots.every(b => b.done || !b.active);
-              if (allBotsDone) {
-                const stayedStillBonus = !this.hasRelocatedDuringSeek ? CFG.pointsUnmovedBonus : 0;
-                const totalGain = CFG.pointsWinBase + stayedStillBonus;
-                const botLabel = allConfiguredBots.length > 1 ? 'Both Seekers' : 'The Seeker';
-                const desc = stayedStillBonus > 0
-                  ? `${botLabel} searched all spots (${this.maxAttempts} checks) and missed you! You earned +${CFG.pointsUnmovedBonus} extra points for staying in your original spot.`
-                  : `${botLabel} searched all spots (${this.maxAttempts} checks) and missed you after you switched spots mid-search.`;
-
-                this.endRound(true, 'You Outsmarted the Seeker', desc, totalGain);
-                return;
+              const otherTargetIds = new Set();
+              for (const ob of allConfiguredBots) {
+                if (ob !== bot && ob.targets[ob.currentTargetIndex]) {
+                  otherTargetIds.add(ob.targets[ob.currentTargetIndex].id);
+                }
               }
-              continue;
+              const freshCandidates = this.apt.hidingSpots.filter(s => !otherTargetIds.has(s.id) && s.id !== currentSpot.id);
+              const nextPick = freshCandidates[Math.floor(Math.random() * freshCandidates.length)] || this.apt.hidingSpots[0];
+              bot.targets.push(nextPick);
             }
 
             let nextSpot = bot.targets[bot.currentTargetIndex];
