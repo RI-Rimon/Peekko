@@ -43,7 +43,7 @@ Connect with friends and play private multiplayer matches (2 to 5 players) witho
 - **Cross-Network Hybrid Transport (MQTT + WebRTC):** Operates over secure WebSockets with public MQTT relay plus PeerJS WebRTC mesh. 100% reliable connections across Mobile Data (4G/5G CGNAT) and Wi-Fi networks worldwide without timeouts or port blocks!
 - **5-Character Room Codes & Shareable Invite Links:** Generate short room codes (e.g. `PK492`) with "📋 Copy Code", "📋 Paste Code", and "🔗 Invite Link" (`?room=PKXYZ`) for instant one-click auto-joining.
 - **Interactive Lobby Table:** Live player list with high-contrast color badges, ready statuses, map selector, and player-directed role selection (Hider / Seeker).
-- **25-Second Hiding Phase:** Hiders receive 25 seconds to navigate the map and hide in spots. The Seeker's movement is locked and all Hiders remain completely invisible to the Seeker during this countdown.
+- **20-Second Hiding Phase:** Hiders receive 20 seconds to navigate the map and hide in spots. The Seeker's movement is locked and all Hiders remain completely invisible to the Seeker during this countdown.
 - **Fair Asymmetric Visibility:** Hiders can see the Seeker, fellow Hiders, and the Seeker's flashlight cone in Night mode. The Seeker *cannot* see hidden players or players behind walls without direct line-of-sight.
 - **Mid-Hunt Relocation:** Hiders can leave their spot mid-search and sprint to a new location if the Seeker is getting uncomfortably close.
 - **Spectator Elimination Mode:** When caught, a player becomes an active spectator able to watch the rest of the hunt unfold.
@@ -135,7 +135,7 @@ Peekko generates all audio effects procedurally using the **Web Audio API** with
 3. **Join Room:** Friends click **Join Room**, enter their name and the room code, and click **Join Room**.
 4. **Lobby & Roles:** In the lobby, the Host can toggle who acts as the Seeker (exactly 1 Seeker required).
 5. **Start Match:** Once 2 to 5 players are connected, the Host clicks **Start Match**.
-6. **25-Second Hiding Phase:** Hiders have 25 seconds to infiltrate the map and hide (`Space`). The Seeker's movement is locked and all Hiders are completely invisible during this countdown.
+6. **20-Second Hiding Phase:** Hiders have 20 seconds to infiltrate the map and hide (`Space`). The Seeker's movement is locked and all Hiders are completely invisible during this countdown.
 7. **The Hunt:** When the countdown hits 0, the Seeker is unleashed to search rooms, inspect spots (`Space`), and catch any Hiders spotted in the open!
 8. **Results & Rematch:** View the final ranked podium with stealth bonus justifications and click **Return to Lobby** to play again with new roles.
 

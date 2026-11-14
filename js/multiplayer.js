@@ -2,7 +2,7 @@
    Peekko - PeerJS Host-Authoritative Custom Room Multiplayer
    Real-Time P2P WebRTC mesh for 2 to 5 Players with STUN/TURN
    Cross-Network Mobile Data & Wi-Fi NAT Traversal Support,
-   Every-Player Lobby Role Switching, 25s Hiding Countdown,
+   Every-Player Lobby Role Switching, 20s Hiding Countdown,
    Mobile Touch Controls & Detailed End-of-Match Leaderboard
    ======================================================== */
 
@@ -10,7 +10,7 @@
   'use strict';
 
   const MP_CFG = (typeof window !== 'undefined' && window.PEEKKO_CONFIG && window.PEEKKO_CONFIG.multiplayer) || {
-    hidingPhaseSeconds: 25,
+    hidingPhaseSeconds: 20,
     minPlayers: 2,
     maxPlayers: 5,
     defaultAttempts: 10,
@@ -768,9 +768,10 @@
       if (msg.type === 'JOIN') {
         const clientId = msg.id || (conn && conn.peer) || 'guest_' + Math.random().toString(16).slice(2, 8);
 
-        // Check if player already registered (prevent duplicate rows on handshake retries)
-        const existingPlayer = this.players.find(p => p.id === clientId);
+        // Check if player already registered (prevent duplicate rows on handshake retries or peer/MQTT dual-connect)
+        const existingPlayer = this.players.find(p => p.id === clientId || (msg.name && p.name === msg.name));
         if (existingPlayer) {
+          existingPlayer.id = clientId;
           existingPlayer.name = msg.name || existingPlayer.name;
           if (conn && conn.peer) this.connections.set(conn.peer, conn);
           this.sendToClient(clientId, {
@@ -877,6 +878,7 @@
       }
 
       if (msg.type === 'WELCOME') {
+        if (msg.localId) this.localPlayerId = msg.localId;
         this.roomCode = msg.roomCode;
         this.settings = msg.settings;
         this.players = msg.players;
@@ -1143,7 +1145,7 @@
     }
 
     /* ========================================================
-       MATCH START & 25-SECOND HIDING PHASE
+       MATCH START & 20-SECOND HIDING PHASE
        ======================================================== */
     startMatch() {
       if (!this.isHost || this.players.length < MP_CFG.minPlayers) return;
@@ -1171,7 +1173,7 @@
         p.hasRelocated = false;
       });
 
-      // Broadcast MATCH_START
+      // Broadcast MATCH_START with immediate send + redundancy pulses
       const startPayload = {
         type: 'MATCH_START',
         settings: this.settings,
@@ -1180,6 +1182,12 @@
         attemptsLimit: this.attemptsLeft
       };
       this.broadcast(startPayload);
+      setTimeout(() => {
+        if (this.phase === 'mp_hiding_countdown') this.broadcast(startPayload);
+      }, 120);
+      setTimeout(() => {
+        if (this.phase === 'mp_hiding_countdown') this.broadcast(startPayload);
+      }, 300);
 
       this.clientStartMatch();
       this.startHostAuthoritativeLoop();
@@ -1187,28 +1195,43 @@
 
     clientStartMatch() {
       this.closeModal();
+      if (this.modal) this.modal.classList.add('hidden');
+      if (this.lobbyView) this.lobbyView.classList.add('hidden');
+      if (this.panelJoin) this.panelJoin.classList.add('hidden');
+      if (this.panelCreate) this.panelCreate.classList.add('hidden');
       if (this.resultModal) this.resultModal.classList.add('hidden');
+      if (this.game.pauseModal) this.game.pauseModal.classList.add('hidden');
 
       // Setup game instance
       this.game.isMultiplayer = true;
       this.game.mpManager = this;
       this.game.selectedMapId = this.settings.mapId;
       this.game.apt.loadMap(this.settings.mapId);
+      this.game.apt.resetSpots();
       this.game.renderer.setTheme(this.settings.lightingMode);
       this.game.applyTheme(this.settings.lightingMode);
 
-      // Find local player
-      const me = this.players.find(p => p.id === this.localPlayerId);
+      // Reconcile and find local player
+      let me = this.players.find(p => p.id === this.localPlayerId);
+      if (!me) {
+        me = this.players.find(p => p.name === this.localPlayerName);
+      }
+      if (!me) {
+        me = this.isHost ? this.players.find(p => p.isHost) : this.players.find(p => !p.isHost);
+      }
       if (me) {
+        this.localPlayerId = me.id;
         this.game.role = me.role;
         this.game.player.x = me.x;
         this.game.player.y = me.y;
         this.game.player.angle = me.angle;
         this.game.player.isHidden = false;
         this.game.player.hiddenSpot = null;
+      } else {
+        this.game.role = this.isHost ? 'seeker' : 'hider';
       }
 
-      this.game.phase = 'mp_hiding_countdown';
+      this.game.phase = this.phase || 'mp_hiding_countdown';
       this.game.menuScreen.classList.add('hidden');
       this.game.topHud.classList.remove('hidden');
       this.game.attemptsBox.classList.remove('hidden');
@@ -1270,10 +1293,15 @@
       const syncData = {
         type: 'GAME_SYNC',
         phase: this.phase,
-        countdown: Math.max(0, this.countdown),
+        countdown: Math.max(0, Math.round(this.countdown * 10) / 10),
         attemptsLeft: this.attemptsLeft,
+        settings: this.settings,
         players: this.players.map(p => ({
           id: p.id,
+          name: p.name,
+          role: p.role,
+          color: p.color,
+          isHost: p.isHost,
           x: Math.round(p.x * 10) / 10,
           y: Math.round(p.y * 10) / 10,
           angle: Math.round(p.angle * 100) / 100,
@@ -1688,6 +1716,29 @@
     }
 
     applyGameSync(sync) {
+      if (!sync) return;
+
+      // Auto-start match on client if match is active but client is still in lobby
+      if ((!this.game.isMultiplayer || this.phase === 'lobby' || this.game.phase === 'menu') &&
+          (sync.phase === 'mp_hiding_countdown' || sync.phase === 'mp_hunting')) {
+        if (sync.settings) this.settings = sync.settings;
+        if (sync.players && sync.players.length > 0) {
+          sync.players.forEach(sp => {
+            const ep = this.players.find(p => p.id === sp.id || (sp.name && p.name === sp.name));
+            if (ep) {
+              Object.assign(ep, sp);
+            } else {
+              this.players.push(sp);
+            }
+          });
+        }
+        this.phase = sync.phase;
+        this.countdown = sync.countdown;
+        this.attemptsLeft = sync.attemptsLeft;
+        this.checkedSpots = sync.checkedSpots || [];
+        this.clientStartMatch();
+      }
+
       this.phase = sync.phase;
       this.countdown = sync.countdown;
       this.attemptsLeft = sync.attemptsLeft;
@@ -1706,23 +1757,31 @@
         }
       }
 
-      sync.players.forEach(remote => {
-        const localP = this.players.find(p => p.id === remote.id);
-        if (localP) {
-          localP.isMoving = remote.isMoving;
-          localP.isHidden = remote.isHidden;
-          localP.hiddenSpotId = remote.hiddenSpotId;
-          localP.isReady = remote.isReady;
-          localP.eliminated = remote.eliminated;
-          localP.hasRelocated = remote.hasRelocated;
-
-          if (remote.id !== this.localPlayerId) {
-            localP.x = remote.x;
-            localP.y = remote.y;
-            localP.angle = remote.angle;
+      if (sync.players) {
+        sync.players.forEach(remote => {
+          let localP = this.players.find(p => p.id === remote.id);
+          if (!localP && remote.name) {
+            localP = this.players.find(p => p.name === remote.name);
+            if (localP) localP.id = remote.id;
           }
-        }
-      });
+          if (localP) {
+            localP.isMoving = remote.isMoving;
+            localP.isHidden = remote.isHidden;
+            localP.hiddenSpotId = remote.hiddenSpotId;
+            localP.isReady = remote.isReady;
+            localP.eliminated = remote.eliminated;
+            localP.hasRelocated = remote.hasRelocated;
+
+            if (remote.id !== this.localPlayerId) {
+              localP.x = remote.x;
+              localP.y = remote.y;
+              localP.angle = remote.angle;
+            }
+          } else {
+            this.players.push(remote);
+          }
+        });
+      }
 
       this.updateMultiplayerHUD();
       this.checkLocalPlayerElimination();

@@ -51,7 +51,7 @@ const PEEKKO_CONFIG = Object.freeze({
     warm: 380
   },
   multiplayer: {
-    hidingPhaseSeconds: 25,
+    hidingPhaseSeconds: 20,
     minPlayers: 2,
     maxPlayers: 5,
     defaultAttempts: 10,
