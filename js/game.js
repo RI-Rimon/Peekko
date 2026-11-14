@@ -748,8 +748,8 @@
 
       this.mapPill.textContent = this.apt.mapName.toUpperCase();
       this.mapPill.classList.remove('hidden');
-      this.rolePill.classList.remove('hidden', 'seeker');
-      this.phasePill.classList.remove('hidden');
+      if (this.rolePill) this.rolePill.classList.add('hidden');
+      if (this.phasePill) this.phasePill.classList.add('hidden');
       this.attemptsBox.classList.remove('hidden');
       this.btnTouchReady.classList.add('hidden');
 
@@ -1242,6 +1242,10 @@
       }
 
       if (this.isMultiplayer) {
+        if (this.mpManager && this.phase === 'mp_hiding_countdown') {
+          this.mpManager.updateCountdownFromClock();
+          this.mpManager.updateMultiplayerHUD();
+        }
         if (this.phase === 'mp_hiding_countdown' || this.phase === 'mp_hunting') {
           this.updatePlayerMovement(dt);
           this.updateInteractionPrompt();

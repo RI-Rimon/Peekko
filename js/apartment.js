@@ -656,8 +656,8 @@ class ApartmentMap {
   }
 
   // ========================================================
-  // MAP 5: WONDERLAND PARK (1840 x 1080, 40 Spots)
-  // Grand Amusement Park with Rides, Carnival Midway & Open Plazas
+  // MAP 5: WONDERLAND PARK (1840 x 1080, 32 Spots)
+  // Grand Amusement Park with Spacious Promenades, Wide Doorways & Smooth Bot Navigation
   // ========================================================
   buildAmusementMap() {
     this.mapName = 'Wonderland Park';
@@ -681,94 +681,83 @@ class ApartmentMap {
       { x: 40, y: 40, w: 1760, h: 14 },
       { x: 40, y: 40, w: 14, h: 1000 },
       { x: 1786, y: 40, w: 14, h: 1000 },
-      { x: 40, y: 1026, w: 760, h: 14 },
-      { x: 1040, y: 1026, w: 760, h: 14 }, // South entrance portal (x: 760..1040)
+      { x: 40, y: 1026, w: 720, h: 14 },
+      { x: 1080, y: 1026, w: 720, h: 14 }, // South entrance portal (x: 720..1080, 360px wide!)
 
-      // Decorative divider piers leaving generous promenades
-      { x: 620, y: 840, w: 14, h: 70 },
-      { x: 620, y: 980, w: 14, h: 60 },
-      { x: 1206, y: 840, w: 14, h: 70 },
-      { x: 1206, y: 980, w: 14, h: 60 },
+      // Decorative divider piers with wide 140px open passages
+      { x: 620, y: 840, w: 14, h: 40 },
+      { x: 620, y: 1000, w: 14, h: 40 },
+      { x: 1206, y: 840, w: 14, h: 40 },
+      { x: 1206, y: 1000, w: 14, h: 40 },
 
-      // Midway to North rides dividing arch pillars
-      { x: 40, y: 633, w: 160, h: 14 },
-      { x: 460, y: 633, w: 160, h: 14 },
+      // Midway to North rides dividing arch pillars (420px huge arch opening!)
+      { x: 40, y: 633, w: 100, h: 14 },
+      { x: 520, y: 633, w: 100, h: 14 },
 
-      // Wonder Rides to Thrill Zone archway pillars
-      { x: 793, y: 40, w: 14, h: 130 },
-      { x: 793, y: 310, w: 14, h: 130 },
+      // Wonder Rides to Thrill Zone archway pillars (280px wide passage!)
+      { x: 793, y: 40, w: 14, h: 80 },
+      { x: 793, y: 360, w: 14, h: 80 },
 
-      // Central fountain lawn decorative boundary balustrades
-      { x: 620, y: 440, w: 14, h: 140 },
-      { x: 620, y: 700, w: 14, h: 140 },
-      { x: 1206, y: 440, w: 14, h: 140 },
-      { x: 1206, y: 700, w: 14, h: 140 },
+      // Central fountain lawn boundary balustrades (260px wide openings!)
+      { x: 620, y: 440, w: 14, h: 70 },
+      { x: 620, y: 770, w: 14, h: 70 },
+      { x: 1206, y: 440, w: 14, h: 70 },
+      { x: 1206, y: 770, w: 14, h: 70 },
 
-      // Arcade to Haunted zone partition
-      { x: 1220, y: 793, w: 180, h: 14 },
-      { x: 1600, y: 793, w: 186, h: 14 }
+      // Arcade to Haunted zone partition (320px wide passage!)
+      { x: 1220, y: 793, w: 120, h: 14 },
+      { x: 1660, y: 793, w: 126, h: 14 }
     ];
 
-    // Transparent safety glass barriers around Bumper Cars and Coaster Queue
-    this.glassWalls = [
-      { x: 1280, y: 470, w: 220, h: 8 },  // Bumper Cars top railing
-      { x: 900, y: 88, w: 180, h: 8 }     // Coaster platform safety railing
-    ];
+    // Transparent safety glass barriers removed to ensure completely free bot circulation
+    this.glassWalls = [];
 
     this.hidingSpots = [
-      // 1. Entrance & Ticket Plaza (6 spots) - Clear central entrance foyer
-      { id: 'ap_turnstiles', name: 'Brass Turnstile Barrier', roomId: 'entry_plaza', roomName: 'GRAND ENTRANCE PLAZA', x: 670, y: 960, w: 65, h: 36, ix: 755, iy: 978, hideX: 702, hideY: 978, stealthWeight: 1.2, type: 'turnstiles' },
-      { id: 'ap_ticket_w', name: 'West Ticket Kiosk', roomId: 'entry_plaza', roomName: 'GRAND ENTRANCE PLAZA', x: 670, y: 860, w: 70, h: 50, ix: 705, iy: 820, hideX: 705, hideY: 885, stealthWeight: 1.4, type: 'ticket_booth' },
-      { id: 'ap_info_kiosk', name: 'Guest Information Booth', roomId: 'entry_plaza', roomName: 'GRAND ENTRANCE PLAZA', x: 770, y: 860, w: 75, h: 50, ix: 807, iy: 940, hideX: 807, hideY: 885, stealthWeight: 1.3, type: 'info_kiosk' },
-      { id: 'ap_mascot_statue', name: 'Giant Peekko Bear Mascot Statue', roomId: 'entry_plaza', roomName: 'GRAND ENTRANCE PLAZA', x: 1050, y: 860, w: 65, h: 65, ix: 1082, iy: 955, hideX: 1082, hideY: 892, stealthWeight: 1.6, type: 'mascot_statue' },
-      { id: 'ap_ticket_e', name: 'East Ticket Kiosk', roomId: 'entry_plaza', roomName: 'GRAND ENTRANCE PLAZA', x: 1135, y: 860, w: 65, h: 50, ix: 1167, iy: 820, hideX: 1167, hideY: 885, stealthWeight: 1.4, type: 'ticket_booth' },
-      { id: 'ap_balloon_vendor', name: 'Entrance Balloon Cluster Cart', roomId: 'entry_plaza', roomName: 'GRAND ENTRANCE PLAZA', x: 1135, y: 955, w: 65, h: 50, ix: 1080, iy: 980, hideX: 1167, hideY: 980, stealthWeight: 1.3, type: 'balloon_cart' },
+      // 1. Entrance & Ticket Plaza (4 spots) - Clear, open central entrance foyer
+      { id: 'ap_turnstiles', name: 'Brass Turnstile Barrier', roomId: 'entry_plaza', roomName: 'GRAND ENTRANCE PLAZA', x: 680, y: 960, w: 65, h: 36, ix: 760, iy: 978, hideX: 712, hideY: 978, stealthWeight: 1.2, type: 'turnstiles' },
+      { id: 'ap_ticket_w', name: 'West Ticket Kiosk', roomId: 'entry_plaza', roomName: 'GRAND ENTRANCE PLAZA', x: 680, y: 860, w: 70, h: 50, ix: 715, iy: 935, hideX: 715, hideY: 885, stealthWeight: 1.4, type: 'ticket_booth' },
+      { id: 'ap_mascot_statue', name: 'Giant Peekko Bear Mascot Statue', roomId: 'entry_plaza', roomName: 'GRAND ENTRANCE PLAZA', x: 1040, y: 860, w: 65, h: 65, ix: 1072, iy: 955, hideX: 1072, hideY: 892, stealthWeight: 1.6, type: 'mascot_statue' },
+      { id: 'ap_balloon_vendor', name: 'Entrance Balloon Cluster Cart', roomId: 'entry_plaza', roomName: 'GRAND ENTRANCE PLAZA', x: 1140, y: 955, w: 65, h: 50, ix: 1080, iy: 980, hideX: 1172, hideY: 980, stealthWeight: 1.3, type: 'balloon_cart' },
 
-      // 2. Festival Carnival Midway (6 spots)
-      { id: 'ap_balloon_darts', name: 'Balloon Darts Game Booth', roomId: 'carnival_midway', roomName: 'CARNIVAL MIDWAY', x: 90, y: 680, w: 110, h: 70, ix: 145, iy: 780, hideX: 145, hideY: 715, stealthWeight: 1.5, type: 'balloon_booth' },
-      { id: 'ap_ring_toss', name: 'Ring Toss Prize Booth', roomId: 'carnival_midway', roomName: 'CARNIVAL MIDWAY', x: 250, y: 680, w: 110, h: 70, ix: 305, iy: 780, hideX: 305, hideY: 715, stealthWeight: 1.5, type: 'ring_toss_booth' },
-      { id: 'ap_duck_pond', name: 'Lucky Duck Fishing Stall', roomId: 'carnival_midway', roomName: 'CARNIVAL MIDWAY', x: 410, y: 680, w: 110, h: 70, ix: 465, iy: 780, hideX: 465, hideY: 715, stealthWeight: 1.4, type: 'duck_pond' },
-      { id: 'ap_popcorn_wagon', name: 'Vintage Popcorn Wagon', roomId: 'carnival_midway', roomName: 'CARNIVAL MIDWAY', x: 110, y: 880, w: 85, h: 60, ix: 152, iy: 835, hideX: 152, hideY: 910, stealthWeight: 1.4, type: 'popcorn_cart' },
-      { id: 'ap_cotton_candy', name: 'Cotton Candy Floss Cart', roomId: 'carnival_midway', roomName: 'CARNIVAL MIDWAY', x: 270, y: 880, w: 80, h: 55, ix: 310, iy: 835, hideX: 310, hideY: 907, stealthWeight: 1.3, type: 'cotton_candy_cart' },
-      { id: 'ap_midway_planter', name: 'Midway Floral Planter & Bench', roomId: 'carnival_midway', roomName: 'CARNIVAL MIDWAY', x: 430, y: 880, w: 85, h: 50, ix: 472, iy: 835, hideX: 472, hideY: 905, stealthWeight: 1.2, type: 'park_bench' },
+      // 2. Festival Carnival Midway (5 spots) - Well-spaced game stalls
+      { id: 'ap_balloon_darts', name: 'Balloon Darts Game Booth', roomId: 'carnival_midway', roomName: 'CARNIVAL MIDWAY', x: 100, y: 680, w: 110, h: 65, ix: 155, iy: 775, hideX: 155, hideY: 712, stealthWeight: 1.5, type: 'balloon_booth' },
+      { id: 'ap_ring_toss', name: 'Ring Toss Prize Booth', roomId: 'carnival_midway', roomName: 'CARNIVAL MIDWAY', x: 260, y: 680, w: 110, h: 65, ix: 315, iy: 775, hideX: 315, hideY: 712, stealthWeight: 1.5, type: 'ring_toss_booth' },
+      { id: 'ap_duck_pond', name: 'Lucky Duck Fishing Stall', roomId: 'carnival_midway', roomName: 'CARNIVAL MIDWAY', x: 420, y: 680, w: 110, h: 65, ix: 475, iy: 775, hideX: 475, hideY: 712, stealthWeight: 1.4, type: 'duck_pond' },
+      { id: 'ap_popcorn_wagon', name: 'Vintage Popcorn Wagon', roomId: 'carnival_midway', roomName: 'CARNIVAL MIDWAY', x: 140, y: 885, w: 85, h: 55, ix: 182, iy: 840, hideX: 182, hideY: 912, stealthWeight: 1.4, type: 'popcorn_cart' },
+      { id: 'ap_cotton_candy', name: 'Cotton Candy Floss Cart', roomId: 'carnival_midway', roomName: 'CARNIVAL MIDWAY', x: 380, y: 885, w: 80, h: 55, ix: 420, iy: 840, hideX: 420, hideY: 912, stealthWeight: 1.3, type: 'cotton_candy_cart' },
 
-      // 3. Fantasy Carousel & Ferris Plaza (6 spots)
-      { id: 'ap_carousel', name: 'Grand Musical Carousel', roomId: 'wonder_rides', roomName: 'FERRIS & CAROUSEL PLAZA', x: 150, y: 150, w: 170, h: 170, ix: 235, iy: 350, hideX: 235, hideY: 235, stealthWeight: 1.8, type: 'carousel_ride' },
+      // 3. Fantasy Carousel & Ferris Plaza (5 spots) - Unobstructed ride zones
+      { id: 'ap_carousel', name: 'Grand Musical Carousel', roomId: 'wonder_rides', roomName: 'FERRIS & CAROUSEL PLAZA', x: 150, y: 150, w: 160, h: 160, ix: 230, iy: 345, hideX: 230, hideY: 230, stealthWeight: 1.8, type: 'carousel_ride' },
       { id: 'ap_carousel_control', name: 'Carousel Operator Console', roomId: 'wonder_rides', roomName: 'FERRIS & CAROUSEL PLAZA', x: 370, y: 200, w: 60, h: 50, ix: 400, iy: 280, hideX: 400, hideY: 225, stealthWeight: 1.3, type: 'operator_booth' },
-      { id: 'ap_ferris_wheel', name: 'Giant Star Ferris Wheel Hub', roomId: 'wonder_rides', roomName: 'FERRIS & CAROUSEL PLAZA', x: 520, y: 100, w: 190, h: 190, ix: 475, iy: 195, hideX: 615, hideY: 195, stealthWeight: 1.8, type: 'ferris_wheel' },
-      { id: 'ap_ferris_ramp', name: 'Ferris Wheel Boarding Queue', roomId: 'wonder_rides', roomName: 'FERRIS & CAROUSEL PLAZA', x: 540, y: 310, w: 110, h: 50, ix: 595, iy: 385, hideX: 595, hideY: 335, stealthWeight: 1.4, type: 'boarding_ramp' },
-      { id: 'ap_photo_booth', name: 'Park Memory Photo Booth', roomId: 'wonder_rides', roomName: 'FERRIS & CAROUSEL PLAZA', x: 120, y: 440, w: 75, h: 60, ix: 157, iy: 525, hideX: 157, hideY: 470, stealthWeight: 1.5, type: 'photo_booth' },
-      { id: 'ap_souvenir_kiosk', name: 'Carousel Plush Toy Stall', roomId: 'wonder_rides', roomName: 'FERRIS & CAROUSEL PLAZA', x: 270, y: 440, w: 90, h: 60, ix: 315, iy: 525, hideX: 315, hideY: 470, stealthWeight: 1.4, type: 'souvenir_stall' },
+      { id: 'ap_ferris_wheel', name: 'Giant Star Ferris Wheel Hub', roomId: 'wonder_rides', roomName: 'FERRIS & CAROUSEL PLAZA', x: 530, y: 100, w: 180, h: 180, ix: 475, iy: 190, hideX: 620, hideY: 190, stealthWeight: 1.8, type: 'ferris_wheel' },
+      { id: 'ap_photo_booth', name: 'Park Memory Photo Booth', roomId: 'wonder_rides', roomName: 'FERRIS & CAROUSEL PLAZA', x: 130, y: 440, w: 75, h: 60, ix: 167, iy: 530, hideX: 167, hideY: 470, stealthWeight: 1.5, type: 'photo_booth' },
+      { id: 'ap_souvenir_kiosk', name: 'Carousel Plush Toy Stall', roomId: 'wonder_rides', roomName: 'FERRIS & CAROUSEL PLAZA', x: 320, y: 440, w: 90, h: 60, ix: 365, iy: 530, hideX: 365, hideY: 470, stealthWeight: 1.4, type: 'souvenir_stall' },
 
-      // 4. Thunder Coaster & Pirate Cove (6 spots)
+      // 4. Thunder Coaster & Pirate Cove (5 spots) - Wide promenades
       { id: 'ap_coaster_station', name: 'Thunder Coaster Boarding Deck', roomId: 'thrill_zone', roomName: 'THUNDER COASTER & PIRATE COVE', x: 900, y: 100, w: 170, h: 75, ix: 985, iy: 205, hideX: 985, hideY: 137, stealthWeight: 1.6, type: 'coaster_station' },
-      { id: 'ap_coaster_train_1', name: 'Coaster Train Front Engine Car', roomId: 'thrill_zone', roomName: 'THUNDER COASTER & PIRATE COVE', x: 1110, y: 105, w: 105, h: 65, ix: 1162, iy: 195, hideX: 1162, hideY: 137, stealthWeight: 1.5, type: 'coaster_car' },
-      { id: 'ap_coaster_train_2', name: 'Coaster Train Passenger Car', roomId: 'thrill_zone', roomName: 'THUNDER COASTER & PIRATE COVE', x: 1250, y: 105, w: 105, h: 65, ix: 1302, iy: 195, hideX: 1302, hideY: 137, stealthWeight: 1.5, type: 'coaster_car' },
-      { id: 'ap_pirate_ship', name: 'Buccaneer Pirate Galleon Swing', roomId: 'thrill_zone', roomName: 'THUNDER COASTER & PIRATE COVE', x: 1470, y: 110, w: 210, h: 135, ix: 1575, iy: 275, hideX: 1575, hideY: 177, stealthWeight: 1.8, type: 'pirate_ship' },
-      { id: 'ap_pirate_gangplank', name: 'Pirate Ship Boarding Gangplank', roomId: 'thrill_zone', roomName: 'THUNDER COASTER & PIRATE COVE', x: 1410, y: 265, w: 95, h: 50, ix: 1457, iy: 345, hideX: 1457, hideY: 290, stealthWeight: 1.4, type: 'boarding_ramp' },
-      { id: 'ap_coaster_lockers', name: 'Ride Safety Lockers Bank', roomId: 'thrill_zone', roomName: 'THUNDER COASTER & PIRATE COVE', x: 930, y: 250, w: 85, h: 45, ix: 972, iy: 320, hideX: 972, hideY: 272, stealthWeight: 1.3, type: 'safety_lockers' },
+      { id: 'ap_coaster_train_1', name: 'Coaster Train Front Engine Car', roomId: 'thrill_zone', roomName: 'THUNDER COASTER & PIRATE COVE', x: 1140, y: 105, w: 110, h: 65, ix: 1195, iy: 195, hideX: 1195, hideY: 137, stealthWeight: 1.5, type: 'coaster_car' },
+      { id: 'ap_pirate_ship', name: 'Buccaneer Pirate Galleon Swing', roomId: 'thrill_zone', roomName: 'THUNDER COASTER & PIRATE COVE', x: 1480, y: 110, w: 200, h: 130, ix: 1580, iy: 270, hideX: 1580, hideY: 175, stealthWeight: 1.8, type: 'pirate_ship' },
+      { id: 'ap_pirate_gangplank', name: 'Pirate Ship Boarding Gangplank', roomId: 'thrill_zone', roomName: 'THUNDER COASTER & PIRATE COVE', x: 1380, y: 265, w: 95, h: 50, ix: 1427, iy: 345, hideX: 1427, hideY: 290, stealthWeight: 1.4, type: 'boarding_ramp' },
+      { id: 'ap_coaster_lockers', name: 'Ride Safety Lockers Bank', roomId: 'thrill_zone', roomName: 'THUNDER COASTER & PIRATE COVE', x: 950, y: 250, w: 85, h: 45, ix: 992, iy: 320, hideX: 992, hideY: 272, stealthWeight: 1.3, type: 'safety_lockers' },
 
-      // 5. Bumper Cars & Retro Arcade (6 spots)
-      { id: 'ap_bumper_arena', name: 'Electric Bumper Cars Arena Buffer', roomId: 'arcade_arena', roomName: 'BUMPER CARS & RETRO ARCADE', x: 1280, y: 490, w: 210, h: 135, ix: 1385, iy: 440, hideX: 1385, hideY: 557, stealthWeight: 1.7, type: 'bumper_arena' },
-      { id: 'ap_bumper_car_red', name: 'Red Bumper Car (#7)', roomId: 'arcade_arena', roomName: 'BUMPER CARS & RETRO ARCADE', x: 1560, y: 500, w: 70, h: 50, ix: 1660, iy: 525, hideX: 1595, hideY: 525, stealthWeight: 1.4, type: 'bumper_car' },
-      { id: 'ap_bumper_car_blue', name: 'Blue Bumper Car (#12)', roomId: 'arcade_arena', roomName: 'BUMPER CARS & RETRO ARCADE', x: 1560, y: 580, w: 70, h: 50, ix: 1660, iy: 605, hideX: 1595, hideY: 605, stealthWeight: 1.4, type: 'bumper_car' },
+      // 5. Bumper Cars & Retro Arcade (5 spots) - Clean open aisles
+      { id: 'ap_bumper_arena', name: 'Electric Bumper Cars Arena Buffer', roomId: 'arcade_arena', roomName: 'BUMPER CARS & RETRO ARCADE', x: 1280, y: 485, w: 200, h: 130, ix: 1380, iy: 435, hideX: 1380, hideY: 550, stealthWeight: 1.7, type: 'bumper_arena' },
+      { id: 'ap_bumper_car_red', name: 'Red Bumper Car (#7)', roomId: 'arcade_arena', roomName: 'BUMPER CARS & RETRO ARCADE', x: 1580, y: 530, w: 70, h: 50, ix: 1660, iy: 555, hideX: 1615, hideY: 555, stealthWeight: 1.4, type: 'bumper_car' },
       { id: 'ap_claw_machine', name: 'Giant Plush Claw Machine', roomId: 'arcade_arena', roomName: 'BUMPER CARS & RETRO ARCADE', x: 1260, y: 705, w: 90, h: 50, ix: 1305, iy: 660, hideX: 1305, hideY: 730, stealthWeight: 1.4, type: 'claw_machine' },
-      { id: 'ap_racing_cabs', name: 'Twin VR Racing Arcade Cabs', roomId: 'arcade_arena', roomName: 'BUMPER CARS & RETRO ARCADE', x: 1410, y: 705, w: 100, h: 55, ix: 1460, iy: 660, hideX: 1460, hideY: 732, stealthWeight: 1.5, type: 'arcade_cabinets' },
-      { id: 'ap_prize_counter', name: 'Arcade Prize & Token Counter', roomId: 'arcade_arena', roomName: 'BUMPER CARS & RETRO ARCADE', x: 1580, y: 705, w: 85, h: 50, ix: 1622, iy: 660, hideX: 1622, hideY: 730, stealthWeight: 1.3, type: 'prize_counter' },
+      { id: 'ap_racing_cabs', name: 'Twin VR Racing Arcade Cabs', roomId: 'arcade_arena', roomName: 'BUMPER CARS & RETRO ARCADE', x: 1420, y: 705, w: 100, h: 55, ix: 1470, iy: 660, hideX: 1470, hideY: 732, stealthWeight: 1.5, type: 'arcade_cabinets' },
+      { id: 'ap_prize_counter', name: 'Arcade Prize & Token Counter', roomId: 'arcade_arena', roomName: 'BUMPER CARS & RETRO ARCADE', x: 1600, y: 705, w: 85, h: 50, ix: 1642, iy: 660, hideX: 1642, hideY: 730, stealthWeight: 1.3, type: 'prize_counter' },
 
-      // 6. Mystery Haunted Castle (5 spots)
-      { id: 'ap_haunted_facade', name: 'Gothic Castle Crypt Gate', roomId: 'haunted_zone', roomName: 'MYSTERY HAUNTED CASTLE', x: 1260, y: 840, w: 130, h: 70, ix: 1325, iy: 935, hideX: 1325, hideY: 875, stealthWeight: 1.7, type: 'haunted_castle' },
-      { id: 'ap_ghost_cart', name: 'Spooky Ghost Train Minecart', roomId: 'haunted_zone', roomName: 'MYSTERY HAUNTED CASTLE', x: 1440, y: 840, w: 85, h: 55, ix: 1482, iy: 925, hideX: 1482, hideY: 867, stealthWeight: 1.5, type: 'ghost_cart' },
-      { id: 'ap_fortune_tent', name: 'Madame Zora Mystic Tent', roomId: 'haunted_zone', roomName: 'MYSTERY HAUNTED CASTLE', x: 1640, y: 850, w: 85, h: 85, ix: 1682, iy: 960, hideX: 1682, hideY: 892, stealthWeight: 1.6, type: 'fortune_tent' },
-      { id: 'ap_cemetery_tomb', name: 'Gargoyle Pillar & Coffin Prop', roomId: 'haunted_zone', roomName: 'MYSTERY HAUNTED CASTLE', x: 1290, y: 970, w: 75, h: 45, ix: 1327, iy: 935, hideX: 1327, hideY: 992, stealthWeight: 1.4, type: 'cemetery_prop' },
-      { id: 'ap_witch_cauldron', name: 'Witch Cauldron & Potion Stand', roomId: 'haunted_zone', roomName: 'MYSTERY HAUNTED CASTLE', x: 1510, y: 970, w: 70, h: 45, ix: 1545, iy: 935, hideX: 1545, hideY: 992, stealthWeight: 1.3, type: 'cauldron_prop' },
+      // 6. Mystery Haunted Castle (4 spots) - Spacious castle courtyard
+      { id: 'ap_haunted_facade', name: 'Gothic Castle Crypt Gate', roomId: 'haunted_zone', roomName: 'MYSTERY HAUNTED CASTLE', x: 1270, y: 840, w: 130, h: 70, ix: 1335, iy: 935, hideX: 1335, hideY: 875, stealthWeight: 1.7, type: 'haunted_castle' },
+      { id: 'ap_ghost_cart', name: 'Spooky Ghost Train Minecart', roomId: 'haunted_zone', roomName: 'MYSTERY HAUNTED CASTLE', x: 1470, y: 840, w: 85, h: 55, ix: 1512, iy: 925, hideX: 1512, hideY: 867, stealthWeight: 1.5, type: 'ghost_cart' },
+      { id: 'ap_fortune_tent', name: 'Madame Zora Mystic Tent', roomId: 'haunted_zone', roomName: 'MYSTERY HAUNTED CASTLE', x: 1650, y: 850, w: 85, h: 85, ix: 1692, iy: 960, hideX: 1692, hideY: 892, stealthWeight: 1.6, type: 'fortune_tent' },
+      { id: 'ap_cemetery_tomb', name: 'Gargoyle Pillar & Coffin Prop', roomId: 'haunted_zone', roomName: 'MYSTERY HAUNTED CASTLE', x: 1380, y: 970, w: 80, h: 45, ix: 1420, iy: 935, hideX: 1420, hideY: 992, stealthWeight: 1.4, type: 'cemetery_prop' },
 
-      // 7. Central Fountain & Picnic Lawn (5 spots)
-      { id: 'ap_ice_cream', name: 'Sweet Scoops Ice Cream Parlor', roomId: 'food_fair', roomName: 'CENTRAL FOUNTAIN & PICNIC LAWN', x: 700, y: 490, w: 105, h: 60, ix: 752, iy: 575, hideX: 752, hideY: 520, stealthWeight: 1.4, type: 'ice_cream_stand' },
-      { id: 'ap_pretzel_cart', name: 'Warm Pretzels & Churros Cart', roomId: 'food_fair', roomName: 'CENTRAL FOUNTAIN & PICNIC LAWN', x: 860, y: 490, w: 80, h: 50, ix: 900, iy: 565, hideX: 900, hideY: 515, stealthWeight: 1.3, type: 'pretzel_cart' },
+      // 7. Central Fountain & Picnic Lawn (4 spots) - Wide open lawns
+      { id: 'ap_ice_cream', name: 'Sweet Scoops Ice Cream Parlor', roomId: 'food_fair', roomName: 'CENTRAL FOUNTAIN & PICNIC LAWN', x: 720, y: 490, w: 100, h: 60, ix: 770, iy: 575, hideX: 770, hideY: 520, stealthWeight: 1.4, type: 'ice_cream_stand' },
       { id: 'ap_central_fountain', name: 'Grand Tiered Fountain Pool', roomId: 'food_fair', roomName: 'CENTRAL FOUNTAIN & PICNIC LAWN', x: 870, y: 620, w: 100, h: 100, ix: 920, iy: 745, hideX: 920, hideY: 670, stealthWeight: 1.7, type: 'tiered_fountain' },
-      { id: 'ap_gazebo', name: 'Victorian Garden Gazebo', roomId: 'food_fair', roomName: 'CENTRAL FOUNTAIN & PICNIC LAWN', x: 1040, y: 490, w: 110, h: 90, ix: 1095, iy: 605, hideX: 1095, hideY: 535, stealthWeight: 1.6, type: 'park_gazebo' },
-      { id: 'ap_garden_bench', name: 'Rose Garden Park Bench', roomId: 'food_fair', roomName: 'CENTRAL FOUNTAIN & PICNIC LAWN', x: 1040, y: 650, w: 100, h: 45, ix: 1090, iy: 720, hideX: 1090, hideY: 672, stealthWeight: 1.3, type: 'park_bench' }
+      { id: 'ap_gazebo', name: 'Victorian Garden Gazebo', roomId: 'food_fair', roomName: 'CENTRAL FOUNTAIN & PICNIC LAWN', x: 1050, y: 490, w: 110, h: 90, ix: 1105, iy: 605, hideX: 1105, hideY: 535, stealthWeight: 1.6, type: 'park_gazebo' },
+      { id: 'ap_garden_bench', name: 'Rose Garden Park Bench', roomId: 'food_fair', roomName: 'CENTRAL FOUNTAIN & PICNIC LAWN', x: 740, y: 660, w: 95, h: 45, ix: 787, iy: 730, hideX: 787, hideY: 682, stealthWeight: 1.3, type: 'park_bench' }
     ];
 
     this.decorProps = [];
@@ -787,9 +776,9 @@ class ApartmentMap {
       gazebo_east: { x: 1100, y: 620, neighbors: ['fountain_center', 'arcade_w'] },
       wonder_plaza_s: { x: 420, y: 480, neighbors: ['midway_north', 'fountain_center', 'wonder_plaza_c'] },
       wonder_plaza_c: { x: 420, y: 260, neighbors: ['wonder_plaza_s', 'carousel_s', 'carousel_w', 'ferris_s', 'ferris_e'] },
-      carousel_s: { x: 235, y: 350, neighbors: ['wonder_plaza_c'] },
-      carousel_w: { x: 110, y: 235, neighbors: ['wonder_plaza_c'] },
-      ferris_s: { x: 595, y: 385, neighbors: ['wonder_plaza_c'] },
+      carousel_s: { x: 230, y: 345, neighbors: ['wonder_plaza_c'] },
+      carousel_w: { x: 110, y: 230, neighbors: ['wonder_plaza_c'] },
+      ferris_s: { x: 620, y: 345, neighbors: ['wonder_plaza_c'] },
       ferris_e: { x: 740, y: 220, neighbors: ['wonder_plaza_c', 'thrill_w'] },
       thrill_w: { x: 920, y: 220, neighbors: ['ferris_e', 'fountain_north', 'thrill_coaster'] },
       thrill_coaster: { x: 1180, y: 220, neighbors: ['thrill_w', 'thrill_pirate'] },

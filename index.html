@@ -30,15 +30,15 @@
       </div>
 
       <div class="hud-center">
-        <div class="stat-box">
+        <div id="attempts-box" class="stat-box hidden">
+          <span class="stat-label" id="attempts-label">BOT CHECKS</span>
+          <span id="attempts-value" class="stat-value accent">10 / 10</span>
+        </div>
+        <div id="hud-score-box" class="stat-box hidden">
           <span class="stat-label">SCORE</span>
           <span id="score-value" class="stat-value">0</span>
         </div>
-        <div id="attempts-box" class="stat-box hidden">
-          <span class="stat-label" id="attempts-label">ATTEMPTS LEFT</span>
-          <span id="attempts-value" class="stat-value accent">10 / 10</span>
-        </div>
-        <div class="stat-box">
+        <div id="hud-wins-box" class="stat-box hidden">
           <span class="stat-label">WINS</span>
           <span id="wins-value" class="stat-value">0</span>
         </div>
@@ -193,7 +193,7 @@
               <button class="map-option" data-map="5">
                 <div class="map-opt-head">
                   <span class="map-num">MAP 05</span>
-                  <span class="map-spots">40 Spots</span>
+                  <span class="map-spots">32 Spots</span>
                 </div>
                 <div class="map-opt-name">Wonderland Park</div>
                 <div class="map-opt-desc">Amusement Rides, Midway & Plaza</div>
@@ -254,21 +254,21 @@
             </div>
           </div>
 
-          <!-- STEP 4: EXPLICIT START BUTTON & MULTIPLAYER ENTRY -->
+          <!-- STEP 4: EXPLICIT START BUTTON -->
           <div class="start-action-row">
             <button id="btn-start-game" class="btn-start-game">START GAME</button>
-            <button id="btn-open-multiplayer" class="btn-multiplayer" type="button">
-              <span class="mp-btn-icon">👥</span>
-              <span class="mp-btn-text">Custom Rooms</span>
-            </button>
           </div>
         </div>
       </div>
 
-      <!-- BOTTOM NAVBAR WITH ABOUT CREATOR ON LEFT -->
+      <!-- BOTTOM NAVBAR WITH ABOUT CREATOR ON LEFT & CUSTOM ROOMS ON RIGHT -->
       <footer class="menu-bottom-nav">
         <button id="btn-about-creator" class="creator-nav-btn">About Creator</button>
         <div class="nav-hint">Desktop & Mobile Landscape Supported</div>
+        <button id="btn-open-multiplayer" class="btn-multiplayer" type="button">
+          <span class="mp-btn-icon">👥</span>
+          <span class="mp-btn-text">Custom Rooms</span>
+        </button>
       </footer>
     </section>
 
@@ -277,7 +277,7 @@
       <div class="modal-card creator-card">
         <h2 id="creator-title">Meet the Creator</h2>
         <div class="creator-info-box">
-          <a href="https://redwanulrimon.vercel.app/" target="_blank" rel="noopener noreferrer" class="creator-name-link" title="Visit Portfolio">
+          <a href="https://www.linkedin.com/in/redwanul-rimon/" target="_blank" rel="noopener noreferrer" class="creator-name-link" title="Open LinkedIn Profile">
             Redwanul Islam Rimon
           </a>
         </div>

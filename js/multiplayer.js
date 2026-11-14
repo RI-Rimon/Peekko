@@ -472,7 +472,10 @@
         this.mqtt.onMessageArrived = (message) => {
           try {
             const data = JSON.parse(message.payloadString);
+            if (data.senderId && data.senderId === this.localPlayerId) return;
+            if (data.type === 'LOBBY_PING') return;
             if (this.isHost) {
+              if (data.isHost) return;
               const senderId = data.senderId || data.id || 'guest';
               this.handleHostMessage({
                 peer: senderId,
@@ -499,16 +502,13 @@
       this.mqtt.connect({
         useSSL: true,
         timeout: 5,
-        keepAliveInterval: 30,
+        keepAliveInterval: 15,
         cleanSession: true,
         onSuccess: () => {
           this.mqttConnected = true;
           const topicPrefix = `peekko/v10/room/${this.roomCode}`;
-          if (isHost) {
-            this.mqtt.subscribe(`${topicPrefix}/c2h`);
-          } else {
-            this.mqtt.subscribe(`${topicPrefix}/h2c`);
-            this.mqtt.subscribe(`${topicPrefix}/client/${this.localPlayerId}`);
+          this.mqtt.subscribe(`${topicPrefix}/#`);
+          if (!isHost) {
             // Send instant handshake over MQTT
             this.sendToHost({
               type: 'JOIN',
@@ -525,7 +525,10 @@
             this.mqtt.onMessageArrived = (message) => {
               try {
                 const data = JSON.parse(message.payloadString);
+                if (data.senderId && data.senderId === this.localPlayerId) return;
+                if (data.type === 'LOBBY_PING') return;
                 if (this.isHost) {
+                  if (data.isHost) return;
                   const senderId = data.senderId || data.id || 'guest';
                   this.handleHostMessage({
                     peer: senderId,
@@ -541,16 +544,13 @@
             this.mqtt.connect({
               useSSL: true,
               timeout: 5,
-              keepAliveInterval: 30,
+              keepAliveInterval: 15,
               cleanSession: true,
               onSuccess: () => {
                 this.mqttConnected = true;
                 const topicPrefix = `peekko/v10/room/${this.roomCode}`;
-                if (isHost) {
-                  this.mqtt.subscribe(`${topicPrefix}/c2h`);
-                } else {
-                  this.mqtt.subscribe(`${topicPrefix}/h2c`);
-                  this.mqtt.subscribe(`${topicPrefix}/client/${this.localPlayerId}`);
+                this.mqtt.subscribe(`${topicPrefix}/#`);
+                if (!isHost) {
                   this.sendToHost({
                     type: 'JOIN',
                     id: this.localPlayerId,
@@ -567,8 +567,10 @@
     mqttPublish(subTopic, payloadObj) {
       if (this.mqtt && this.mqttConnected) {
         try {
+          if (!payloadObj.senderId) payloadObj.senderId = this.localPlayerId;
           const msg = new Paho.MQTT.Message(JSON.stringify(payloadObj));
           msg.destinationName = `peekko/v10/room/${this.roomCode}/${subTopic}`;
+          msg.qos = 0;
           this.mqtt.send(msg);
         } catch (e) {
           console.warn('MQTT publish error:', e);
@@ -660,6 +662,14 @@
         this.btnCreateSubmit.textContent = 'GENERATE ROOM CODE';
       }
       this.showLobbyView();
+
+      // Lobby keepalive pulse every 2.5s to prevent mobile carriers from closing idle TCP sockets
+      if (this.lobbyPingInterval) clearInterval(this.lobbyPingInterval);
+      this.lobbyPingInterval = setInterval(() => {
+        if (this.isHost && this.phase === 'lobby' && this.mqttConnected) {
+          this.broadcast({ type: 'LOBBY_PING', t: Date.now() });
+        }
+      }, 2500);
 
       // Launch PeerJS in parallel for direct P2P mesh
       if (typeof Peer !== 'undefined') {
@@ -917,14 +927,17 @@
         this.settings = msg.settings;
         this.players = msg.players;
         this.countdown = msg.countdown;
+        this.countdownEndTime = msg.countdownEndTime || (Date.now() + (msg.countdown * 1000));
         this.attemptsLeft = msg.attemptsLimit;
         this.checkedSpots = [];
         this.phase = 'mp_hiding_countdown';
+        if (this.game) this.game.phase = 'mp_hiding_countdown';
         this.clientStartMatch();
       } else if (msg.type === 'GAME_SYNC') {
         this.applyGameSync(msg);
       } else if (msg.type === 'MATCH_END') {
         this.phase = 'mp_ended';
+        if (this.game) this.game.phase = 'mp_ended';
         this.rankings = msg.rankings;
         this.showResultModal(msg);
       } else if (msg.type === 'RETURN_LOBBY') {
@@ -1170,10 +1183,29 @@
     /* ========================================================
        MATCH START & 20-SECOND HIDING PHASE
        ======================================================== */
+    updateCountdownFromClock() {
+      if (this.phase !== 'mp_hiding_countdown') return;
+      if (!this.countdownEndTime) {
+        this.countdownEndTime = Date.now() + (MP_CFG.hidingPhaseSeconds * 1000);
+      }
+      const remaining = Math.max(0, (this.countdownEndTime - Date.now()) / 1000);
+      this.countdown = remaining;
+      if (this.isHost && remaining <= 0) {
+        this.transitionToHuntPhase();
+      }
+    }
+
     startMatch() {
       if (!this.isHost || this.players.length < MP_CFG.minPlayers) return;
 
+      if (this.lobbyPingInterval) {
+        clearInterval(this.lobbyPingInterval);
+        this.lobbyPingInterval = null;
+      }
+
       this.phase = 'mp_hiding_countdown';
+      if (this.game) this.game.phase = 'mp_hiding_countdown';
+      this.countdownEndTime = Date.now() + (MP_CFG.hidingPhaseSeconds * 1000);
       this.countdown = MP_CFG.hidingPhaseSeconds;
       this.attemptsLeft = this.settings.attemptsLimit;
       this.checkedSpots = [];
@@ -1202,6 +1234,8 @@
         settings: this.settings,
         players: this.players,
         countdown: this.countdown,
+        countdownEndTime: this.countdownEndTime,
+        matchActive: true,
         attemptsLimit: this.attemptsLeft
       };
       const sendStartPulses = () => {
@@ -1214,9 +1248,11 @@
         });
       };
       sendStartPulses();
-      setTimeout(sendStartPulses, 150);
-      setTimeout(sendStartPulses, 350);
-      setTimeout(sendStartPulses, 650);
+      setTimeout(sendStartPulses, 100);
+      setTimeout(sendStartPulses, 250);
+      setTimeout(sendStartPulses, 500);
+      setTimeout(sendStartPulses, 800);
+      setTimeout(sendStartPulses, 1200);
 
       this.clientStartMatch();
       this.startHostAuthoritativeLoop();
@@ -1249,6 +1285,12 @@
         this.game.pauseModal.style.display = 'none';
       }
 
+      // Hide the menu screen completely (menuScreen has z-index 25 and can block view!)
+      if (this.game.menuScreen) {
+        this.game.menuScreen.classList.add('hidden');
+        this.game.menuScreen.style.display = 'none';
+      }
+
       // Setup game instance
       this.game.isMultiplayer = true;
       this.game.mpManager = this;
@@ -1279,7 +1321,6 @@
       }
 
       this.game.phase = this.phase || 'mp_hiding_countdown';
-      this.game.menuScreen.classList.add('hidden');
       this.game.topHud.classList.remove('hidden');
       this.game.attemptsBox.classList.remove('hidden');
       this.game.attemptsLabel.textContent = 'SEEKER CHECKS';
@@ -1306,6 +1347,7 @@
         Sound.init();
       }
 
+      this.updateCountdownFromClock();
       this.startClientInputLoop();
       this.updateMultiplayerHUD();
     }
@@ -1324,13 +1366,8 @@
     }
 
     tickHostAuthoritative() {
-      const dt = 1 / MP_CFG.syncHz;
-
       if (this.phase === 'mp_hiding_countdown') {
-        this.countdown -= dt;
-        if (this.countdown <= 0) {
-          this.transitionToHuntPhase();
-        }
+        this.updateCountdownFromClock();
       } else if (this.phase === 'mp_hunting') {
         this.checkHuntLineOfSightCatches();
         this.checkMatchEndConditions();
@@ -1340,7 +1377,9 @@
       const syncData = {
         type: 'GAME_SYNC',
         phase: this.phase,
+        matchActive: this.phase === 'mp_hiding_countdown' || this.phase === 'mp_hunting',
         countdown: Math.max(0, Math.round(this.countdown * 10) / 10),
+        countdownEndTime: this.countdownEndTime || 0,
         attemptsLeft: this.attemptsLeft,
         settings: this.settings,
         players: this.players.map(p => ({
@@ -1380,7 +1419,9 @@
 
     transitionToHuntPhase() {
       this.phase = 'mp_hunting';
+      if (this.game) this.game.phase = 'mp_hunting';
       this.countdown = 0;
+      this.countdownEndTime = 0;
       if (typeof Sound !== 'undefined' && Sound.playAlert) {
         Sound.playAlert();
       }
@@ -1718,9 +1759,9 @@
       this.inputInterval = setInterval(() => {
         if (this.phase === 'lobby' || this.phase === 'mp_ended') return;
 
-        // Smooth local client countdown prediction for 20s hiding timer
-        if (!this.isHost && this.phase === 'mp_hiding_countdown' && this.countdown > 0) {
-          this.countdown = Math.max(0, this.countdown - (intervalMs / 1000));
+        // Smooth local client countdown prediction for 20s hiding timer using wall clock
+        if (!this.isHost && this.phase === 'mp_hiding_countdown') {
+          this.updateCountdownFromClock();
           this.updateMultiplayerHUD();
         }
 
@@ -1782,9 +1823,11 @@
     applyGameSync(sync) {
       if (!sync || this.isHost) return;
 
-      // Auto-start match on client if match is active but client is still in lobby
-      if ((!this.game.isMultiplayer || this.phase === 'lobby' || this.game.phase === 'menu') &&
-          (sync.phase === 'mp_hiding_countdown' || sync.phase === 'mp_hunting')) {
+      // Auto-start match on client if match is active on server but client is still in lobby/menu/modal
+      const clientNotInGame = !this.game.isMultiplayer || this.phase === 'lobby' || this.game.phase === 'menu' || (this.modal && this.modal.style.display !== 'none');
+      const serverMatchActive = !!(sync.matchActive || sync.phase === 'mp_hiding_countdown' || sync.phase === 'mp_hunting');
+
+      if (clientNotInGame && serverMatchActive) {
         if (sync.settings) this.settings = sync.settings;
         if (sync.players && sync.players.length > 0) {
           sync.players.forEach(sp => {
@@ -1797,6 +1840,10 @@
           });
         }
         this.phase = sync.phase;
+        if (this.game) this.game.phase = sync.phase;
+        if (sync.countdownEndTime) {
+          this.countdownEndTime = sync.countdownEndTime;
+        }
         this.countdown = sync.countdown;
         this.attemptsLeft = sync.attemptsLeft;
         this.checkedSpots = sync.checkedSpots || [];
@@ -1804,9 +1851,13 @@
       }
 
       this.phase = sync.phase;
-      this.countdown = sync.countdown;
+      if (this.game) this.game.phase = sync.phase;
+      if (sync.countdownEndTime) {
+        this.countdownEndTime = sync.countdownEndTime;
+      }
       this.attemptsLeft = sync.attemptsLeft;
       this.checkedSpots = sync.checkedSpots || [];
+      this.updateCountdownFromClock();
 
       if (this.game && this.game.apt) {
         this.game.apt.hidingSpots.forEach(s => {
@@ -1987,6 +2038,11 @@
     }
 
     cleanup() {
+      if (this.lobbyPingInterval) {
+        clearInterval(this.lobbyPingInterval);
+        this.lobbyPingInterval = null;
+      }
+      this.countdownEndTime = 0;
       if (this.connectTimeout) {
         clearTimeout(this.connectTimeout);
         this.connectTimeout = null;
