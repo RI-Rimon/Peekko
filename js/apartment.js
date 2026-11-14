@@ -871,3 +871,11 @@ class ApartmentMap {
     return this.findBestNodeWithClearance(x, y, 9.5);
   }
 }
+
+if (typeof window !== 'undefined') {
+  window.ApartmentMap = ApartmentMap;
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = ApartmentMap;
+}
+

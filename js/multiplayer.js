@@ -1,8 +1,9 @@
 /* ========================================================
    Peekko - PeerJS Host-Authoritative Custom Room Multiplayer
-   Real-Time P2P WebRTC mesh for 2 to 5 Players
-   Asymmetric Fair Visibility, 25s Hiding Countdown,
-   Proximity Audio, Mid-Hunt Relocation & Detailed Leaderboard
+   Real-Time P2P WebRTC mesh for 2 to 5 Players with STUN/TURN
+   Cross-Network Mobile Data & Wi-Fi NAT Traversal Support,
+   Every-Player Lobby Role Switching, 25s Hiding Countdown,
+   Mobile Touch Controls & Detailed End-of-Match Leaderboard
    ======================================================== */
 
 (function () {
@@ -17,6 +18,32 @@
     hiderPalette: ['#38bdf8', '#10b981', '#a855f7', '#ec4899', '#f43f5e'],
     seekerColor: '#f59e0b',
     syncHz: 25
+  };
+
+  // Cross-Network STUN & Free Open TURN Relay Configuration
+  const PEER_CONFIG = {
+    debug: 1,
+    config: {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
+        { urls: 'stun:stun.cloudflare.com:3478' },
+        { urls: 'stun:openrelay.metered.ca:80' },
+        {
+          urls: [
+            'turn:openrelay.metered.ca:80',
+            'turn:openrelay.metered.ca:443',
+            'turn:openrelay.metered.ca:443?transport=tcp'
+          ],
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        }
+      ],
+      iceCandidatePoolSize: 10
+    }
   };
 
   function generateRoomCode() {
@@ -105,6 +132,10 @@
       this.lobbyStatusMsg = document.getElementById('lobby-status-msg');
       this.btnStartMatch = document.getElementById('btn-mp-start-match');
       this.btnLeaveLobby = document.getElementById('btn-mp-leave-lobby');
+
+      // Lobby Quick Role Selector for Local Player
+      this.btnMyRoleHider = document.getElementById('btn-my-role-hider');
+      this.btnMyRoleSeeker = document.getElementById('btn-my-role-seeker');
 
       // In-Game Countdown & Status Overlays
       this.countdownOverlay = document.getElementById('mp-countdown-overlay');
@@ -200,6 +231,14 @@
       // Copy Code
       if (this.btnCopyCode) {
         this.btnCopyCode.addEventListener('click', () => this.copyRoomCode());
+      }
+
+      // Quick Role Selectors for Local Player
+      if (this.btnMyRoleHider) {
+        this.btnMyRoleHider.addEventListener('click', () => this.requestRoleChange('hider'));
+      }
+      if (this.btnMyRoleSeeker) {
+        this.btnMyRoleSeeker.addEventListener('click', () => this.requestRoleChange('seeker'));
       }
 
       // Start Match (Host Only)
@@ -319,9 +358,7 @@
       const peerId = getHostPeerId(this.roomCode);
 
       try {
-        this.peer = new Peer(peerId, {
-          debug: 1
-        });
+        this.peer = new Peer(peerId, PEER_CONFIG);
       } catch (err) {
         this.showCreateError('Failed to initialize Peer: ' + err.message);
         if (this.btnCreateSubmit) {
@@ -369,7 +406,6 @@
 
       this.peer.on('connection', (conn) => {
         conn.on('open', () => {
-          // Listen for messages from this client
           conn.on('data', (data) => this.handleHostMessage(conn, data));
         });
 
@@ -411,7 +447,7 @@
       this.showJoinError('');
       if (this.btnJoinSubmit) {
         this.btnJoinSubmit.disabled = true;
-        this.btnJoinSubmit.textContent = 'Connecting...';
+        this.btnJoinSubmit.textContent = 'Connecting across networks...';
       }
 
       this.cleanup();
@@ -421,7 +457,7 @@
       const hostPeerId = getHostPeerId(this.roomCode);
 
       try {
-        this.peer = new Peer({ debug: 1 });
+        this.peer = new Peer(PEER_CONFIG);
       } catch (err) {
         this.showJoinError('Failed to initialize Peer: ' + err.message);
         if (this.btnJoinSubmit) {
@@ -434,14 +470,14 @@
       let connected = false;
       const connectTimeout = setTimeout(() => {
         if (!connected) {
-          this.showJoinError('Connection timeout. Room not found or Host offline.');
+          this.showJoinError('Connection timeout. Please verify Room Code and ensure Host is in lobby.');
           if (this.btnJoinSubmit) {
             this.btnJoinSubmit.disabled = false;
             this.btnJoinSubmit.textContent = 'JOIN ROOM';
           }
           this.cleanup();
         }
-      }, 9000);
+      }, 18000); // 18s for cross-network cellular/broadband TURN traversal
 
       this.peer.on('open', (id) => {
         this.localPlayerId = id;
@@ -554,7 +590,6 @@
         this.broadcastLobbyUpdate();
         this.renderLobbyUI();
       } else if (msg.type === 'PLAYER_INPUT') {
-        // Find player and update their real-time state
         const p = this.players.find(pl => pl.id === msg.id);
         if (p && !p.eliminated) {
           p.x = msg.x;
@@ -567,12 +602,13 @@
           if (msg.hasRelocated) p.hasRelocated = true;
         }
       } else if (msg.type === 'SEEKER_SEARCH') {
-        // Seeker searched a spot
         this.processSeekerSearch(msg.spotId, msg.seekerId);
       } else if (msg.type === 'HIDER_READY') {
         const p = this.players.find(pl => pl.id === msg.id);
         if (p) p.isReady = true;
         this.checkAllHidersReady();
+      } else if (msg.type === 'REQUEST_ROLE') {
+        this.applyRoleChange(msg.id, msg.role);
       }
     }
 
@@ -625,17 +661,63 @@
           this.broadcastLobbyUpdate();
           this.renderLobbyUI();
         } else if (this.phase === 'mp_hunting' || this.phase === 'mp_hiding_countdown') {
-          // If seeker disconnected or all hiders gone, handle end
           this.checkMatchEndConditions();
         }
       }
+    }
+
+    /* ========================================================
+       ROLE CHANGE & AUTO BALANCING
+       ======================================================== */
+    requestRoleChange(newRole) {
+      if (this.phase !== 'lobby') return;
+      if (this.isHost) {
+        this.applyRoleChange(this.localPlayerId, newRole);
+      } else if (this.hostConn && this.hostConn.open) {
+        this.hostConn.send({
+          type: 'REQUEST_ROLE',
+          id: this.localPlayerId,
+          role: newRole
+        });
+      }
+    }
+
+    applyRoleChange(targetId, newRole) {
+      if (!this.isHost) return;
+      const target = this.players.find(p => p.id === targetId);
+      if (!target) return;
+
+      if (newRole === 'seeker') {
+        // Target becomes seeker, all other players become hiders
+        this.players.forEach(p => {
+          if (p.id === targetId) {
+            p.role = 'seeker';
+            p.color = MP_CFG.seekerColor;
+          } else {
+            p.role = 'hider';
+          }
+        });
+      } else {
+        // Target becomes hider
+        target.role = 'hider';
+        // Ensure there is still 1 seeker; if none, make the other player or host seeker
+        const hasSeeker = this.players.some(p => p.role === 'seeker');
+        if (!hasSeeker && this.players.length > 0) {
+          const nextSeeker = this.players.find(p => p.id !== targetId) || this.players[0];
+          nextSeeker.role = 'seeker';
+          nextSeeker.color = MP_CFG.seekerColor;
+        }
+      }
+
+      this.autoBalanceRoles();
+      this.broadcastLobbyUpdate();
+      this.renderLobbyUI();
     }
 
     autoBalanceRoles() {
       // Ensure exactly 1 seeker exists
       const seekers = this.players.filter(p => p.role === 'seeker');
       if (seekers.length === 0 && this.players.length > 0) {
-        // Make the host or 1st player seeker by default
         this.players[0].role = 'seeker';
         this.players[0].color = MP_CFG.seekerColor;
       } else if (seekers.length > 1) {
@@ -644,7 +726,7 @@
         }
       }
 
-      // Re-assign distinct colors to hiders
+      // Re-assign distinct high-contrast colors to hiders
       let colorIdx = 0;
       this.players.forEach(p => {
         if (p.role === 'seeker') {
@@ -654,21 +736,6 @@
           colorIdx++;
         }
       });
-    }
-
-    setSeeker(targetId) {
-      if (!this.isHost || this.phase !== 'lobby') return;
-      this.players.forEach(p => {
-        if (p.id === targetId) {
-          p.role = 'seeker';
-          p.color = MP_CFG.seekerColor;
-        } else {
-          p.role = 'hider';
-        }
-      });
-      this.autoBalanceRoles();
-      this.broadcastLobbyUpdate();
-      this.renderLobbyUI();
     }
 
     broadcastLobbyUpdate() {
@@ -716,17 +783,25 @@
         this.lobbyCount.textContent = `Players: ${count} / ${MP_CFG.maxPlayers} (Min 2 required)`;
       }
 
+      // Update Quick Role Selector Pills for Local Player
+      const me = this.players.find(p => p.id === this.localPlayerId);
+      if (me) {
+        if (this.btnMyRoleHider) this.btnMyRoleHider.classList.toggle('active', me.role === 'hider');
+        if (this.btnMyRoleSeeker) this.btnMyRoleSeeker.classList.toggle('active', me.role === 'seeker');
+      }
+
       this.players.forEach(p => {
         const tr = document.createElement('tr');
-        tr.className = `lobby-player-row ${p.id === this.localPlayerId ? 'local-player' : ''}`;
+        const isMe = p.id === this.localPlayerId;
+        tr.className = `lobby-player-row ${isMe ? 'local-player' : ''}`;
 
-        // Player Name + Host tag
+        // Player Name + Host / You tag
         const tdName = document.createElement('td');
         tdName.innerHTML = `
           <div class="lobby-name-cell">
             <strong>${this.escapeHtml(p.name)}</strong>
             ${p.isHost ? '<span class="lobby-badge host">HOST</span>' : ''}
-            ${p.id === this.localPlayerId ? '<span class="lobby-badge you">YOU</span>' : ''}
+            ${isMe ? '<span class="lobby-badge you">YOU</span>' : ''}
           </div>
         `;
 
@@ -738,14 +813,21 @@
           </div>
         `;
 
-        // Role (Host can click to assign Seeker)
+        // Role: Host can toggle ANY player, Guest can toggle THEMSELVES!
         const tdRole = document.createElement('td');
-        if (this.isHost) {
+        if (this.isHost || isMe) {
           const btnRole = document.createElement('button');
           btnRole.className = `role-toggle-btn ${p.role === 'seeker' ? 'is-seeker' : 'is-hider'}`;
           btnRole.textContent = p.role === 'seeker' ? 'Seeker (Hunter)' : 'Hider (Stealth)';
-          btnRole.title = 'Click to make this player the Seeker';
-          btnRole.addEventListener('click', () => this.setSeeker(p.id));
+          btnRole.title = isMe ? 'Click to switch your role' : 'Click to change this player\'s role';
+          btnRole.addEventListener('click', () => {
+            const nextRole = p.role === 'seeker' ? 'hider' : 'seeker';
+            if (this.isHost) {
+              this.applyRoleChange(p.id, nextRole);
+            } else {
+              this.requestRoleChange(nextRole);
+            }
+          });
           tdRole.appendChild(btnRole);
         } else {
           tdRole.innerHTML = `
@@ -771,7 +853,7 @@
         if (!this.isHost) {
           this.btnStartMatch.classList.add('hidden');
           if (this.lobbyStatusMsg) {
-            this.lobbyStatusMsg.textContent = 'Waiting for Host to configure and start the match...';
+            this.lobbyStatusMsg.textContent = 'Waiting for Host to start the match... You can choose your role above anytime.';
           }
         } else {
           this.btnStartMatch.classList.remove('hidden');
@@ -779,11 +861,11 @@
           this.btnStartMatch.disabled = !canStart;
           if (this.lobbyStatusMsg) {
             if (count < MP_CFG.minPlayers) {
-              this.lobbyStatusMsg.textContent = `Need at least ${MP_CFG.minPlayers} players to start (Currently ${count}). Share Room Code: ${this.roomCode}`;
+              this.lobbyStatusMsg.textContent = `Need at least ${MP_CFG.minPlayers} players to start (Currently ${count}). Share Code: ${this.roomCode}`;
             } else if (seekerCount !== 1) {
-              this.lobbyStatusMsg.textContent = 'Assign exactly 1 Seeker by clicking the Role button.';
+              this.lobbyStatusMsg.textContent = 'Assign exactly 1 Seeker before starting.';
             } else {
-              this.lobbyStatusMsg.textContent = 'Lobby ready! Click Start Match to begin the 25s Hiding Phase.';
+              this.lobbyStatusMsg.textContent = 'Lobby ready! Click Start Match to begin.';
             }
           }
         }
@@ -801,7 +883,7 @@
       this.attemptsLeft = this.settings.attemptsLimit;
       this.checkedSpots = [];
 
-      // Set spawn coordinates in map foyer
+      // Set spawn coordinates in map foyer with offset
       this.players.forEach((p, i) => {
         p.x = 640 + (i * 28 - (this.players.length * 14));
         p.y = 725;
@@ -861,6 +943,22 @@
       this.game.attemptsBox.classList.remove('hidden');
       this.game.attemptsLabel.textContent = 'SEEKER CHECKS';
       this.game.attemptsValue.textContent = `${this.attemptsLeft} / ${this.settings.attemptsLimit}`;
+
+      // SHOW MOBILE CONTROLS & HUD IN MULTIPLAYER
+      this.game.tryFullscreenAndLandscape();
+      if (this.game.touchPad) this.game.touchPad.classList.remove('hidden');
+      if (this.game.actionBar) this.game.actionBar.classList.remove('hidden');
+      if (this.game.controlsFooter) this.game.controlsFooter.classList.remove('hidden');
+
+      if (this.game.role === 'hider') {
+        if (this.game.btnTouchReady) this.game.btnTouchReady.classList.remove('hidden');
+        if (this.game.btnReady) this.game.btnReady.classList.remove('hidden');
+      } else {
+        if (this.game.btnTouchReady) this.game.btnTouchReady.classList.add('hidden');
+        if (this.game.btnReady) this.game.btnReady.classList.add('hidden');
+      }
+
+      this.game.renderer.resize();
 
       // Audio init
       if (typeof Sound !== 'undefined' && Sound.init) {
@@ -933,6 +1031,9 @@
         Sound.playAlert();
       }
       this.game.showToast('Hunt Phase Activated! Seeker released!');
+      if (this.countdownSeekerBanner) this.countdownSeekerBanner.classList.add('hidden');
+      if (this.game.btnTouchReady) this.game.btnTouchReady.classList.add('hidden');
+      if (this.game.btnReady) this.game.btnReady.classList.add('hidden');
     }
 
     checkAllHidersReady() {
@@ -979,7 +1080,6 @@
         this.game.showToast(`🚨 ${caughtNames} was CAUGHT in ${spot.name}!`);
         if (typeof Sound !== 'undefined' && Sound.playCaught) Sound.playCaught();
       } else {
-        // Not found: calculate proximity hint from closest living hidden Hider
         if (typeof Sound !== 'undefined' && Sound.playEmpty) Sound.playEmpty();
         this.calculateProximityHint(spot);
       }
@@ -1033,7 +1133,6 @@
         const dy = h.y - seeker.y;
         const dist = Math.hypot(dx, dy);
 
-        // Clearance check through walls
         if (!this.game.apt.hasLineOfSight(seeker.x, seeker.y, h.x, h.y)) return;
 
         // Instant catch distance (34px proximity)
@@ -1113,7 +1212,6 @@
       const rankings = [];
 
       if (outcome === 'seeker_win') {
-        // Seeker caught ALL Hiders: Seeker is #1
         rankings.push({
           rank: 1,
           name: seeker.name,
@@ -1124,7 +1222,6 @@
           justification: 'Successfully caught all Hiders before running out of attempts.'
         });
 
-        // Hiders ranked in reverse order of elimination (last caught = 2nd)
         const sortedHiders = [...hiders].sort((a, b) => (a.eliminatedAt || 0) - (b.eliminatedAt || 0));
         sortedHiders.forEach((h, idx) => {
           rankings.push({
@@ -1138,11 +1235,9 @@
           });
         });
       } else {
-        // 1 or more Hiders survived!
         const survivors = hiders.filter(h => !h.eliminated);
         const caught = hiders.filter(h => h.eliminated).sort((a, b) => (a.eliminatedAt || 0) - (b.eliminatedAt || 0));
 
-        // Unmoved survivors get #1 Unmoved Stealth Bonus
         const unmovedSurvivors = survivors.filter(h => !h.hasRelocated);
         const movedSurvivors = survivors.filter(h => h.hasRelocated);
 
@@ -1189,7 +1284,6 @@
           currentRank++;
         });
 
-        // Seeker ran out of attempts
         const caughtCount = hiders.length - survivors.length;
         rankings.push({
           rank: currentRank,
@@ -1210,6 +1304,7 @@
       this.resultModal.classList.remove('hidden');
 
       if (this.countdownOverlay) this.countdownOverlay.classList.add('hidden');
+      if (this.countdownSeekerBanner) this.countdownSeekerBanner.classList.add('hidden');
       if (this.spectatorBanner) this.spectatorBanner.classList.add('hidden');
 
       const isSeekerWin = data.outcome === 'seeker_win';
@@ -1252,7 +1347,6 @@
         });
       }
 
-      // Audio cue
       const me = this.players.find(p => p.id === this.localPlayerId);
       if (me) {
         const iWon = (isSeekerWin && me.role === 'seeker') || (!isSeekerWin && me.role === 'hider' && !me.eliminated);
@@ -1274,7 +1368,6 @@
         const me = this.players.find(p => p.id === this.localPlayerId);
         if (!me) return;
 
-        // Sync local game player position into multiplayer struct
         me.x = this.game.player.x;
         me.y = this.game.player.y;
         me.angle = this.game.player.angle;
@@ -1333,7 +1426,6 @@
       this.attemptsLeft = sync.attemptsLeft;
       this.checkedSpots = sync.checkedSpots || [];
 
-      // Update spot checked badges in apartment map
       if (this.game && this.game.apt) {
         this.game.apt.hidingSpots.forEach(s => {
           s.checked = this.checkedSpots.includes(s.id);
@@ -1347,7 +1439,6 @@
         }
       }
 
-      // Smoothly interpolate other players
       sync.players.forEach(remote => {
         const localP = this.players.find(p => p.id === remote.id);
         if (localP) {
@@ -1358,7 +1449,6 @@
           localP.eliminated = remote.eliminated;
           localP.hasRelocated = remote.hasRelocated;
 
-          // Don't overwrite local player's own position
           if (remote.id !== this.localPlayerId) {
             localP.x = remote.x;
             localP.y = remote.y;
@@ -1384,7 +1474,6 @@
       const me = this.players.find(p => p.id === this.localPlayerId);
       if (!me) return;
 
-      // Top attempts box
       if (this.game.attemptsValue) {
         this.game.attemptsValue.textContent = `${this.attemptsLeft} / ${this.settings.attemptsLimit}`;
       }
@@ -1392,21 +1481,24 @@
       // 25s Countdown Phase Overlays
       if (this.phase === 'mp_hiding_countdown') {
         const sec = Math.ceil(this.countdown);
-        if (this.countdownOverlay) this.countdownOverlay.classList.remove('hidden');
 
         if (me.role === 'seeker') {
           // Seeker sees centered lock banner
-          if (this.countdownHiderBadge) this.countdownHiderBadge.classList.add('hidden');
+          if (this.countdownOverlay) this.countdownOverlay.classList.add('hidden');
           if (this.countdownSeekerBanner) this.countdownSeekerBanner.classList.remove('hidden');
           if (this.countdownSeekerSeconds) this.countdownSeekerSeconds.textContent = `${sec}s`;
         } else {
           // Hider sees live countdown badge
           if (this.countdownSeekerBanner) this.countdownSeekerBanner.classList.add('hidden');
+          if (this.countdownOverlay) this.countdownOverlay.classList.remove('hidden');
           if (this.countdownHiderBadge) this.countdownHiderBadge.classList.remove('hidden');
           if (this.countdownHiderSeconds) this.countdownHiderSeconds.textContent = `${sec}s`;
         }
       } else {
         if (this.countdownOverlay) this.countdownOverlay.classList.add('hidden');
+        if (this.countdownSeekerBanner) this.countdownSeekerBanner.classList.add('hidden');
+        if (this.game.btnTouchReady) this.game.btnTouchReady.classList.add('hidden');
+        if (this.game.btnReady) this.game.btnReady.classList.add('hidden');
       }
 
       // Spectator mode banner
@@ -1461,11 +1553,15 @@
       if (this.resultModal) this.resultModal.classList.add('hidden');
       if (this.spectatorBanner) this.spectatorBanner.classList.add('hidden');
       if (this.countdownOverlay) this.countdownOverlay.classList.add('hidden');
+      if (this.countdownSeekerBanner) this.countdownSeekerBanner.classList.add('hidden');
 
       this.game.isMultiplayer = false;
       this.game.phase = 'menu';
       this.game.menuScreen.classList.remove('hidden');
       this.game.topHud.classList.add('hidden');
+      if (this.game.touchPad) this.game.touchPad.classList.add('hidden');
+      if (this.game.actionBar) this.game.actionBar.classList.add('hidden');
+      if (this.game.controlsFooter) this.game.controlsFooter.classList.add('hidden');
 
       this.showLobbyView();
     }
@@ -1481,9 +1577,13 @@
       if (this.resultModal) this.resultModal.classList.add('hidden');
       if (this.spectatorBanner) this.spectatorBanner.classList.add('hidden');
       if (this.countdownOverlay) this.countdownOverlay.classList.add('hidden');
+      if (this.countdownSeekerBanner) this.countdownSeekerBanner.classList.add('hidden');
 
       this.game.menuScreen.classList.remove('hidden');
       this.game.topHud.classList.add('hidden');
+      if (this.game.touchPad) this.game.touchPad.classList.add('hidden');
+      if (this.game.actionBar) this.game.actionBar.classList.add('hidden');
+      if (this.game.controlsFooter) this.game.controlsFooter.classList.add('hidden');
     }
 
     cleanup() {

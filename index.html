@@ -102,17 +102,19 @@
         </div>
       </div>
 
-      <!-- MULTIPLAYER 25S COUNTDOWN OVERLAY & NOTIFICATIONS -->
+      <!-- MULTIPLAYER 25S COUNTDOWN OVERLAY (HIDERS) -->
       <div id="mp-countdown-overlay" class="mp-countdown-overlay hidden">
         <div id="mp-countdown-hider-badge" class="mp-countdown-hider-badge">
           <span class="pulse-beacon"></span> HIDE TIME: <strong id="mp-countdown-hider-seconds">25s</strong>
         </div>
-        <div id="mp-countdown-seeker-banner" class="mp-countdown-seeker-banner hidden">
-          <div class="seeker-banner-box">
-            <span class="lock-icon">🔒</span>
-            <h3>HUNTER RESTRICTED</h3>
-            <p>Hiders are securing their positions... Hunt begins in <strong id="mp-countdown-seeker-seconds">25s</strong></p>
-          </div>
+      </div>
+
+      <!-- SEEKER LOCKED OVERLAY (Direct child of canvas stage, perfectly centered) -->
+      <div id="mp-countdown-seeker-banner" class="mp-countdown-seeker-banner hidden">
+        <div class="seeker-banner-box">
+          <span class="lock-icon">🔒</span>
+          <h3>SEEKER LOCKED</h3>
+          <p>Hiders are securing their positions... Hunt begins in <strong id="mp-countdown-seeker-seconds">25s</strong></p>
         </div>
       </div>
 
@@ -244,8 +246,7 @@
             <button id="btn-start-game" class="btn-start-game">START GAME</button>
             <button id="btn-open-multiplayer" class="btn-multiplayer" type="button">
               <span class="mp-btn-icon">👥</span>
-              <span class="mp-btn-text">PLAY WITH FRIENDS (CUSTOM ROOM)</span>
-              <span class="mp-btn-tag">2-5 PLAYERS</span>
+              <span class="mp-btn-text">Custom Rooms</span>
             </button>
           </div>
         </div>
@@ -321,8 +322,7 @@
       <div class="modal-card mp-card">
         <div class="mp-modal-header">
           <div class="mp-modal-title-group">
-            <h2 id="mp-modal-title">Custom Room Multiplayer</h2>
-            <span class="mp-sub-tag">P2P Host-Authoritative • 2-5 Players</span>
+            <h2 id="mp-modal-title">Custom Rooms</h2>
           </div>
           <button id="btn-close-mp-modal" class="modal-close-icon" aria-label="Close Modal">✕</button>
         </div>
@@ -416,6 +416,15 @@
               <span id="lobby-map-name" class="meta-chip">Penthouse</span>
               <span id="lobby-lighting" class="meta-chip">Night (Dark)</span>
               <span id="lobby-attempts" class="meta-chip">10 Checks</span>
+            </div>
+          </div>
+
+          <!-- QUICK ROLE SELECTOR FOR LOCAL PLAYER -->
+          <div class="lobby-my-role-bar">
+            <span class="my-role-label">Choose Your Role:</span>
+            <div class="my-role-pills">
+              <button id="btn-my-role-hider" type="button" class="my-role-pill active" data-role="hider">Hider (Stealth)</button>
+              <button id="btn-my-role-seeker" type="button" class="my-role-pill" data-role="seeker">Seeker (Hunter)</button>
             </div>
           </div>
 

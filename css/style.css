@@ -85,17 +85,16 @@ html, body {
   }
 }
 
-/* Force Mobile Landscape Orientation when held vertically */
-@media (orientation: portrait) and (pointer: coarse), (orientation: portrait) and (max-width: 768px) {
-  #app {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vh;
-    height: 100vw;
-    transform: rotate(90deg) translateY(-100%);
-    transform-origin: top left;
-  }
+/* Responsive Viewport Layout */
+#app {
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
 }
 
 .hidden {
@@ -653,9 +652,10 @@ html[data-theme="light"] .diff-btn.active {
 .btn-multiplayer {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  min-width: 280px;
-  padding: 11px 26px;
+  justify-content: center;
+  gap: 8px;
+  min-width: 170px;
+  padding: 11px 24px;
   border-radius: 999px;
   border: 2px solid #a855f7;
   background: linear-gradient(135deg, rgba(168, 85, 247, 0.22), rgba(56, 189, 248, 0.16));
@@ -665,8 +665,8 @@ html[data-theme="light"] .diff-btn.active {
   font-weight: 800;
   letter-spacing: 0.04em;
   cursor: pointer;
-  box-shadow: 0 0 20px rgba(168, 85, 247, 0.28), 0 4px 18px rgba(0, 0, 0, 0.4);
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.25);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   backdrop-filter: blur(8px);
 }
 
@@ -674,23 +674,11 @@ html[data-theme="light"] .diff-btn.active {
   transform: translateY(-2px) scale(1.02);
   border-color: #c084fc;
   background: linear-gradient(135deg, rgba(168, 85, 247, 0.35), rgba(56, 189, 248, 0.25));
-  box-shadow: 0 0 28px rgba(168, 85, 247, 0.5), 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 24px rgba(168, 85, 247, 0.45);
 }
 
 .mp-btn-icon {
-  font-size: 1.15rem;
-}
-
-.mp-btn-tag {
-  background: rgba(168, 85, 247, 0.35);
-  border: 1px solid #c084fc;
-  color: #f3e8ff;
-  font-size: 0.65rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  padding: 2px 7px;
-  border-radius: 6px;
-  text-transform: uppercase;
+  font-size: 1.1rem;
 }
 
 html[data-theme="light"] .btn-start-game {
@@ -705,12 +693,6 @@ html[data-theme="light"] .btn-multiplayer {
   border-color: #9333ea;
   color: #1e293b;
   box-shadow: 0 4px 16px rgba(147, 51, 234, 0.25);
-}
-
-html[data-theme="light"] .mp-btn-tag {
-  background: rgba(147, 51, 234, 0.15);
-  border-color: #9333ea;
-  color: #7e22ce;
 }
 
 .btn-start-game:hover {
@@ -1500,6 +1482,76 @@ html[data-theme="light"] .modal-overlay {
   color: var(--text-secondary);
 }
 
+/* Quick Role Selector for Local Player */
+.lobby-my-role-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.my-role-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.my-role-pills {
+  display: flex;
+  gap: 8px;
+}
+
+.my-role-pill {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.my-role-pill:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.my-role-pill.active[data-role="hider"] {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+}
+
+.my-role-pill.active[data-role="seeker"] {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+  color: #fbbf24;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.25);
+}
+
+html[data-theme="light"] .my-role-pill.active[data-role="hider"] {
+  background: rgba(2, 132, 199, 0.15);
+  border-color: #0284c7;
+  color: #0369a1;
+}
+
+html[data-theme="light"] .my-role-pill.active[data-role="seeker"] {
+  background: rgba(217, 119, 6, 0.15);
+  border-color: #d97706;
+  color: #b45309;
+}
+
 /* Lobby Table */
 .lobby-table-wrapper {
   overflow-x: auto;
@@ -1737,13 +1789,12 @@ html[data-theme="light"] .modal-overlay {
 }
 
 .mp-countdown-seeker-banner {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(11, 22, 44, 0.75);
-  backdrop-filter: blur(6px);
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(11, 22, 44, 0.85);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1755,10 +1806,11 @@ html[data-theme="light"] .modal-overlay {
   background: var(--bg-card);
   border: 2px solid #f59e0b;
   border-radius: 16px;
-  padding: 32px 42px;
+  padding: 24px 28px;
   text-align: center;
   box-shadow: 0 0 35px rgba(245, 158, 11, 0.35), 0 20px 50px rgba(0, 0, 0, 0.7);
-  max-width: 480px;
+  width: 90%;
+  max-width: 440px;
 }
 
 .seeker-banner-box .lock-icon {

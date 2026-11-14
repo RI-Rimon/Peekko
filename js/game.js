@@ -318,7 +318,10 @@
       });
 
       this.btnTouchReady.addEventListener('click', () => {
-        if (this.role === 'hider' && this.phase === 'hider_ready' && !this.isPaused) {
+        if (this.isPaused) return;
+        if (this.isMultiplayer && this.role === 'hider' && this.phase === 'mp_hiding_countdown') {
+          this.confirmHiderReady();
+        } else if (this.role === 'hider' && this.phase === 'hider_ready') {
           this.confirmHiderReady();
         }
       });
@@ -1341,7 +1344,11 @@
       }
 
       const wp = bot.waypoints[bot.waypointIndex];
-      if (!wp) {
+      const distToSpotIx = Math.hypot(currentSpot.ix - bot.x, currentSpot.iy - bot.y);
+      const distToSpotHide = Math.hypot(currentSpot.hideX - bot.x, currentSpot.hideY - bot.y);
+
+      // If no more waypoints or bot has reached the spot directly, start scanning
+      if (!wp || distToSpotIx < 28 || distToSpotHide < 36) {
         bot.scanningSpotId = currentSpot.id;
         bot.scanTimer = CFG.scanDuration;
         bot.stuckTimer = 0;
@@ -1356,7 +1363,7 @@
       const dy = wp.y - bot.y;
       const dist = Math.hypot(dx, dy);
       const isLastWp = (bot.waypointIndex === bot.waypoints.length - 1);
-      const arrivalRadius = isLastWp ? 10 : 18;
+      const arrivalRadius = isLastWp ? 22 : 22;
 
       if (dist < arrivalRadius) {
         bot.waypointIndex++;
@@ -1398,39 +1405,60 @@
         bot.angle = Math.atan2(dy, dx);
         bot.isMoving = moved > 0.05;
 
-        // Unstuck maneuver tracking: track whenever moved distance per frame is < 0.35 * step
-        if (moved < 0.35 * step) {
+        // Guaranteed Unstuck Fail-Safe: Max stuck duration strictly <= 0.50 seconds
+        if (moved < 0.45 * step) {
           bot.stuckTimer = (bot.stuckTimer || 0) + (dt * 0.01667);
 
-          if (bot.stuckTimer > 1.1) {
-            // Hard stuck recovery: snap smoothly to closest valid nav node and recalculate path
+          if (bot.stuckTimer >= 0.45) {
+            // If already in the general vicinity of the target spot (< 50px), trigger scan
+            if (distToSpotIx < 50 || distToSpotHide < 50 || isLastWp) {
+              bot.scanningSpotId = currentSpot.id;
+              bot.scanTimer = CFG.scanDuration;
+              bot.stuckTimer = 0;
+              bot.waypoints = [];
+              bot.waypointIndex = 0;
+              Sound.playSpatialPing(bot.x, bot.y, this.player.x, this.player.y, this.apt);
+              return;
+            }
+
+            // Hard recovery: snap smoothly to closest valid corridor node and advance path
             const closestNodeId = this.apt.findClosestNode(bot.x, bot.y);
             const node = closestNodeId ? this.apt.navNodes[closestNodeId] : null;
             if (node) {
               bot.x = node.x;
               bot.y = node.y;
             }
-            bot.waypoints = this.apt.findPathToSpot(bot.x, bot.y, currentSpot);
-            bot.waypointIndex = 0;
+            if (bot.waypointIndex + 1 < bot.waypoints.length) {
+              bot.waypointIndex++;
+            } else {
+              bot.waypoints = this.apt.findPathToSpot(bot.x, bot.y, currentSpot);
+              bot.waypointIndex = 0;
+            }
             bot.stuckTimer = 0;
-          } else if (bot.stuckTimer > 0.45) {
+          } else if (bot.stuckTimer >= 0.18) {
+            // Minor snag recovery: try skipping intermediate waypoint if close
+            if (bot.waypointIndex + 1 < bot.waypoints.length) {
+              const nextWp = bot.waypoints[bot.waypointIndex + 1];
+              const dNext = Math.hypot(nextWp.x - bot.x, nextWp.y - bot.y);
+              if (dNext < 75) {
+                bot.waypointIndex++;
+                bot.stuckTimer = 0;
+              }
+            }
+
             // Perpendicular sidestep nudge (90 degrees left or right relative to target direction)
-            const nudgeDist = step * 1.5;
+            const nudgeDist = step * 2.2;
             const nudgeLeft = this.apt.resolveMovement(bot.x, bot.y, 9.5, (-dy / dist) * nudgeDist, (dx / dist) * nudgeDist);
             const nudgeRight = this.apt.resolveMovement(bot.x, bot.y, 9.5, (dy / dist) * nudgeDist, (-dx / dist) * nudgeDist);
             const distLeft = Math.hypot(nudgeLeft.x - prevX, nudgeLeft.y - prevY);
             const distRight = Math.hypot(nudgeRight.x - prevX, nudgeRight.y - prevY);
 
-            if (distLeft >= distRight && distLeft > 0.2) {
+            if (distLeft >= distRight && distLeft > 0.25) {
               bot.x = nudgeLeft.x;
               bot.y = nudgeLeft.y;
-            } else if (distRight > 0.2) {
+            } else if (distRight > 0.25) {
               bot.x = nudgeRight.x;
               bot.y = nudgeRight.y;
-            } else {
-              // Both sides blocked, recalculate path from current spot
-              bot.waypoints = this.apt.findPathToSpot(bot.x, bot.y, currentSpot);
-              bot.waypointIndex = 0;
             }
           }
         } else {
