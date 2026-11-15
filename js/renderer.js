@@ -169,7 +169,11 @@ class ApartmentRenderer {
     for (const spot of this.apt.hidingSpots) {
       const isNearest = gameState.nearestSpot && gameState.nearestSpot.id === spot.id;
       const isPlayerHere = gameState.player && gameState.player.hiddenSpot && gameState.player.hiddenSpot.id === spot.id;
-      const isBotRevealedHere = gameState.revealBotSpot && gameState.botHiddenSpot && gameState.botHiddenSpot.id === spot.id;
+      const isBotRevealedHere = (gameState.revealBotSpot && gameState.botHiddenSpot && gameState.botHiddenSpot.id === spot.id) ||
+        (gameState.isMultiplayer && (
+          (gameState.revealMpSpotId && gameState.revealMpSpotId === spot.id) ||
+          (gameState.mpPlayers && gameState.mpPlayers.some(pl => pl.eliminated && pl.revealedSpotId === spot.id))
+        ));
       const isBeingScanned = (gameState.botSeekers && gameState.botSeekers.some(b => b.active && b.scanningSpotId === spot.id)) ||
         (gameState.botSeeker && gameState.botSeeker.active && gameState.botSeeker.scanningSpotId === spot.id);
       const isSeekerRole = gameState.role === 'seeker' || (gameState.isMultiplayer && gameState.mpRole === 'seeker');
@@ -202,9 +206,9 @@ class ApartmentRenderer {
       const seeker = gameState.mpPlayers.find(pl => pl.role === 'seeker');
       if (seeker && this.theme === 'dark') {
         if (isMeSeeker || !isHidingCountdown || isMeEliminated) {
-          const sx = isMeSeeker ? gameState.player.x : seeker.x;
-          const sy = isMeSeeker ? gameState.player.y : seeker.y;
-          const sAngle = isMeSeeker ? gameState.player.angle : seeker.angle;
+          const sx = isMeSeeker ? gameState.player.x : (seeker.renderX !== undefined ? seeker.renderX : seeker.x);
+          const sy = isMeSeeker ? gameState.player.y : (seeker.renderY !== undefined ? seeker.renderY : seeker.y);
+          const sAngle = isMeSeeker ? gameState.player.angle : (seeker.renderAngle !== undefined ? seeker.renderAngle : seeker.angle);
           this.drawFlashlightCone(
             ctx,
             sx,
@@ -215,13 +219,36 @@ class ApartmentRenderer {
         }
       }
 
-      // 7b. Draw Characters with Asymmetric Fair Visibility
+      // 7b. Draw Characters with Asymmetric Fair Visibility & Smooth 60 FPS Interpolation
       for (const pl of gameState.mpPlayers) {
         const isLocal = pl.id === gameState.mpLocalId;
         const label = isLocal ? `YOU (${pl.name})` : pl.name;
-        const posX = isLocal ? gameState.player.x : pl.x;
-        const posY = isLocal ? gameState.player.y : pl.y;
-        const posAngle = isLocal ? gameState.player.angle : pl.angle;
+
+        // Smooth 60 FPS linear interpolation for remote players (eliminates network stutter)
+        if (!isLocal) {
+          if (pl.renderX === undefined || isNaN(pl.renderX)) {
+            pl.renderX = pl.x;
+            pl.renderY = pl.y;
+            pl.renderAngle = pl.angle;
+          } else {
+            const d = Math.hypot(pl.x - pl.renderX, pl.y - pl.renderY);
+            if (d > 75) {
+              pl.renderX = pl.x;
+              pl.renderY = pl.y;
+            } else {
+              pl.renderX += (pl.x - pl.renderX) * 0.35;
+              pl.renderY += (pl.y - pl.renderY) * 0.35;
+            }
+            let diff = pl.angle - pl.renderAngle;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            pl.renderAngle += diff * 0.35;
+          }
+        }
+
+        const posX = isLocal ? gameState.player.x : pl.renderX;
+        const posY = isLocal ? gameState.player.y : pl.renderY;
+        const posAngle = isLocal ? gameState.player.angle : pl.renderAngle;
         const posMoving = isLocal ? gameState.player.isMoving : pl.isMoving;
 
         if (pl.role === 'seeker') {
@@ -231,10 +258,15 @@ class ApartmentRenderer {
         } else {
           // Character is a Hider
           if (pl.eliminated) {
-            // Eliminated spectator ghost (only visible to fellow hiders/spectators)
-            if (!isMeSeeker || isMeEliminated) {
+            // When caught inside a hiding spot, reveal at that spot with a bright alert badge to ALL players!
+            if (pl.revealedSpotId) {
+              const spot = this.apt.hidingSpots.find(s => s.id === pl.revealedSpotId);
+              const hx = spot ? spot.hideX : posX;
+              const hy = spot ? spot.hideY : posY;
+              this.drawCharacter(ctx, hx, hy, 0, '#ef4444', `[CAUGHT] ${pl.name}`, false, false);
+            } else {
               ctx.save();
-              ctx.globalAlpha = 0.35;
+              ctx.globalAlpha = 0.55;
               this.drawCharacter(ctx, posX, posY, posAngle, '#94a3b8', `[OUT] ${pl.name}`, false, false);
               ctx.restore();
             }

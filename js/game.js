@@ -688,6 +688,7 @@
       this.botSeeker.active = false;
       this.topHud.classList.add('hidden');
       this.menuScreen.classList.remove('hidden');
+      this.menuScreen.style.display = '';
       this.revealMenuOptions();
       this.resultModal.classList.add('hidden');
       this.pauseModal.classList.add('hidden');
@@ -1236,7 +1237,8 @@
         mpPlayers: this.mpManager ? this.mpManager.players : null,
         mpLocalId: this.mpManager ? this.mpManager.localPlayerId : null,
         mpPhase: this.mpManager ? this.mpManager.phase : null,
-        mpRole: this.role
+        mpRole: this.role,
+        revealMpSpotId: (this.mpManager && this.mpManager.revealSpotId) || null
       });
 
       requestAnimationFrame((t) => this.loop(t));

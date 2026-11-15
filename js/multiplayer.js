@@ -1,9 +1,9 @@
 /* ========================================================
-   Peekko - Custom Room Real-Time Multiplayer
+   Peekko - Custom Room Real-Time Multiplayer (v13.1)
    Cross-Network Mobile Data (4G/5G) & Wi-Fi Relay over WSS MQTT
-   Every-Player Lobby Role Switching, 20s Hiding Countdown,
-   Collision-Free Dedicated Room Spawns, Mobile Touch Controls
-   & Detailed End-of-Match Leaderboard
+   20 Hz Network Sync, 60 FPS LERP Remote Interpolation,
+   Instant Catch Revelation, Fair Hider Elimination / Spectator,
+   Clean Disconnect / Mid-Game Exit Handling & Leaderboards
    ======================================================== */
 
 (function () {
@@ -17,7 +17,7 @@
     allowedAttempts: [7, 10, 15, 20],
     hiderPalette: ['#38bdf8', '#10b981', '#a855f7', '#ec4899', '#f43f5e'],
     seekerColor: '#f59e0b',
-    syncHz: 10
+    syncHz: 20
   };
 
   // Pre-calculated, 100% collision-free spawn nodes across distinct rooms for maps 1-5
@@ -113,6 +113,7 @@
       this.attemptsLeft = 10;
       this.checkedSpots = [];
       this.rankings = [];
+      this.revealSpotId = null;
 
       // Intervals & Timers
       this.syncInterval = null;
@@ -121,6 +122,7 @@
       this.handshakeRetryTimer = null;
       this.connectTimeout = null;
       this.mqttReconnectTimer = null;
+      this.matchEndTimeout = null;
 
       // MQTT state
       this.mqtt = null;
@@ -476,15 +478,14 @@
     }
 
     /* ========================================================
-       CROSS-NETWORK WSS MQTT RELAY TRANSPORT
-       Seamlessly traverses Mobile 4G/5G CGNAT, Wi-Fi & Firewalls.
-       Zero-Echo Strict Topic Separation:
+       CROSS-NETWORK WSS MQTT RELAY TRANSPORT (20 Hz)
+       Strict Topic Separation:
          - Base:   peekko/v12/room/<ROOM_CODE>
          - Host:   Subscribes ONLY to 'c2h'; Publishes to 'h2c' & 'client/<id>'
          - Client: Subscribes to 'h2c' & 'client/<id>'; Publishes ONLY to 'c2h'
        ======================================================== */
     scheduleMqttReconnect(isHost) {
-      if (this.mqttReconnectTimer) return; // Prevent cascading timers / duplicate instances
+      if (this.mqttReconnectTimer) return;
       if (!this.roomCode || this.status === 'idle') return;
 
       this.mqttReconnectTimer = setTimeout(() => {
@@ -498,7 +499,7 @@
 
     initMqtt(isHost) {
       if (typeof Paho === 'undefined' || !Paho.MQTT) {
-        console.error('Paho MQTT library not available in document.');
+        console.error('Paho MQTT library not available.');
         return;
       }
 
@@ -530,7 +531,6 @@
           try {
             const data = JSON.parse(message.payloadString);
             if (!data || !data.type) return;
-            // Prevent processing own reflected packets
             if (data.senderId && data.senderId === this.localPlayerId) return;
 
             if (this.isHost) {
@@ -563,14 +563,10 @@
           const topicPrefix = `peekko/v12/room/${this.roomCode}`;
 
           if (isHost) {
-            // Host subscribes strictly to Client-to-Host (c2h) topic
             this.mqtt.subscribe(`${topicPrefix}/c2h`, { qos: 0 });
           } else {
-            // Client subscribes strictly to Host-to-Client broadcast and direct personal topic
             this.mqtt.subscribe(`${topicPrefix}/h2c`, { qos: 0 });
             this.mqtt.subscribe(`${topicPrefix}/client/${this.localPlayerId}`, { qos: 0 });
-
-            // Begin continuous handshake retry until WELCOME is acknowledged
             this.startHandshakeRetry();
           }
         },
@@ -599,7 +595,6 @@
         });
       };
 
-      // Immediate first burst + 1000ms periodic retry
       sendJoin();
       this.handshakeRetryTimer = setInterval(sendJoin, 1000);
     }
@@ -652,10 +647,8 @@
       this.roomCode = generateRoomCode();
       this.localPlayerId = 'host_' + Math.random().toString(36).slice(2, 10);
 
-      // Initialize MQTT relay immediately
       this.initMqtt(true);
 
-      // Initialize Host Player in Lobby
       const hostRole = this.hostInitialRole || 'hider';
       const hostColor = hostRole === 'seeker' ? MP_CFG.seekerColor : MP_CFG.hiderPalette[0];
 
@@ -686,7 +679,6 @@
       }
       this.showLobbyView();
 
-      // Lobby keepalive pulse every 2.5s to prevent mobile carriers from closing idle TCP sockets
       if (this.lobbyPingInterval) clearInterval(this.lobbyPingInterval);
       this.lobbyPingInterval = setInterval(() => {
         if (this.isHost && this.phase === 'lobby' && this.mqttConnected) {
@@ -711,7 +703,6 @@
       this.roomCode = roomCode.toUpperCase().trim();
       this.localPlayerId = 'usr_' + Math.random().toString(36).slice(2, 10);
 
-      // 15s timeout safeguard
       this.connectTimeout = setTimeout(() => {
         if (this.status !== 'lobby') {
           this.showJoinError(`Could not reach Room '${this.roomCode}'. Please verify the Room Code and ensure Host is currently in the lobby.`);
@@ -723,7 +714,6 @@
         }
       }, 15000);
 
-      // Initialize MQTT relay immediately
       this.initMqtt(false);
     }
 
@@ -736,7 +726,6 @@
       if (msg.type === 'JOIN') {
         const clientId = msg.id || msg.senderId || ('guest_' + Math.random().toString(36).slice(2, 8));
 
-        // Check if player already registered (prevent duplicate rows on handshake retries)
         const existingPlayer = this.players.find(p => p.id === clientId || (msg.name && p.name === msg.name));
         if (existingPlayer) {
           existingPlayer.id = clientId;
@@ -761,7 +750,6 @@
           return;
         }
 
-        // Assign player role and unique color
         const usedColors = this.players.filter(p => p.role === 'hider').map(p => p.color);
         const freeColor = MP_CFG.hiderPalette.find(c => !usedColors.includes(c)) || MP_CFG.hiderPalette[0];
 
@@ -788,7 +776,6 @@
         this.players.push(newPlayer);
         this.autoBalanceRoles();
 
-        // Send direct WELCOME to this client
         this.sendToClient(clientId, {
           type: 'WELCOME',
           roomCode: this.roomCode,
@@ -797,7 +784,6 @@
           players: this.players
         });
 
-        // Broadcast updated lobby list to all players
         this.broadcastLobbyUpdate();
         this.renderLobbyUI();
       } else if (msg.type === 'PLAYER_INPUT') {
@@ -820,6 +806,41 @@
         this.checkAllHidersReady();
       } else if (msg.type === 'REQUEST_ROLE') {
         this.applyRoleChange(msg.id || msg.senderId, msg.role || msg.requestedRole);
+      } else if (msg.type === 'PLAYER_LEFT') {
+        const leavingId = msg.id || msg.senderId;
+        const p = this.players.find(pl => pl.id === leavingId);
+        const name = (p && p.name) || msg.name || 'A player';
+        this.game.showToast(`⚠️ ${name} left the match.`);
+
+        if (p) {
+          p.eliminated = true;
+          p.eliminatedReason = 'Left match';
+        }
+
+        this.broadcast({
+          type: 'PLAYER_LEFT',
+          id: leavingId,
+          name: name
+        });
+
+        if (this.phase === 'lobby') {
+          const idx = this.players.findIndex(pl => pl.id === leavingId);
+          if (idx !== -1) this.players.splice(idx, 1);
+          this.autoBalanceRoles();
+          this.broadcastLobbyUpdate();
+          this.renderLobbyUI();
+        } else if (this.phase === 'mp_hunting' || this.phase === 'mp_hiding_countdown') {
+          if (p && p.role === 'seeker') {
+            this.game.showToast('Seeker left the match! Surviving Hiders WIN!');
+            this.endMatch('hider_win');
+          } else {
+            const living = this.players.filter(pl => pl.role === 'hider' && !pl.eliminated);
+            if (living.length === 0) {
+              this.game.showToast('All Hiders left or caught! Seeker WINS!');
+              this.endMatch('seeker_win');
+            }
+          }
+        }
       }
     }
 
@@ -871,18 +892,60 @@
         this.countdownEndTime = msg.countdownEndTime || (Date.now() + (msg.countdown * 1000));
         this.attemptsLeft = msg.attemptsLimit;
         this.checkedSpots = [];
+        this.revealSpotId = null;
         this.phase = 'mp_hiding_countdown';
         if (this.game) this.game.phase = 'mp_hiding_countdown';
         this.clientStartMatch();
       } else if (msg.type === 'GAME_SYNC') {
         this.applyGameSync(msg);
+      } else if (msg.type === 'HIDER_CAUGHT') {
+        this.revealSpotId = msg.spotId;
+        const caughtNames = [];
+        this.players.forEach(p => {
+          if (msg.caughtPlayerIds && msg.caughtPlayerIds.includes(p.id)) {
+            p.eliminated = true;
+            p.isHidden = false;
+            p.revealedSpotId = msg.spotId;
+            caughtNames.push(p.name);
+          }
+        });
+
+        const me = this.players.find(p => p.id === this.localPlayerId);
+        if (me && msg.caughtPlayerIds && msg.caughtPlayerIds.includes(me.id)) {
+          this.game.player.speed = 0;
+          this.game.player.isMoving = false;
+          if (typeof Sound !== 'undefined' && Sound.playCaught) Sound.playCaught();
+          this.game.showToast(`🚨 You were CAUGHT in ${msg.spotName}!`);
+          if (this.spectatorBanner) this.spectatorBanner.classList.remove('hidden');
+        } else {
+          if (typeof Sound !== 'undefined' && Sound.playCaught) Sound.playCaught();
+          this.game.showToast(`🚨 ${caughtNames.join(', ')} was CAUGHT in ${msg.spotName}!`);
+        }
       } else if (msg.type === 'MATCH_END') {
         this.phase = 'mp_ended';
         if (this.game) this.game.phase = 'mp_ended';
+        if (msg.revealSpotId) this.revealSpotId = msg.revealSpotId;
         this.rankings = msg.rankings;
         this.showResultModal(msg);
       } else if (msg.type === 'RETURN_LOBBY') {
         this.clientReturnToLobby();
+      } else if (msg.type === 'PLAYER_LEFT') {
+        const leavingId = msg.id || msg.senderId;
+        const name = msg.name || 'A player';
+        this.game.showToast(`⚠️ ${name} left the game.`);
+
+        const p = this.players.find(pl => pl.id === leavingId);
+        if (p) {
+          p.eliminated = true;
+          p.eliminatedReason = 'Left match';
+        }
+
+        if (msg.isHost) {
+          this.game.showToast('Host left the room. Game ended.');
+          const me = this.players.find(pl => pl.id === this.localPlayerId);
+          const iWon = me && ((me.role === 'hider' && p && p.role === 'seeker') || (me.role === 'seeker' && p && p.role === 'hider'));
+          this.endMatch(iWon ? (me.role === 'seeker' ? 'seeker_win' : 'hider_win') : 'hider_win');
+        }
       }
     }
 
@@ -908,7 +971,6 @@
       if (!target) return;
 
       if (newRole === 'seeker') {
-        // Target becomes seeker, all other players become hiders
         this.players.forEach(p => {
           if (p.id === targetId) {
             p.role = 'seeker';
@@ -918,9 +980,7 @@
           }
         });
       } else {
-        // Target becomes hider
         target.role = 'hider';
-        // Ensure there is still 1 seeker; if none, assign another player
         const hasSeeker = this.players.some(p => p.role === 'seeker');
         if (!hasSeeker && this.players.length > 0) {
           const nextSeeker = this.players.find(p => p.id !== targetId) || this.players[0];
@@ -935,7 +995,6 @@
     }
 
     autoBalanceRoles() {
-      // Ensure exactly 1 seeker exists
       const seekers = this.players.filter(p => p.role === 'seeker');
       if (seekers.length === 0 && this.players.length > 0) {
         this.players[0].role = 'seeker';
@@ -946,7 +1005,6 @@
         }
       }
 
-      // Re-assign distinct high-contrast colors to hiders
       let colorIdx = 0;
       this.players.forEach(p => {
         if (p.role === 'seeker') {
@@ -1015,7 +1073,6 @@
         this.lobbyCount.textContent = `Players: ${count} / ${MP_CFG.maxPlayers} (Min 2 required)`;
       }
 
-      // Update Quick Role Selector Pills for Local Player
       const me = this.players.find(p => p.id === this.localPlayerId);
       if (me) {
         if (this.btnMyRoleHider) this.btnMyRoleHider.classList.toggle('active', me.role === 'hider');
@@ -1027,7 +1084,6 @@
         const isMe = p.id === this.localPlayerId;
         tr.className = `lobby-player-row ${isMe ? 'local-player' : ''}`;
 
-        // Player Name + Host / You tag
         const tdName = document.createElement('td');
         tdName.innerHTML = `
           <div class="lobby-name-cell">
@@ -1037,7 +1093,6 @@
           </div>
         `;
 
-        // Color badge
         const tdColor = document.createElement('td');
         tdColor.innerHTML = `
           <div class="color-badge-wrap">
@@ -1045,7 +1100,6 @@
           </div>
         `;
 
-        // Role: Host can toggle ANY player, Guest can toggle THEMSELVES
         const tdRole = document.createElement('td');
         if (this.isHost || isMe) {
           const btnRole = document.createElement('button');
@@ -1069,7 +1123,6 @@
           `;
         }
 
-        // Status
         const tdStatus = document.createElement('td');
         tdStatus.innerHTML = `<span class="status-connected">● Ready</span>`;
 
@@ -1080,7 +1133,6 @@
         this.lobbyTbody.appendChild(tr);
       });
 
-      // Start match button rules: Host only, count >= 2, exactly 1 seeker
       if (this.btnStartMatch) {
         if (!this.isHost) {
           this.btnStartMatch.classList.add('hidden');
@@ -1133,6 +1185,7 @@
       this.countdown = MP_CFG.hidingPhaseSeconds;
       this.attemptsLeft = this.settings.attemptsLimit;
       this.checkedSpots = [];
+      this.revealSpotId = null;
 
       this.game.apt.loadMap(this.settings.mapId);
 
@@ -1159,10 +1212,10 @@
         p.eliminated = false;
         p.eliminatedAt = 0;
         p.eliminatedReason = '';
+        p.revealedSpotId = null;
         p.hasRelocated = false;
       });
 
-      // Broadcast MATCH_START with redundancy pulses across 1.5s to ensure zero mobile packet drops
       const startPayload = {
         type: 'MATCH_START',
         phase: 'mp_hiding_countdown',
@@ -1195,7 +1248,6 @@
     }
 
     clientStartMatch() {
-      // Instantly hide all modals, overlays and menu screens
       try {
         if (this.modal) {
           this.modal.classList.add('hidden');
@@ -1229,7 +1281,6 @@
         console.warn('Overlay hide notice:', err);
       }
 
-      // Setup game instance
       this.game.isMultiplayer = true;
       this.game.mpManager = this;
       this.game.selectedMapId = this.settings.mapId;
@@ -1238,7 +1289,6 @@
       this.game.renderer.setTheme(this.settings.lightingMode);
       this.game.applyTheme(this.settings.lightingMode);
 
-      // Reconcile and find local player
       let me = this.players.find(p => p.id === this.localPlayerId);
       if (!me) {
         me = this.players.find(p => p.name === this.localPlayerName);
@@ -1268,7 +1318,6 @@
       this.game.attemptsLabel.textContent = 'SEEKER CHECKS';
       this.game.attemptsValue.textContent = `${this.attemptsLeft} / ${this.settings.attemptsLimit}`;
 
-      // SHOW MOBILE CONTROLS & HUD IN MULTIPLAYER
       this.game.tryFullscreenAndLandscape();
       if (this.game.touchPad) this.game.touchPad.classList.remove('hidden');
       if (this.game.actionBar) this.game.actionBar.classList.remove('hidden');
@@ -1294,7 +1343,7 @@
     }
 
     /* ========================================================
-       HOST AUTHORITATIVE LOOP (10 Hz Network Sync)
+       HOST AUTHORITATIVE LOOP (20 Hz Network Sync)
        ======================================================== */
     startHostAuthoritativeLoop() {
       if (!this.isHost) return;
@@ -1307,6 +1356,17 @@
     }
 
     tickHostAuthoritative() {
+      // 1. Update host local player FIRST before creating syncData so coordinates are always fresh
+      const me = this.players.find(p => p.id === this.localPlayerId);
+      if (me) {
+        me.x = this.game.player.x;
+        me.y = this.game.player.y;
+        me.angle = this.game.player.angle;
+        me.isMoving = this.game.player.isMoving;
+        me.isHidden = this.game.player.isHidden;
+        me.hiddenSpotId = this.game.player.hiddenSpot ? this.game.player.hiddenSpot.id : null;
+      }
+
       if (this.phase === 'mp_hiding_countdown') {
         this.updateCountdownFromClock();
       } else if (this.phase === 'mp_hunting') {
@@ -1314,7 +1374,7 @@
         this.checkMatchEndConditions();
       }
 
-      // Broadcast GAME_SYNC snapshot
+      // 2. Broadcast GAME_SYNC snapshot
       const syncData = {
         type: 'GAME_SYNC',
         phase: this.phase,
@@ -1323,6 +1383,7 @@
         countdownEndTime: this.countdownEndTime || 0,
         attemptsLeft: this.attemptsLeft,
         settings: this.settings,
+        revealSpotId: this.revealSpotId || null,
         players: this.players.map(p => ({
           id: p.id,
           name: p.name,
@@ -1337,6 +1398,8 @@
           hiddenSpotId: p.hiddenSpotId,
           isReady: p.isReady,
           eliminated: p.eliminated,
+          eliminatedReason: p.eliminatedReason,
+          revealedSpotId: p.revealedSpotId || null,
           hasRelocated: p.hasRelocated
         })),
         checkedSpots: this.checkedSpots,
@@ -1344,17 +1407,6 @@
       };
 
       this.broadcast(syncData);
-
-      // On host, update local player entity and refresh multiplayer HUD directly
-      const me = this.players.find(p => p.id === this.localPlayerId);
-      if (me) {
-        me.x = this.game.player.x;
-        me.y = this.game.player.y;
-        me.angle = this.game.player.angle;
-        me.isMoving = this.game.player.isMoving;
-        me.isHidden = this.game.player.isHidden;
-        me.hiddenSpotId = this.game.player.hiddenSpot ? this.game.player.hiddenSpot.id : null;
-      }
       this.updateMultiplayerHUD();
     }
 
@@ -1410,11 +1462,29 @@
           h.eliminatedAt = this.attemptsLeft;
           h.eliminatedReason = `Found in ${spot.name}`;
           h.isHidden = false;
+          h.revealedSpotId = spot.id;
         });
+        this.revealSpotId = spot.id;
+
+        // Broadcast HIDER_CAUGHT immediately across channels so all players see the reveal
+        const caughtPayload = {
+          type: 'HIDER_CAUGHT',
+          spotId: spot.id,
+          spotName: spot.name,
+          caughtPlayerIds: caughtHiders.map(h => h.id)
+        };
+        this.broadcast(caughtPayload);
 
         const caughtNames = caughtHiders.map(h => h.name).join(', ');
         this.game.showToast(`🚨 ${caughtNames} was CAUGHT in ${spot.name}!`);
         if (typeof Sound !== 'undefined' && Sound.playCaught) Sound.playCaught();
+
+        const me = this.players.find(p => p.id === this.localPlayerId);
+        if (me && me.eliminated) {
+          this.game.player.speed = 0;
+          this.game.player.isMoving = false;
+          if (this.spectatorBanner) this.spectatorBanner.classList.remove('hidden');
+        }
       } else {
         if (typeof Sound !== 'undefined' && Sound.playEmpty) Sound.playEmpty();
         this.calculateProximityHint(spot);
@@ -1478,6 +1548,13 @@
           h.eliminatedReason = 'Spotted in the Open';
           this.game.showToast(`🚨 ${h.name} was caught in the open!`);
           if (typeof Sound !== 'undefined' && Sound.playCaught) Sound.playCaught();
+
+          this.broadcast({
+            type: 'HIDER_CAUGHT',
+            spotId: null,
+            spotName: 'the open corridor',
+            caughtPlayerIds: [h.id]
+          });
           return;
         }
 
@@ -1492,6 +1569,13 @@
             h.eliminatedReason = 'Spotted in the Open';
             this.game.showToast(`🚨 ${h.name} was spotted in the open!`);
             if (typeof Sound !== 'undefined' && Sound.playCaught) Sound.playCaught();
+
+            this.broadcast({
+              type: 'HIDER_CAUGHT',
+              spotId: null,
+              spotName: 'the open corridor',
+              caughtPlayerIds: [h.id]
+            });
           }
         }
       });
@@ -1503,15 +1587,24 @@
       const livingHiders = this.players.filter(p => p.role === 'hider' && !p.eliminated);
       const seeker = this.players.find(p => p.role === 'seeker');
 
-      // Condition 1: All Hiders eliminated -> Seeker wins
+      // Condition 1: All Hiders eliminated -> Seeker wins!
+      // Add a 1.8-second display window so all players see the reveal animation on the canvas before modal pops up!
       if (livingHiders.length === 0) {
-        this.endMatch('seeker_win');
+        if (!this.matchEndTimeout) {
+          this.matchEndTimeout = setTimeout(() => {
+            this.endMatch('seeker_win');
+          }, 1800);
+        }
         return;
       }
 
-      // Condition 2: Seeker exhausted attempts -> Surviving Hiders win
+      // Condition 2: Seeker exhausted attempts -> Surviving Hiders win!
       if (this.attemptsLeft <= 0) {
-        this.endMatch('hider_win');
+        if (!this.matchEndTimeout) {
+          this.matchEndTimeout = setTimeout(() => {
+            this.endMatch('hider_win');
+          }, 1800);
+        }
         return;
       }
 
@@ -1523,16 +1616,26 @@
     }
 
     endMatch(outcome) {
+      if (this.matchEndTimeout) {
+        clearTimeout(this.matchEndTimeout);
+        this.matchEndTimeout = null;
+      }
       this.phase = 'mp_ended';
+      if (this.game) this.game.phase = 'mp_ended';
       this.rankings = this.computeFinalRankings(outcome);
 
       const endPayload = {
         type: 'MATCH_END',
         outcome: outcome,
-        rankings: this.rankings
+        rankings: this.rankings,
+        revealSpotId: this.revealSpotId || null
       };
 
+      // Broadcast redundancy pulses so all players receive match end reliably
       this.broadcast(endPayload);
+      setTimeout(() => this.broadcast(endPayload), 250);
+      setTimeout(() => this.broadcast(endPayload), 600);
+
       this.showResultModal(endPayload);
     }
 
@@ -1691,7 +1794,7 @@
     }
 
     /* ========================================================
-       CLIENT INPUT TRANSMISSION LOOP (10 Hz)
+       CLIENT INPUT TRANSMISSION LOOP (20 Hz)
        ======================================================== */
     startClientInputLoop() {
       clearInterval(this.inputInterval);
@@ -1699,7 +1802,6 @@
       this.inputInterval = setInterval(() => {
         if (this.phase === 'lobby' || this.phase === 'mp_ended') return;
 
-        // Smooth local client countdown prediction for 20s hiding timer using wall clock
         if (!this.isHost && this.phase === 'mp_hiding_countdown') {
           this.updateCountdownFromClock();
           this.updateMultiplayerHUD();
@@ -1763,7 +1865,6 @@
     applyGameSync(sync) {
       if (!sync || this.isHost) return;
 
-      // Auto-start match on client if match is active on server but client is still in lobby/menu/modal
       const clientNotInGame = !this.game.isMultiplayer || this.phase === 'lobby' || this.game.phase === 'menu' || (this.modal && (!this.modal.classList.contains('hidden') || this.modal.style.display !== 'none'));
       const serverMatchActive = !!(sync.matchActive || sync.phase === 'mp_hiding_countdown' || sync.phase === 'mp_hunting');
 
@@ -1797,6 +1898,7 @@
       }
       this.attemptsLeft = sync.attemptsLeft;
       this.checkedSpots = sync.checkedSpots || [];
+      if (sync.revealSpotId) this.revealSpotId = sync.revealSpotId;
       this.updateCountdownFromClock();
 
       if (this.game && this.game.apt) {
@@ -1825,6 +1927,8 @@
             localP.hiddenSpotId = remote.hiddenSpotId;
             localP.isReady = remote.isReady;
             localP.eliminated = remote.eliminated;
+            localP.eliminatedReason = remote.eliminatedReason;
+            if (remote.revealedSpotId) localP.revealedSpotId = remote.revealedSpotId;
             localP.hasRelocated = remote.hasRelocated;
 
             if (remote.id !== this.localPlayerId) {
@@ -1865,17 +1969,14 @@
         this.game.attemptsValue.textContent = `${this.attemptsLeft} / ${this.settings.attemptsLimit}`;
       }
 
-      // 20s Countdown Phase Overlays
       if (this.phase === 'mp_hiding_countdown') {
         const sec = Math.max(0, Math.ceil(this.countdown));
 
         if (myRole === 'seeker') {
-          // Seeker sees centered lock banner
           if (this.countdownOverlay) this.countdownOverlay.classList.add('hidden');
           if (this.countdownSeekerBanner) this.countdownSeekerBanner.classList.remove('hidden');
           if (this.countdownSeekerSeconds) this.countdownSeekerSeconds.textContent = `${sec}s`;
         } else {
-          // Hider sees live countdown badge
           if (this.countdownSeekerBanner) this.countdownSeekerBanner.classList.add('hidden');
           if (this.countdownOverlay) this.countdownOverlay.classList.remove('hidden');
           if (this.countdownHiderBadge) this.countdownHiderBadge.classList.remove('hidden');
@@ -1888,14 +1989,12 @@
         if (this.game.btnReady) this.game.btnReady.classList.add('hidden');
       }
 
-      // Spectator mode banner
       if (me && me.eliminated && this.phase === 'mp_hunting') {
         if (this.spectatorBanner) this.spectatorBanner.classList.remove('hidden');
       } else {
         if (this.spectatorBanner) this.spectatorBanner.classList.add('hidden');
       }
 
-      // Proximity heartbeat sound for living Hiders
       if (this.phase === 'mp_hunting' && myRole === 'hider' && me && !me.eliminated) {
         const seeker = this.players.find(p => p.role === 'seeker');
         if (seeker) {
@@ -1911,6 +2010,7 @@
       if (!this.isHost) return;
       this.phase = 'lobby';
       this.checkedSpots = [];
+      this.revealSpotId = null;
       this.wasEliminatedAnnounced = false;
 
       this.players.forEach(p => {
@@ -1918,6 +2018,7 @@
         p.isHidden = false;
         p.hiddenSpotId = null;
         p.isReady = false;
+        p.revealedSpotId = null;
         p.hasRelocated = false;
       });
 
@@ -1934,6 +2035,8 @@
     clientReturnToLobby() {
       this.phase = 'lobby';
       this.wasEliminatedAnnounced = false;
+      this.revealSpotId = null;
+
       if (this.resultModal) this.resultModal.classList.add('hidden');
       if (this.spectatorBanner) this.spectatorBanner.classList.add('hidden');
       if (this.countdownOverlay) this.countdownOverlay.classList.add('hidden');
@@ -1942,6 +2045,7 @@
       this.game.isMultiplayer = false;
       this.game.phase = 'menu';
       this.game.menuScreen.classList.remove('hidden');
+      this.game.menuScreen.style.display = '';
       this.game.topHud.classList.add('hidden');
       if (this.game.touchPad) this.game.touchPad.classList.add('hidden');
       if (this.game.actionBar) this.game.actionBar.classList.add('hidden');
@@ -1950,12 +2054,38 @@
       this.showLobbyView();
     }
 
+    /* ========================================================
+       CLEAN ROOM EXIT / DISCONNECT (Prevents Freezes & Crashes)
+       ======================================================== */
     leaveRoom() {
+      // 1. Notify other players before severing MQTT connection
+      if (this.mqttConnected && this.roomCode) {
+        try {
+          const leavePayload = {
+            type: 'PLAYER_LEFT',
+            id: this.localPlayerId,
+            name: this.localPlayerName,
+            isHost: this.isHost
+          };
+          if (this.isHost) {
+            this.broadcast(leavePayload);
+          } else {
+            this.sendToHost(leavePayload);
+          }
+        } catch (_) {}
+      }
+
+      // 2. Clear all internal timers and MQTT client
       this.cleanup();
+
+      // 3. Reset Game State to Menu
       this.game.isMultiplayer = false;
       this.game.phase = 'menu';
+      this.game.isPaused = false;
       this.phase = 'lobby';
+      this.revealSpotId = null;
 
+      // 4. Force hide all multiplayer and pause modals
       if (this.modal) {
         this.modal.classList.add('hidden');
         this.modal.style.display = 'none';
@@ -1964,16 +2094,53 @@
         this.lobbyView.classList.add('hidden');
         this.lobbyView.style.display = 'none';
       }
-      if (this.resultModal) this.resultModal.classList.add('hidden');
-      if (this.spectatorBanner) this.spectatorBanner.classList.add('hidden');
-      if (this.countdownOverlay) this.countdownOverlay.classList.add('hidden');
-      if (this.countdownSeekerBanner) this.countdownSeekerBanner.classList.add('hidden');
+      if (this.panelJoin) {
+        this.panelJoin.classList.add('hidden');
+        this.panelJoin.style.display = 'none';
+      }
+      if (this.panelCreate) {
+        this.panelCreate.classList.add('hidden');
+        this.panelCreate.style.display = 'none';
+      }
+      if (this.resultModal) {
+        this.resultModal.classList.add('hidden');
+        this.resultModal.style.display = 'none';
+      }
+      if (this.game.pauseModal) {
+        this.game.pauseModal.classList.add('hidden');
+        this.game.pauseModal.style.display = 'none';
+      }
+      if (this.spectatorBanner) {
+        this.spectatorBanner.classList.add('hidden');
+        this.spectatorBanner.style.display = 'none';
+      }
+      if (this.countdownOverlay) {
+        this.countdownOverlay.classList.add('hidden');
+        this.countdownOverlay.style.display = 'none';
+      }
+      if (this.countdownSeekerBanner) {
+        this.countdownSeekerBanner.classList.add('hidden');
+        this.countdownSeekerBanner.style.display = 'none';
+      }
 
-      this.game.menuScreen.classList.remove('hidden');
+      // 5. Restore Main Menu Screen & Interactive Options
+      if (this.game.menuScreen) {
+        this.game.menuScreen.classList.remove('hidden');
+        this.game.menuScreen.style.display = '';
+      }
+      if (this.game.revealMenuOptions) {
+        this.game.revealMenuOptions();
+      }
+
       this.game.topHud.classList.add('hidden');
+      this.game.topHud.style.display = 'none';
       if (this.game.touchPad) this.game.touchPad.classList.add('hidden');
       if (this.game.actionBar) this.game.actionBar.classList.add('hidden');
       if (this.game.controlsFooter) this.game.controlsFooter.classList.add('hidden');
+
+      if (this.game.renderer && this.game.renderer.resize) {
+        this.game.renderer.resize();
+      }
     }
 
     cleanup() {
@@ -1993,6 +2160,10 @@
         clearTimeout(this.mqttReconnectTimer);
         this.mqttReconnectTimer = null;
       }
+      if (this.matchEndTimeout) {
+        clearTimeout(this.matchEndTimeout);
+        this.matchEndTimeout = null;
+      }
       clearInterval(this.syncInterval);
       clearInterval(this.inputInterval);
 
@@ -2011,6 +2182,7 @@
       this.status = 'idle';
       this.wasEliminatedAnnounced = false;
       this.countdownEndTime = 0;
+      this.revealSpotId = null;
     }
 
     escapeHtml(str) {

@@ -634,18 +634,24 @@ html[data-theme="light"] .diff-btn.active {
   font-weight: 500;
 }
 
-/* Start Action Row */
+/* Start Action Row with Centered Start Game and Right-Aligned Custom Rooms */
 .start-action-row {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   width: 100%;
   padding-top: 4px;
+  position: relative;
+}
+
+.start-row-side-spacer {
+  flex: 1;
+  min-width: 0;
 }
 
 .btn-start-game {
-  min-width: 240px;
-  padding: 12px 48px;
+  min-width: 230px;
+  padding: 12px 44px;
   border-radius: 999px;
   border: 2px solid var(--accent-hider);
   background: linear-gradient(135deg, #eadbc2, #f6efe2);
@@ -658,31 +664,48 @@ html[data-theme="light"] .diff-btn.active {
   cursor: pointer;
   box-shadow: 0 8px 24px var(--accent-hider-glow);
   transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  margin: 0 auto;
+}
+
+.start-row-side-action {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
 .btn-multiplayer {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  padding: 7px 18px;
+  gap: 5px;
+  padding: 6px 14px;
   border-radius: 999px;
   border: 1.5px solid #a855f7;
   background: linear-gradient(135deg, rgba(168, 85, 247, 0.22), rgba(56, 189, 248, 0.16));
   color: var(--text-primary);
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 0.85rem;
+  font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   cursor: pointer;
-  box-shadow: 0 0 14px rgba(168, 85, 247, 0.25);
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.25);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   backdrop-filter: blur(8px);
+  white-space: nowrap;
 }
 
 .btn-multiplayer:hover {
-  transform: translateY(-2px) scale(1.02);
+  transform: translateY(-2px) scale(1.03);
   border-color: #c084fc;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.35), rgba(56, 189, 248, 0.25));
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.45);
+}
+
+.mp-btn-icon {
+  font-size: 0.85rem;
+}
   background: linear-gradient(135deg, rgba(168, 85, 247, 0.35), rgba(56, 189, 248, 0.25));
   box-shadow: 0 0 22px rgba(168, 85, 247, 0.45);
 }
