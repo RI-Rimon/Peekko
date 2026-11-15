@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Peekko</title>
   <link rel="icon" type="image/svg+xml" href="assets/peekko-icon.svg">
-  <link rel="stylesheet" href="css/style.css?v=13.3">
+  <link rel="stylesheet" href="css/style.css?v=13.4">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" media="print" onload="this.media='all'">
@@ -411,7 +411,7 @@
           <div class="mp-form-group">
             <label for="mp-join-code">Enter Room Code</label>
             <div class="mp-code-input-row">
-              <input type="text" id="mp-join-code" class="mp-input code-input" maxlength="5" placeholder="e.g. PK492" autocomplete="off" spellcheck="false">
+              <input type="text" id="mp-join-code" class="mp-input code-input" maxlength="5" placeholder="e.g. PK492" autocomplete="off" autocapitalize="characters" spellcheck="false">
               <button type="button" id="btn-paste-code" class="btn-paste-code" title="Paste Code from Clipboard">📋 Paste</button>
             </div>
           </div>
@@ -424,7 +424,7 @@
         </div>
 
         <!-- LOBBY VIEW (Embedded inside modal) -->
-        <div id="mp-lobby-view" class="mp-lobby-view hidden">
+        <div id="mp-lobby-view" class="mp-lobby-view hidden" style="display: none;">
           <div class="lobby-header-bar">
             <div class="lobby-code-badge">
               <span class="code-label">ROOM CODE:</span>
@@ -530,12 +530,12 @@
     </div>
   </div>
 
-  <script src="js/config.js?v=13.3"></script>
-  <script src="js/audio.js?v=13.3"></script>
-  <script src="js/apartment.js?v=13.3"></script>
-  <script src="js/renderer.js?v=13.3"></script>
-  <script src="js/multiplayer.js?v=13.3"></script>
-  <script src="js/game.js?v=13.3"></script>
+  <script src="js/config.js?v=13.4"></script>
+  <script src="js/audio.js?v=13.4"></script>
+  <script src="js/apartment.js?v=13.4"></script>
+  <script src="js/renderer.js?v=13.4"></script>
+  <script src="js/multiplayer.js?v=13.4"></script>
+  <script src="js/game.js?v=13.4"></script>
   <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
 </body>
 </html>

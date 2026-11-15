@@ -890,6 +890,9 @@
           this.phasePill.textContent = 'EXPOSED';
           Sound.playUnhide();
           this.showToast('Left hiding spot! Relocating...');
+          if (this.mpManager && this.mpManager.sendHiderInstantAction) {
+            this.mpManager.sendHiderInstantAction(false, null, this.player.x, this.player.y);
+          }
         } else if (!this.player.isHidden && this.nearestSpot) {
           // Hide in nearest spot
           this.player.isHidden = true;
@@ -898,6 +901,11 @@
           this.phasePill.textContent = 'HIDDEN';
           Sound.playHide();
           this.showToast(`Hidden in ${this.nearestSpot.name}.`);
+          if (this.mpManager && this.mpManager.sendHiderInstantAction) {
+            const hx = this.nearestSpot.hideX || this.player.x;
+            const hy = this.nearestSpot.hideY || this.player.y;
+            this.mpManager.sendHiderInstantAction(true, this.nearestSpot.id, hx, hy);
+          }
         } else if (!this.player.isHidden) {
           this.showToast('Move close to an object and press SPACE to hide.');
         }

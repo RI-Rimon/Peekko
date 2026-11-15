@@ -232,12 +232,13 @@ class ApartmentRenderer {
             pl.renderAngle = pl.angle;
           } else {
             const d = Math.hypot(pl.x - pl.renderX, pl.y - pl.renderY);
-            if (d > 75) {
+            if (d > 220) {
               pl.renderX = pl.x;
               pl.renderY = pl.y;
             } else {
-              pl.renderX += (pl.x - pl.renderX) * 0.35;
-              pl.renderY += (pl.y - pl.renderY) * 0.35;
+              const factor = Math.min(0.48, 0.28 + d * 0.001);
+              pl.renderX += (pl.x - pl.renderX) * factor;
+              pl.renderY += (pl.y - pl.renderY) * factor;
             }
             let diff = pl.angle - pl.renderAngle;
             while (diff < -Math.PI) diff += Math.PI * 2;
@@ -316,11 +317,26 @@ class ApartmentRenderer {
                 continue;
               }
               // Rule 2: CANNOT see Hiders blocked behind walls
-              const hasLOS = this.apt.hasLineOfSight(gameState.player.x, gameState.player.y, pl.x, pl.y);
+              const hasLOS = this.apt.hasLineOfSight(gameState.player.x, gameState.player.y, posX, posY);
               if (!hasLOS) {
                 continue;
               }
-              // Rule 3: Moving out in open within Line of Sight
+              // Rule 3: Stealth in open map — Seeker can only spot a moving/relocating Hider
+              // if Hider is directly within Seeker's flashlight vision cone OR point-blank touch proximity!
+              const dX = posX - gameState.player.x;
+              const dY = posY - gameState.player.y;
+              const dist = Math.hypot(dX, dY);
+              const angleToHider = Math.atan2(dY, dX);
+              let angleDiff = Math.abs(angleToHider - gameState.player.angle);
+              while (angleDiff > Math.PI) angleDiff = Math.abs(angleDiff - Math.PI * 2);
+
+              const inFlashlightCone = dist <= 195 && angleDiff <= 0.48;
+              const inTouchProximity = dist <= 35;
+
+              if (!inFlashlightCone && !inTouchProximity) {
+                continue; // Stealth mode: Hider stays hidden in shadows / outside Seeker's direct cone!
+              }
+
               this.drawCharacter(ctx, posX, posY, posAngle, pl.color, label, false, posMoving);
             }
           }
