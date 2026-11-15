@@ -392,16 +392,19 @@ class ApartmentRenderer {
     ctx.save();
     const alpha = Math.min(1, hint.timer / 25);
     ctx.globalAlpha = alpha;
-    const bg = hint.type === 'hot' ? 'rgba(239, 68, 68, 0.94)' : (hint.type === 'warm' ? 'rgba(245, 158, 11, 0.94)' : 'rgba(56, 189, 248, 0.94)');
+    ctx.font = '800 12px Inter, sans-serif';
+    const textWidth = ctx.measureText(hint.text).width;
+    const badgeW = Math.max(144, textWidth + 26);
+    const badgeH = 28;
+    const bg = hint.type === 'hot' ? 'rgba(239, 68, 68, 0.95)' : (hint.type === 'warm' ? 'rgba(245, 158, 11, 0.95)' : 'rgba(56, 189, 248, 0.95)');
     ctx.fillStyle = bg;
-    this.roundRect(ctx, hint.x - 72, hint.y - 42, 144, 28, 8);
+    this.roundRect(ctx, hint.x - badgeW / 2, hint.y - 42, badgeW, badgeH, 8);
     ctx.fill();
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = '800 12px Inter, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(hint.text, hint.x, hint.y - 28);

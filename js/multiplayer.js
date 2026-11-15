@@ -1010,6 +1010,12 @@
           if (typeof Sound !== 'undefined' && Sound.playCaught) Sound.playCaught();
           this.game.showToast(`🚨 ${caughtNames.join(', ')} was CAUGHT in ${msg.spotName}!`);
         }
+      } else if (msg.type === 'PROXIMITY_HINT') {
+        const me = this.players.find(p => p.id === this.localPlayerId);
+        if (me && me.role === 'seeker' && msg.hint) {
+          this.game.proximityHint = msg.hint;
+          if (typeof Sound !== 'undefined' && Sound.playEmpty) Sound.playEmpty();
+        }
       } else if (msg.type === 'MATCH_END') {
         this.phase = 'mp_ended';
         if (this.game) this.game.phase = 'mp_ended';
@@ -1504,8 +1510,15 @@
           hasRelocated: p.hasRelocated
         })),
         checkedSpots: this.checkedSpots,
-        proximityHint: this.hostProximityHint || null
+        proximityHint: (this.hostProximityHint && this.hostProximityHint.timer > 0) ? this.hostProximityHint : null
       };
+
+      if (this.hostProximityHint) {
+        this.hostProximityHint.timer -= 7;
+        if (this.hostProximityHint.timer <= 0) {
+          this.hostProximityHint = null;
+        }
+      }
 
       this.broadcast(syncData);
       this.updateMultiplayerHUD();
@@ -1595,32 +1608,61 @@
     }
 
     calculateProximityHint(spot) {
-      const livingHiddenHiders = this.players.filter(p => p.role === 'hider' && !p.eliminated && p.isHidden);
-      if (livingHiddenHiders.length === 0) return;
+      const livingHiders = this.players.filter(p => p.role === 'hider' && !p.eliminated);
+      if (livingHiders.length === 0) return;
+
+      const spotCenterX = spot.x + (spot.w || 40) / 2;
+      const spotCenterY = spot.y + (spot.h || 40) / 2;
 
       let minDist = Infinity;
-      livingHiddenHiders.forEach(h => {
-        const d = Math.hypot(h.x - (spot.x + spot.w / 2), h.y - (spot.y + spot.h / 2));
+      livingHiders.forEach(h => {
+        let hx = h.x;
+        let hy = h.y;
+        if (h.isHidden && h.hiddenSpotId) {
+          const s = this.game.apt.hidingSpots.find(sp => sp.id === h.hiddenSpotId);
+          if (s) {
+            hx = (s.hideX !== undefined) ? s.hideX : (s.x + (s.w || 40) / 2);
+            hy = (s.hideY !== undefined) ? s.hideY : (s.y + (s.h || 40) / 2);
+          }
+        }
+        const d = Math.hypot(hx - spotCenterX, hy - spotCenterY);
         if (d < minDist) minDist = d;
       });
 
       let type = 'cool';
-      let text = 'Cool (Opponent Far Away)';
+      let text = 'COOL (Far Away)';
       if (minDist <= 180) {
         type = 'hot';
-        text = 'HOT! Opponent is Very Close!';
+        text = 'HOT! (Very Close!)';
       } else if (minDist <= 380) {
         type = 'warm';
-        text = 'Warm — Opponent is Nearby';
+        text = 'WARM (Nearby)';
       }
 
-      this.hostProximityHint = {
-        x: spot.x + spot.w / 2,
-        y: spot.y + spot.h / 2,
+      const hintObj = {
+        x: spotCenterX,
+        y: spotCenterY,
         type: type,
         text: text,
-        timer: 35
+        timer: 80
       };
+
+      this.hostProximityHint = hintObj;
+
+      // 1. If local player is the seeker (Host Seeker, e.g. on Laptop), display immediately!
+      const me = this.players.find(p => p.id === this.localPlayerId);
+      if (me && me.role === 'seeker') {
+        this.game.proximityHint = Object.assign({}, hintObj);
+      }
+
+      // 2. If seeker is a remote client (e.g. Mobile Seeker), send an instant direct PROXIMITY_HINT packet!
+      const seeker = this.players.find(p => p.role === 'seeker');
+      if (seeker && !seeker.isHost) {
+        this.sendToClient(seeker.id, {
+          type: 'PROXIMITY_HINT',
+          hint: hintObj
+        });
+      }
     }
 
     checkHuntLineOfSightCatches() {
@@ -2044,7 +2086,9 @@
       if (sync.proximityHint) {
         const me = this.players.find(p => p.id === this.localPlayerId);
         if (me && me.role === 'seeker') {
-          this.game.proximityHint = sync.proximityHint;
+          if (!this.game.proximityHint || this.game.proximityHint.timer <= 15) {
+            this.game.proximityHint = Object.assign({}, sync.proximityHint);
+          }
         }
       }
 
