@@ -867,8 +867,15 @@
     }
 
     handleMultiplayerSpaceAction() {
-      const me = this.mpManager ? this.mpManager.players.find(p => p.id === this.mpManager.localPlayerId) : null;
+      let me = this.mpManager ? this.mpManager.players.find(p => p.id === this.mpManager.localPlayerId) : null;
+      if (!me && this.mpManager && this.mpManager.players.length > 0) {
+        me = this.mpManager.players.find(p => p.name === this.mpManager.localPlayerName) || (this.mpManager.isHost ? this.mpManager.players.find(p => p.isHost) : this.mpManager.players.find(p => !p.isHost));
+      }
       if (!me || me.eliminated) return;
+
+      if (!this.nearestSpot && this.apt) {
+        this.nearestSpot = this.apt.getNearestSpot(this.player.x, this.player.y, 90);
+      }
 
       if (this.role === 'hider') {
         if (this.player.isHidden && this.player.hiddenSpot) {

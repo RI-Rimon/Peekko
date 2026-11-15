@@ -1,9 +1,9 @@
 /* ========================================================
-   Peekko - PeerJS Host-Authoritative Custom Room Multiplayer
-   Real-Time P2P WebRTC mesh for 2 to 5 Players with STUN/TURN
-   Cross-Network Mobile Data & Wi-Fi NAT Traversal Support,
+   Peekko - Custom Room Real-Time Multiplayer
+   Cross-Network Mobile Data (4G/5G) & Wi-Fi Relay over WSS MQTT
    Every-Player Lobby Role Switching, 20s Hiding Countdown,
-   Mobile Touch Controls & Detailed End-of-Match Leaderboard
+   Collision-Free Dedicated Room Spawns, Mobile Touch Controls
+   & Detailed End-of-Match Leaderboard
    ======================================================== */
 
 (function () {
@@ -17,24 +17,55 @@
     allowedAttempts: [7, 10, 15, 20],
     hiderPalette: ['#38bdf8', '#10b981', '#a855f7', '#ec4899', '#f43f5e'],
     seekerColor: '#f59e0b',
-    syncHz: 8
+    syncHz: 10
   };
 
-  // Cross-Network Fast Global STUN Configuration (Google, Cloudflare, Nextcloud)
-  // Ensures instant ICE gathering and robust cross-network P2P connections
-  const PEER_CONFIG = {
-    debug: 1,
-    config: {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' },
-        { urls: 'stun:stun.cloudflare.com:3478' },
-        { urls: 'stun:stun.nextcloud.com:443' }
-      ],
-      iceCandidatePoolSize: 10
+  // Pre-calculated, 100% collision-free spawn nodes across distinct rooms for maps 1-5
+  const MP_SPAWN_NODES = {
+    1: { // Skyglass Penthouse
+      seeker: { x: 680, y: 610, angle: Math.PI / 2 },
+      hiders: [
+        { x: 680, y: 400, angle: -Math.PI / 2 }, // Living Room
+        { x: 285, y: 380, angle: 0 },             // Master Bedroom
+        { x: 1040, y: 200, angle: Math.PI },      // Study Room
+        { x: 220, y: 616, angle: 0 }              // Lounge / Balcony
+      ]
+    },
+    2: { // Midnight Manor
+      seeker: { x: 680, y: 640, angle: Math.PI / 2 },
+      hiders: [
+        { x: 680, y: 350, angle: -Math.PI / 2 }, // Central Great Hall
+        { x: 260, y: 250, angle: 0 },             // Library / Study
+        { x: 1080, y: 250, angle: Math.PI },      // Dining Room
+        { x: 330, y: 690, angle: 0 }              // West Gallery
+      ]
+    },
+    3: { // Warehouse Basement
+      seeker: { x: 740, y: 674, angle: Math.PI / 2 },
+      hiders: [
+        { x: 730, y: 270, angle: -Math.PI / 2 }, // Central Vault
+        { x: 240, y: 270, angle: 0 },             // West Storage Bay
+        { x: 1080, y: 260, angle: Math.PI },      // East Generator Room
+        { x: 335, y: 635, angle: 0 }              // Loading Dock
+      ]
+    },
+    4: { // Grand Shopping Mall
+      seeker: { x: 780, y: 825, angle: Math.PI / 2 },
+      hiders: [
+        { x: 780, y: 400, angle: -Math.PI / 2 }, // Central Plaza
+        { x: 215, y: 245, angle: 0 },             // West Retail Wing
+        { x: 1260, y: 245, angle: Math.PI },      // East Food Court
+        { x: 780, y: 145, angle: 0 }              // North Electronics Promenade
+      ]
+    },
+    5: { // Wonderland Park
+      seeker: { x: 920, y: 930, angle: Math.PI / 2 },
+      hiders: [
+        { x: 920, y: 745, angle: -Math.PI / 2 }, // Central Fountain Plaza
+        { x: 300, y: 810, angle: 0 },             // West Carnival Midway
+        { x: 620, y: 345, angle: 0 },             // North Picnic Meadow
+        { x: 1480, y: 925, angle: Math.PI }       // East Amusement Arcade
+      ]
     }
   };
 
@@ -56,23 +87,14 @@
     return code;
   }
 
-  function getHostPeerId(code) {
-    return 'peekko-v9-' + normalizeRoomCode(code);
-  }
-
   class MultiplayerManager {
     constructor(game) {
       this.game = game;
-      this.peer = null;
       this.isHost = false;
       this.roomCode = null;
       this.localPlayerId = null;
       this.localPlayerName = 'Agent';
       this.status = 'idle'; // 'idle' | 'creating' | 'joining' | 'lobby' | 'in_game'
-
-      // Host connection storage
-      this.connections = new Map(); // peerId -> DataConnection (host side)
-      this.hostConn = null;         // DataConnection to host (client side)
 
       // Room Settings
       this.settings = {
@@ -87,6 +109,7 @@
       // Match State
       this.phase = 'lobby'; // 'lobby' | 'mp_hiding_countdown' | 'mp_hunting' | 'mp_ended'
       this.countdown = MP_CFG.hidingPhaseSeconds;
+      this.countdownEndTime = 0;
       this.attemptsLeft = 10;
       this.checkedSpots = [];
       this.rankings = [];
@@ -94,9 +117,19 @@
       // Intervals & Timers
       this.syncInterval = null;
       this.inputInterval = null;
+      this.lobbyPingInterval = null;
+      this.handshakeRetryTimer = null;
+      this.connectTimeout = null;
+      this.mqttReconnectTimer = null;
+
+      // MQTT state
       this.mqtt = null;
       this.mqttConnected = false;
-      this.connectTimeout = null;
+      this.activeBrokerIndex = 0;
+      this.brokers = [
+        { host: 'broker.hivemq.com', port: 8884, path: '/mqtt' },
+        { host: 'broker.emqx.io', port: 8084, path: '/mqtt' }
+      ];
 
       this.bindDOM();
 
@@ -262,7 +295,7 @@
           const rawCode = (this.inputJoinCode && this.inputJoinCode.value.trim().toUpperCase()) || '';
           const code = normalizeRoomCode(rawCode);
           if (!code || code.length < 3) {
-            this.showJoinError('Please enter a valid room code.');
+            this.showJoinError('Please enter a valid room code (e.g. PK22A).');
             return;
           }
           this.joinRoom(name, code);
@@ -312,17 +345,21 @@
       if (this.btnCopyLink) {
         this.btnCopyLink.addEventListener('click', () => {
           const url = `${window.location.origin}${window.location.pathname}?room=${this.roomCode}`;
-          navigator.clipboard.writeText(url).then(() => {
-            this.btnCopyLink.classList.add('copied');
-            this.btnCopyLink.textContent = '✓ Copied!';
-            setTimeout(() => {
-              this.btnCopyLink.classList.remove('copied');
-              this.btnCopyLink.textContent = '🔗 Invite Link';
-            }, 2000);
-            this.game.showToast('Invite link copied! Share with friends to join room.');
-          }).catch(() => {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(() => {
+              this.btnCopyLink.classList.add('copied');
+              this.btnCopyLink.textContent = '✓ Copied!';
+              setTimeout(() => {
+                this.btnCopyLink.classList.remove('copied');
+                this.btnCopyLink.textContent = '🔗 Invite Link';
+              }, 2000);
+              this.game.showToast('Invite link copied! Share with friends to join room.');
+            }).catch(() => {
+              this.game.showToast(`Invite code: ${this.roomCode}`);
+            });
+          } else {
             this.game.showToast(`Invite code: ${this.roomCode}`);
-          });
+          }
         });
       }
 
@@ -425,7 +462,6 @@
           }
         }).catch(() => {});
       } else {
-        // Fallback
         const temp = document.createElement('input');
         temp.value = this.roomCode;
         document.body.appendChild(temp);
@@ -440,13 +476,29 @@
     }
 
     /* ========================================================
-       CROSS-NETWORK MQTT & HYBRID TRANSPORT RELAY
-       Enables 100% reliable zero-configuration communication
-       across Mobile Data (4G/5G CGNAT) and Wi-Fi networks.
+       CROSS-NETWORK WSS MQTT RELAY TRANSPORT
+       Seamlessly traverses Mobile 4G/5G CGNAT, Wi-Fi & Firewalls.
+       Zero-Echo Strict Topic Separation:
+         - Base:   peekko/v12/room/<ROOM_CODE>
+         - Host:   Subscribes ONLY to 'c2h'; Publishes to 'h2c' & 'client/<id>'
+         - Client: Subscribes to 'h2c' & 'client/<id>'; Publishes ONLY to 'c2h'
        ======================================================== */
+    scheduleMqttReconnect(isHost) {
+      if (this.mqttReconnectTimer) return; // Prevent cascading timers / duplicate instances
+      if (!this.roomCode || this.status === 'idle') return;
+
+      this.mqttReconnectTimer = setTimeout(() => {
+        this.mqttReconnectTimer = null;
+        if (this.roomCode && !this.mqttConnected) {
+          this.activeBrokerIndex = (this.activeBrokerIndex + 1) % this.brokers.length;
+          this.initMqtt(isHost);
+        }
+      }, 1500);
+    }
+
     initMqtt(isHost) {
       if (typeof Paho === 'undefined' || !Paho.MQTT) {
-        console.warn('Paho MQTT library not available. Relying exclusively on WebRTC.');
+        console.error('Paho MQTT library not available in document.');
         return;
       }
 
@@ -460,39 +512,29 @@
         this.mqttConnected = false;
       }
 
-      const clientId = 'pk_' + (isHost ? 'h_' : 'c_') + Math.random().toString(16).slice(2, 10);
-      const brokerHost = 'broker.hivemq.com';
-      const brokerPort = 8884;
-      const brokerPath = '/mqtt';
+      const broker = this.brokers[this.activeBrokerIndex] || this.brokers[0];
+      const mqttClientId = 'pk_' + (isHost ? 'h_' : 'c_') + Math.random().toString(36).slice(2, 10);
 
       try {
-        this.mqtt = new Paho.MQTT.Client(brokerHost, brokerPort, brokerPath, clientId);
+        this.mqtt = new Paho.MQTT.Client(broker.host, broker.port, broker.path, mqttClientId);
+
         this.mqtt.onConnectionLost = (resp) => {
           this.mqttConnected = false;
           if (resp && resp.errorCode !== 0) {
             console.warn('MQTT Connection lost:', resp.errorMessage);
-            if (this.roomCode && (this.status === 'lobby' || this.game.isMultiplayer)) {
-              setTimeout(() => {
-                if (this.roomCode && !this.mqttConnected) this.initMqtt(isHost);
-              }, 1200);
-            }
+            this.scheduleMqttReconnect(isHost);
           }
         };
 
         this.mqtt.onMessageArrived = (message) => {
           try {
             const data = JSON.parse(message.payloadString);
+            if (!data || !data.type) return;
+            // Prevent processing own reflected packets
             if (data.senderId && data.senderId === this.localPlayerId) return;
-            if (data.type === 'LOBBY_PING') return;
+
             if (this.isHost) {
-              if (data.isHost) return;
-              const senderId = data.senderId || data.id || 'guest';
-              this.handleHostMessage({
-                peer: senderId,
-                open: true,
-                send: (reply) => this.sendToClient(senderId, reply),
-                close: () => {}
-              }, data);
+              this.handleHostMessage(data);
             } else {
               this.handleClientMessage(data);
             }
@@ -504,43 +546,62 @@
         this.connectMqtt(isHost);
       } catch (err) {
         console.warn('Could not initialize MQTT client:', err);
+        this.scheduleMqttReconnect(isHost);
       }
     }
 
     connectMqtt(isHost) {
       if (!this.mqtt) return;
+
       this.mqtt.connect({
         useSSL: true,
         timeout: 6,
-        keepAliveInterval: 10,
+        keepAliveInterval: 12,
         cleanSession: true,
         onSuccess: () => {
           this.mqttConnected = true;
-          const topicPrefix = `peekko/v10/room/${this.roomCode}`;
-          this.mqtt.subscribe(`${topicPrefix}/#`);
-          this.mqtt.subscribe(`${topicPrefix}/h2c`);
-          this.mqtt.subscribe(`${topicPrefix}/c2h`);
-          if (this.localPlayerId) {
-            this.mqtt.subscribe(`${topicPrefix}/client/${this.localPlayerId}`);
-          }
-          if (!isHost) {
-            // Send instant handshake over MQTT
-            this.sendToHost({
-              type: 'JOIN',
-              id: this.localPlayerId,
-              name: this.localPlayerName
-            });
+          const topicPrefix = `peekko/v12/room/${this.roomCode}`;
+
+          if (isHost) {
+            // Host subscribes strictly to Client-to-Host (c2h) topic
+            this.mqtt.subscribe(`${topicPrefix}/c2h`, { qos: 0 });
+          } else {
+            // Client subscribes strictly to Host-to-Client broadcast and direct personal topic
+            this.mqtt.subscribe(`${topicPrefix}/h2c`, { qos: 0 });
+            this.mqtt.subscribe(`${topicPrefix}/client/${this.localPlayerId}`, { qos: 0 });
+
+            // Begin continuous handshake retry until WELCOME is acknowledged
+            this.startHandshakeRetry();
           }
         },
         onFailure: (err) => {
-          console.warn('HiveMQ connect failed, retrying...', err);
-          setTimeout(() => {
-            if (this.roomCode && !this.mqttConnected) {
-              this.initMqtt(isHost);
-            }
-          }, 1500);
+          console.warn('MQTT broker connect failed:', err);
+          this.scheduleMqttReconnect(isHost);
         }
       });
+    }
+
+    startHandshakeRetry() {
+      if (this.handshakeRetryTimer) clearInterval(this.handshakeRetryTimer);
+
+      const sendJoin = () => {
+        if (this.status === 'lobby' || this.phase !== 'lobby') {
+          if (this.handshakeRetryTimer) {
+            clearInterval(this.handshakeRetryTimer);
+            this.handshakeRetryTimer = null;
+          }
+          return;
+        }
+        this.sendToHost({
+          type: 'JOIN',
+          id: this.localPlayerId,
+          name: this.localPlayerName
+        });
+      };
+
+      // Immediate first burst + 1000ms periodic retry
+      sendJoin();
+      this.handshakeRetryTimer = setInterval(sendJoin, 1000);
     }
 
     mqttPublish(subTopic, payloadObj) {
@@ -548,7 +609,7 @@
         try {
           if (!payloadObj.senderId) payloadObj.senderId = this.localPlayerId;
           const msg = new Paho.MQTT.Message(JSON.stringify(payloadObj));
-          msg.destinationName = `peekko/v10/room/${this.roomCode}/${subTopic}`;
+          msg.destinationName = `peekko/v12/room/${this.roomCode}/${subTopic}`;
           msg.qos = 0;
           this.mqtt.send(msg);
         } catch (e) {
@@ -561,34 +622,18 @@
       if (this.isHost) return;
       msg.senderId = this.localPlayerId;
       this.mqttPublish('c2h', msg);
-      if (this.hostConn && this.hostConn.open) {
-        try {
-          this.hostConn.send(msg);
-        } catch (e) {}
-      }
     }
 
     broadcast(msg) {
       if (!this.isHost) return;
+      msg.senderId = this.localPlayerId;
       this.mqttPublish('h2c', msg);
-      this.connections.forEach(conn => {
-        if (conn && conn.open) {
-          try {
-            conn.send(msg);
-          } catch (e) {}
-        }
-      });
     }
 
     sendToClient(clientId, msg) {
       if (!this.isHost) return;
+      msg.senderId = this.localPlayerId;
       this.mqttPublish('client/' + clientId, msg);
-      const conn = this.connections.get(clientId);
-      if (conn && conn.open) {
-        try {
-          conn.send(msg);
-        } catch (e) {}
-      }
     }
 
     /* ========================================================
@@ -605,8 +650,7 @@
       this.isHost = true;
       this.localPlayerName = hostName || 'Host';
       this.roomCode = generateRoomCode();
-      this.localPlayerId = 'host_' + Math.random().toString(16).slice(2, 10);
-      const peerId = getHostPeerId(this.roomCode);
+      this.localPlayerId = 'host_' + Math.random().toString(36).slice(2, 10);
 
       // Initialize MQTT relay immediately
       this.initMqtt(true);
@@ -623,8 +667,8 @@
         color: hostColor,
         ready: true,
         x: 680,
-        y: 725,
-        angle: -Math.PI / 2,
+        y: 610,
+        angle: Math.PI / 2,
         isMoving: false,
         isHidden: false,
         hiddenSpotId: null,
@@ -649,37 +693,6 @@
           this.broadcast({ type: 'LOBBY_PING', t: Date.now() });
         }
       }, 2500);
-
-      // Launch PeerJS in parallel for direct P2P mesh
-      if (typeof Peer !== 'undefined') {
-        try {
-          this.peer = new Peer(peerId, PEER_CONFIG);
-          this.peer.on('open', (id) => {
-            if (this.players && this.players[0]) this.players[0].id = id;
-            this.localPlayerId = id;
-          });
-          this.peer.on('connection', (conn) => {
-            conn.on('data', (data) => this.handleHostMessage(conn, data));
-            conn.on('open', () => {
-              if (this.phase === 'lobby') this.broadcastLobbyUpdate();
-            });
-            conn.on('close', () => this.handlePlayerDisconnect(conn.peer));
-            conn.on('error', (err) => {
-              console.warn('Connection error with peer:', conn.peer, err);
-              this.handlePlayerDisconnect(conn.peer);
-            });
-          });
-          this.peer.on('error', (err) => {
-            console.warn('PeerJS Host notice:', err);
-            if (err.type === 'unavailable-id') {
-              this.cleanup();
-              this.createRoom(hostName);
-            }
-          });
-        } catch (e) {
-          console.warn('PeerJS init failed, running via MQTT relay.');
-        }
-      }
     }
 
     /* ========================================================
@@ -696,10 +709,9 @@
       this.isHost = false;
       this.localPlayerName = clientName || 'Guest';
       this.roomCode = roomCode.toUpperCase().trim();
-      this.localPlayerId = 'usr_' + Math.random().toString(16).slice(2, 10);
-      const hostPeerId = getHostPeerId(this.roomCode);
+      this.localPlayerId = 'usr_' + Math.random().toString(36).slice(2, 10);
 
-      // Start 15s timeout
+      // 15s timeout safeguard
       this.connectTimeout = setTimeout(() => {
         if (this.status !== 'lobby') {
           this.showJoinError(`Could not reach Room '${this.roomCode}'. Please verify the Room Code and ensure Host is currently in the lobby.`);
@@ -713,66 +725,22 @@
 
       // Initialize MQTT relay immediately
       this.initMqtt(false);
-
-      // Launch PeerJS in parallel
-      if (typeof Peer !== 'undefined') {
-        try {
-          this.peer = new Peer(PEER_CONFIG);
-          this.peer.on('open', (id) => {
-            this.localPlayerId = id;
-            if (this.mqtt && this.mqttConnected) {
-              this.mqtt.subscribe(`peekko/v10/room/${this.roomCode}/client/${id}`);
-            }
-            this.hostConn = this.peer.connect(hostPeerId, { reliable: true });
-            this.hostConn.on('data', (data) => this.handleClientMessage(data));
-            this.hostConn.on('open', () => {
-              if (this.connectTimeout) {
-                clearTimeout(this.connectTimeout);
-                this.connectTimeout = null;
-              }
-              this.status = 'lobby';
-              this.sendToHost({
-                type: 'JOIN',
-                id: id,
-                name: this.localPlayerName
-              });
-              if (this.btnJoinSubmit) {
-                this.btnJoinSubmit.disabled = false;
-                this.btnJoinSubmit.textContent = 'JOIN ROOM';
-              }
-            });
-            this.hostConn.on('close', () => {
-              this.game.showToast('Disconnected from Host.');
-              this.leaveRoom();
-            });
-            this.hostConn.on('error', (err) => {
-              console.warn('WebRTC Host connection notice:', err);
-            });
-          });
-          this.peer.on('error', (err) => {
-            console.warn('PeerJS Client notice:', err);
-          });
-        } catch (e) {
-          console.warn('PeerJS client init failed, running via MQTT relay.');
-        }
-      }
     }
 
     /* ========================================================
-       HOST: INCOMING MESSAGE HANDLER
+       HOST: INCOMING MESSAGE HANDLER (c2h)
        ======================================================== */
-    handleHostMessage(conn, msg) {
+    handleHostMessage(msg) {
       if (!msg || !msg.type) return;
 
       if (msg.type === 'JOIN') {
-        const clientId = msg.id || (conn && conn.peer) || 'guest_' + Math.random().toString(16).slice(2, 8);
+        const clientId = msg.id || msg.senderId || ('guest_' + Math.random().toString(36).slice(2, 8));
 
-        // Check if player already registered (prevent duplicate rows on handshake retries or peer/MQTT dual-connect)
+        // Check if player already registered (prevent duplicate rows on handshake retries)
         const existingPlayer = this.players.find(p => p.id === clientId || (msg.name && p.name === msg.name));
         if (existingPlayer) {
           existingPlayer.id = clientId;
           existingPlayer.name = msg.name || existingPlayer.name;
-          if (conn && conn.peer) this.connections.set(conn.peer, conn);
           this.sendToClient(clientId, {
             type: 'WELCOME',
             roomCode: this.roomCode,
@@ -793,12 +761,7 @@
           return;
         }
 
-        // Register connection if WebRTC peer
-        if (conn && conn.peer) {
-          this.connections.set(conn.peer, conn);
-        }
-
-        // Assign player role and color
+        // Assign player role and unique color
         const usedColors = this.players.filter(p => p.role === 'hider').map(p => p.color);
         const freeColor = MP_CFG.hiderPalette.find(c => !usedColors.includes(c)) || MP_CFG.hiderPalette[0];
 
@@ -810,7 +773,7 @@
           color: freeColor,
           ready: true,
           x: 680,
-          y: 725,
+          y: 400,
           angle: -Math.PI / 2,
           isMoving: false,
           isHidden: false,
@@ -825,6 +788,7 @@
         this.players.push(newPlayer);
         this.autoBalanceRoles();
 
+        // Send direct WELCOME to this client
         this.sendToClient(clientId, {
           type: 'WELCOME',
           roomCode: this.roomCode,
@@ -833,10 +797,11 @@
           players: this.players
         });
 
+        // Broadcast updated lobby list to all players
         this.broadcastLobbyUpdate();
         this.renderLobbyUI();
       } else if (msg.type === 'PLAYER_INPUT') {
-        const p = this.players.find(pl => pl.id === msg.id);
+        const p = this.players.find(pl => pl.id === msg.id || pl.id === msg.senderId);
         if (p && !p.eliminated) {
           p.x = msg.x !== undefined ? msg.x : p.x;
           p.y = msg.y !== undefined ? msg.y : p.y;
@@ -848,18 +813,18 @@
           if (msg.hasRelocated) p.hasRelocated = true;
         }
       } else if (msg.type === 'SEEKER_SEARCH') {
-        this.processSeekerSearch(msg.spotId, msg.seekerId);
+        this.processSeekerSearch(msg.spotId, msg.seekerId || msg.senderId);
       } else if (msg.type === 'HIDER_READY') {
-        const p = this.players.find(pl => pl.id === msg.id);
+        const p = this.players.find(pl => pl.id === msg.id || pl.id === msg.senderId);
         if (p) p.isReady = true;
         this.checkAllHidersReady();
       } else if (msg.type === 'REQUEST_ROLE') {
-        this.applyRoleChange(msg.id, msg.role || msg.requestedRole);
+        this.applyRoleChange(msg.id || msg.senderId, msg.role || msg.requestedRole);
       }
     }
 
     /* ========================================================
-       CLIENT: INCOMING MESSAGE HANDLER
+       CLIENT: INCOMING MESSAGE HANDLER (h2c & client/<id>)
        ======================================================== */
     handleClientMessage(msg) {
       if (!msg || !msg.type) return;
@@ -868,11 +833,8 @@
         clearTimeout(this.connectTimeout);
         this.connectTimeout = null;
       }
-      if (this.handshakeTimer1) clearTimeout(this.handshakeTimer1);
-      if (this.handshakeTimer2) clearTimeout(this.handshakeTimer2);
-      if (this.handshakeTimer3) clearTimeout(this.handshakeTimer3);
       if (this.handshakeRetryTimer) {
-        clearTimeout(this.handshakeRetryTimer);
+        clearInterval(this.handshakeRetryTimer);
         this.handshakeRetryTimer = null;
       }
 
@@ -924,23 +886,6 @@
       }
     }
 
-    handlePlayerDisconnect(peerId) {
-      this.connections.delete(peerId);
-      const idx = this.players.findIndex(p => p.id === peerId);
-      if (idx !== -1) {
-        const removed = this.players[idx];
-        this.players.splice(idx, 1);
-        this.game.showToast(`${removed.name} left the room.`);
-        if (this.phase === 'lobby') {
-          this.autoBalanceRoles();
-          this.broadcastLobbyUpdate();
-          this.renderLobbyUI();
-        } else if (this.phase === 'mp_hunting' || this.phase === 'mp_hiding_countdown') {
-          this.checkMatchEndConditions();
-        }
-      }
-    }
-
     /* ========================================================
        ROLE CHANGE & AUTO BALANCING
        ======================================================== */
@@ -975,7 +920,7 @@
       } else {
         // Target becomes hider
         target.role = 'hider';
-        // Ensure there is still 1 seeker; if none, make the other player or host seeker
+        // Ensure there is still 1 seeker; if none, assign another player
         const hasSeeker = this.players.some(p => p.role === 'seeker');
         if (!hasSeeker && this.players.length > 0) {
           const nextSeeker = this.players.find(p => p.id !== targetId) || this.players[0];
@@ -1100,13 +1045,13 @@
           </div>
         `;
 
-        // Role: Host can toggle ANY player, Guest can toggle THEMSELVES!
+        // Role: Host can toggle ANY player, Guest can toggle THEMSELVES
         const tdRole = document.createElement('td');
         if (this.isHost || isMe) {
           const btnRole = document.createElement('button');
           btnRole.className = `role-toggle-btn ${p.role === 'seeker' ? 'is-seeker' : 'is-hider'}`;
           btnRole.textContent = p.role === 'seeker' ? 'Seeker (Hunter)' : 'Hider (Stealth)';
-          btnRole.title = isMe ? 'Click to switch your role' : 'Click to change this player\'s role';
+          btnRole.title = isMe ? 'Click to switch your role' : "Click to change this player's role";
           btnRole.addEventListener('click', () => {
             const nextRole = p.role === 'seeker' ? 'hider' : 'seeker';
             if (this.isHost) {
@@ -1190,14 +1135,23 @@
       this.checkedSpots = [];
 
       this.game.apt.loadMap(this.settings.mapId);
-      const mapSpawn = this.game.apt.spawn || { x: 680, y: 725 };
-      const numPlayers = this.players.length;
 
-      // Set spawn coordinates in chosen map foyer with collision-free spacing
-      this.players.forEach((p, i) => {
-        p.x = mapSpawn.x + (i * 16 - (numPlayers - 1) * 8);
-        p.y = mapSpawn.y;
-        p.angle = -Math.PI / 2;
+      // Dedicated Collision-Free Spawns: Separate Seeker & Hiders across distinct rooms
+      const mapNodes = MP_SPAWN_NODES[this.settings.mapId] || MP_SPAWN_NODES[1];
+      let hiderNodeIdx = 0;
+
+      this.players.forEach((p) => {
+        if (p.role === 'seeker') {
+          p.x = mapNodes.seeker.x;
+          p.y = mapNodes.seeker.y;
+          p.angle = mapNodes.seeker.angle || (Math.PI / 2);
+        } else {
+          const node = mapNodes.hiders[hiderNodeIdx % mapNodes.hiders.length];
+          p.x = node.x;
+          p.y = node.y;
+          p.angle = node.angle || (-Math.PI / 2);
+          hiderNodeIdx++;
+        }
         p.isMoving = false;
         p.isHidden = false;
         p.hiddenSpotId = null;
@@ -1208,7 +1162,7 @@
         p.hasRelocated = false;
       });
 
-      // Broadcast MATCH_START with immediate send + redundancy pulses across all channels
+      // Broadcast MATCH_START with redundancy pulses across 1.5s to ensure zero mobile packet drops
       const startPayload = {
         type: 'MATCH_START',
         phase: 'mp_hiding_countdown',
@@ -1219,6 +1173,7 @@
         matchActive: true,
         attemptsLimit: this.attemptsLeft
       };
+
       const sendStartPulses = () => {
         if (this.phase !== 'mp_hiding_countdown') return;
         this.broadcast(startPayload);
@@ -1228,48 +1183,50 @@
           }
         });
       };
+
       sendStartPulses();
-      setTimeout(sendStartPulses, 100);
-      setTimeout(sendStartPulses, 250);
-      setTimeout(sendStartPulses, 500);
-      setTimeout(sendStartPulses, 800);
-      setTimeout(sendStartPulses, 1200);
+      setTimeout(sendStartPulses, 120);
+      setTimeout(sendStartPulses, 300);
+      setTimeout(sendStartPulses, 600);
+      setTimeout(sendStartPulses, 1000);
 
       this.clientStartMatch();
       this.startHostAuthoritativeLoop();
     }
 
     clientStartMatch() {
-      this.closeModal();
-      if (this.modal) {
-        this.modal.classList.add('hidden');
-        this.modal.style.display = 'none';
-      }
-      if (this.lobbyView) {
-        this.lobbyView.classList.add('hidden');
-        this.lobbyView.style.display = 'none';
-      }
-      if (this.panelJoin) {
-        this.panelJoin.classList.add('hidden');
-        this.panelJoin.style.display = 'none';
-      }
-      if (this.panelCreate) {
-        this.panelCreate.classList.add('hidden');
-        this.panelCreate.style.display = 'none';
-      }
-      if (this.resultModal) {
-        this.resultModal.classList.add('hidden');
-        this.resultModal.style.display = 'none';
-      }
-      if (this.game.pauseModal) {
-        this.game.pauseModal.classList.add('hidden');
-        this.game.pauseModal.style.display = 'none';
-      }
-
-      // Hide the menu screen completely (menuScreen has z-index 25 and can block view!)
-      if (this.game.menuScreen) {
-        this.game.menuScreen.classList.add('hidden');
-        this.game.menuScreen.style.display = 'none';
+      // Instantly hide all modals, overlays and menu screens
+      try {
+        if (this.modal) {
+          this.modal.classList.add('hidden');
+          this.modal.style.display = 'none';
+        }
+        if (this.lobbyView) {
+          this.lobbyView.classList.add('hidden');
+          this.lobbyView.style.display = 'none';
+        }
+        if (this.panelJoin) {
+          this.panelJoin.classList.add('hidden');
+          this.panelJoin.style.display = 'none';
+        }
+        if (this.panelCreate) {
+          this.panelCreate.classList.add('hidden');
+          this.panelCreate.style.display = 'none';
+        }
+        if (this.resultModal) {
+          this.resultModal.classList.add('hidden');
+          this.resultModal.style.display = 'none';
+        }
+        if (this.game.pauseModal) {
+          this.game.pauseModal.classList.add('hidden');
+          this.game.pauseModal.style.display = 'none';
+        }
+        if (this.game.menuScreen) {
+          this.game.menuScreen.classList.add('hidden');
+          this.game.menuScreen.style.display = 'none';
+        }
+      } catch (err) {
+        console.warn('Overlay hide notice:', err);
       }
 
       // Setup game instance
@@ -1297,10 +1254,10 @@
         this.game.player.angle = me.angle;
         this.game.player.isHidden = false;
         this.game.player.hiddenSpot = null;
-        this.game.player.speed = (typeof CFG !== 'undefined' && CFG.playerSpeed) ? CFG.playerSpeed : 3.4;
+        this.game.player.speed = (typeof CFG !== 'undefined' && CFG.playerSpeed) ? CFG.playerSpeed : 3.5;
       } else {
         this.game.role = this.isHost ? 'seeker' : 'hider';
-        this.game.player.speed = (typeof CFG !== 'undefined' && CFG.playerSpeed) ? CFG.playerSpeed : 3.4;
+        this.game.player.speed = (typeof CFG !== 'undefined' && CFG.playerSpeed) ? CFG.playerSpeed : 3.5;
       }
 
       this.game.phase = this.phase || 'mp_hiding_countdown';
@@ -1327,7 +1284,6 @@
 
       this.game.renderer.resize();
 
-      // Audio init
       if (typeof Sound !== 'undefined' && Sound.init) {
         Sound.init();
       }
@@ -1338,7 +1294,7 @@
     }
 
     /* ========================================================
-       HOST AUTHORITATIVE LOOP (25 Hz)
+       HOST AUTHORITATIVE LOOP (10 Hz Network Sync)
        ======================================================== */
     startHostAuthoritativeLoop() {
       if (!this.isHost) return;
@@ -1577,7 +1533,6 @@
       };
 
       this.broadcast(endPayload);
-
       this.showResultModal(endPayload);
     }
 
@@ -1736,7 +1691,7 @@
     }
 
     /* ========================================================
-       CLIENT INPUT TRANSMISSION LOOP
+       CLIENT INPUT TRANSMISSION LOOP (10 Hz)
        ======================================================== */
     startClientInputLoop() {
       clearInterval(this.inputInterval);
@@ -1973,7 +1928,6 @@
       };
 
       this.broadcast(payload);
-
       this.clientReturnToLobby();
     }
 
@@ -2027,15 +1981,18 @@
         clearInterval(this.lobbyPingInterval);
         this.lobbyPingInterval = null;
       }
-      this.countdownEndTime = 0;
+      if (this.handshakeRetryTimer) {
+        clearInterval(this.handshakeRetryTimer);
+        this.handshakeRetryTimer = null;
+      }
       if (this.connectTimeout) {
         clearTimeout(this.connectTimeout);
         this.connectTimeout = null;
       }
-      if (this.handshakeTimer1) clearTimeout(this.handshakeTimer1);
-      if (this.handshakeTimer2) clearTimeout(this.handshakeTimer2);
-      if (this.handshakeTimer3) clearTimeout(this.handshakeTimer3);
-      if (this.handshakeRetryTimer) clearTimeout(this.handshakeRetryTimer);
+      if (this.mqttReconnectTimer) {
+        clearTimeout(this.mqttReconnectTimer);
+        this.mqttReconnectTimer = null;
+      }
       clearInterval(this.syncInterval);
       clearInterval(this.inputInterval);
 
@@ -2049,22 +2006,11 @@
         this.mqttConnected = false;
       }
 
-      if (this.hostConn) {
-        this.hostConn.close();
-        this.hostConn = null;
-      }
-      this.connections.forEach(conn => conn.close());
-      this.connections.clear();
-
-      if (this.peer) {
-        this.peer.destroy();
-        this.peer = null;
-      }
-
       this.players = [];
       this.isHost = false;
       this.status = 'idle';
       this.wasEliminatedAnnounced = false;
+      this.countdownEndTime = 0;
     }
 
     escapeHtml(str) {

@@ -807,7 +807,7 @@ class ApartmentMap {
     }
   }
 
-  getNearestSpot(x, y, maxDist = 64) {
+  getNearestSpot(x, y, maxDist = 85) {
     let best = null;
     let bestDist = Infinity;
 
