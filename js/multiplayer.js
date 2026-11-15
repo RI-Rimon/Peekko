@@ -17,7 +17,7 @@
     allowedAttempts: [7, 10, 15, 20],
     hiderPalette: ['#38bdf8', '#10b981', '#a855f7', '#ec4899', '#f43f5e'],
     seekerColor: '#f59e0b',
-    syncHz: 20
+    syncHz: 12
   };
 
   // Pre-calculated, 100% collision-free spawn nodes across distinct rooms for maps 1-5
@@ -123,6 +123,11 @@
       this.connectTimeout = null;
       this.mqttReconnectTimer = null;
       this.matchEndTimeout = null;
+      this.autoReturnTimer = null;
+      this.joinBrokerFailoverTimer = null;
+      this.joinBrokerFailoverTimer2 = null;
+      this.lastSyncTime = 0;
+      this.lastInputTimes = new Map();
 
       // MQTT state
       this.mqtt = null;
@@ -402,6 +407,11 @@
       if (this.modal) {
         this.modal.classList.remove('hidden');
         this.modal.style.display = '';
+        const tabBar = document.querySelector('.mp-tab-bar');
+        if (tabBar) {
+          tabBar.classList.remove('hidden');
+          tabBar.style.display = 'flex';
+        }
         this.switchTab('create');
         if (this.lobbyView) {
           this.lobbyView.classList.add('hidden');
@@ -425,15 +435,31 @@
 
     switchTab(tab) {
       if (tab === 'create') {
-        this.tabCreate.classList.add('active');
-        this.tabJoin.classList.remove('active');
-        this.panelCreate.classList.remove('hidden');
-        this.panelJoin.classList.add('hidden');
+        if (this.tabCreate) this.tabCreate.classList.add('active');
+        if (this.tabJoin) this.tabJoin.classList.remove('active');
+        if (this.panelCreate) {
+          this.panelCreate.classList.remove('hidden');
+          this.panelCreate.style.display = '';
+        }
+        if (this.panelJoin) {
+          this.panelJoin.classList.add('hidden');
+          this.panelJoin.style.display = 'none';
+        }
       } else {
-        this.tabCreate.classList.remove('active');
-        this.tabJoin.classList.add('active');
-        this.panelCreate.classList.add('hidden');
-        this.panelJoin.classList.remove('hidden');
+        if (this.tabCreate) this.tabCreate.classList.remove('active');
+        if (this.tabJoin) this.tabJoin.classList.add('active');
+        if (this.panelCreate) {
+          this.panelCreate.classList.add('hidden');
+          this.panelCreate.style.display = 'none';
+        }
+        if (this.panelJoin) {
+          this.panelJoin.classList.remove('hidden');
+          this.panelJoin.style.display = '';
+        }
+      }
+      if (this.lobbyView) {
+        this.lobbyView.classList.add('hidden');
+        this.lobbyView.style.display = 'none';
       }
       if (this.createError) this.createError.textContent = '';
       if (this.joinError) this.joinError.textContent = '';
@@ -494,7 +520,7 @@
           this.activeBrokerIndex = (this.activeBrokerIndex + 1) % this.brokers.length;
           this.initMqtt(isHost);
         }
-      }, 1500);
+      }, 3000);
     }
 
     initMqtt(isHost) {
@@ -603,6 +629,7 @@
       if (this.mqtt && this.mqttConnected) {
         try {
           if (!payloadObj.senderId) payloadObj.senderId = this.localPlayerId;
+          if (!payloadObj.t) payloadObj.t = Date.now();
           const msg = new Paho.MQTT.Message(JSON.stringify(payloadObj));
           msg.destinationName = `peekko/v12/room/${this.roomCode}/${subTopic}`;
           msg.qos = 0;
@@ -628,7 +655,11 @@
     sendToClient(clientId, msg) {
       if (!this.isHost) return;
       msg.senderId = this.localPlayerId;
+      msg.targetId = clientId;
       this.mqttPublish('client/' + clientId, msg);
+      if (msg.type === 'WELCOME' || msg.type === 'REJECT') {
+        this.mqttPublish('h2c', msg);
+      }
     }
 
     /* ========================================================
@@ -642,6 +673,7 @@
       }
 
       this.cleanup();
+      this.activeBrokerIndex = 0;
       this.isHost = true;
       this.localPlayerName = hostName || 'Host';
       this.roomCode = generateRoomCode();
@@ -692,16 +724,37 @@
        ======================================================== */
     joinRoom(clientName, roomCode) {
       this.showJoinError('');
+      if (!roomCode || roomCode.trim().length === 0) {
+        this.showJoinError('Please enter a 5-character Room Code (e.g. PK492).');
+        return;
+      }
+
       if (this.btnJoinSubmit) {
         this.btnJoinSubmit.disabled = true;
         this.btnJoinSubmit.textContent = 'Connecting to Room...';
       }
 
       this.cleanup();
+      this.activeBrokerIndex = 0;
       this.isHost = false;
       this.localPlayerName = clientName || 'Guest';
       this.roomCode = roomCode.toUpperCase().trim();
       this.localPlayerId = 'usr_' + Math.random().toString(36).slice(2, 10);
+
+      // Auto broker discovery: if Broker 0 gives no response within 3.5s, probe Broker 1
+      this.joinBrokerFailoverTimer = setTimeout(() => {
+        if (this.status !== 'lobby' && !this.isHost && this.roomCode) {
+          this.activeBrokerIndex = (this.activeBrokerIndex + 1) % this.brokers.length;
+          this.initMqtt(false);
+        }
+      }, 3500);
+
+      this.joinBrokerFailoverTimer2 = setTimeout(() => {
+        if (this.status !== 'lobby' && !this.isHost && this.roomCode) {
+          this.activeBrokerIndex = 0;
+          this.initMqtt(false);
+        }
+      }, 7500);
 
       this.connectTimeout = setTimeout(() => {
         if (this.status !== 'lobby') {
@@ -726,14 +779,15 @@
       if (msg.type === 'JOIN') {
         const clientId = msg.id || msg.senderId || ('guest_' + Math.random().toString(36).slice(2, 8));
 
-        const existingPlayer = this.players.find(p => p.id === clientId || (msg.name && p.name === msg.name));
+        // Reconnection: Only match by unique player ID! NEVER match an incoming client to host or existing players by name!
+        const existingPlayer = this.players.find(p => p.id === clientId);
         if (existingPlayer) {
-          existingPlayer.id = clientId;
           existingPlayer.name = msg.name || existingPlayer.name;
           this.sendToClient(clientId, {
             type: 'WELCOME',
             roomCode: this.roomCode,
             localId: clientId,
+            targetId: clientId,
             settings: this.settings,
             players: this.players
           });
@@ -742,12 +796,18 @@
         }
 
         if (this.players.length >= MP_CFG.maxPlayers) {
-          this.sendToClient(clientId, { type: 'REJECT', reason: 'Room is full (max 5 players).' });
+          this.sendToClient(clientId, { type: 'REJECT', targetId: clientId, reason: 'Room is full (max 5 players).' });
           return;
         }
         if (this.phase !== 'lobby') {
-          this.sendToClient(clientId, { type: 'REJECT', reason: 'Match is already in progress.' });
+          this.sendToClient(clientId, { type: 'REJECT', targetId: clientId, reason: 'Match is already in progress.' });
           return;
+        }
+
+        // Disambiguate duplicate player names if both players entered the same name (e.g. "Rimon")
+        let clientName = (msg.name || `Player ${this.players.length + 1}`).trim();
+        if (this.players.some(p => p.name.toLowerCase() === clientName.toLowerCase())) {
+          clientName += ` (${this.players.length + 1})`;
         }
 
         const usedColors = this.players.filter(p => p.role === 'hider').map(p => p.color);
@@ -755,7 +815,7 @@
 
         const newPlayer = {
           id: clientId,
-          name: msg.name || `Player ${this.players.length + 1}`,
+          name: clientName,
           isHost: false,
           role: 'hider',
           color: freeColor,
@@ -780,6 +840,7 @@
           type: 'WELCOME',
           roomCode: this.roomCode,
           localId: clientId,
+          targetId: clientId,
           settings: this.settings,
           players: this.players
         });
@@ -789,6 +850,11 @@
       } else if (msg.type === 'PLAYER_INPUT') {
         const p = this.players.find(pl => pl.id === msg.id || pl.id === msg.senderId);
         if (p && !p.eliminated) {
+          if (msg.t) {
+            const lastT = this.lastInputTimes.get(p.id) || 0;
+            if (msg.t < lastT) return; // Drop stale out-of-order packet
+            this.lastInputTimes.set(p.id, msg.t);
+          }
           p.x = msg.x !== undefined ? msg.x : p.x;
           p.y = msg.y !== undefined ? msg.y : p.y;
           p.angle = msg.angle !== undefined ? msg.angle : p.angle;
@@ -850,16 +916,27 @@
     handleClientMessage(msg) {
       if (!msg || !msg.type) return;
 
-      if (this.connectTimeout) {
-        clearTimeout(this.connectTimeout);
-        this.connectTimeout = null;
-      }
-      if (this.handshakeRetryTimer) {
-        clearInterval(this.handshakeRetryTimer);
-        this.handshakeRetryTimer = null;
+      if (msg.targetId && msg.targetId !== this.localPlayerId) {
+        return; // Message is for another specific client
       }
 
       if (msg.type === 'WELCOME') {
+        if (this.connectTimeout) {
+          clearTimeout(this.connectTimeout);
+          this.connectTimeout = null;
+        }
+        if (this.joinBrokerFailoverTimer) {
+          clearTimeout(this.joinBrokerFailoverTimer);
+          this.joinBrokerFailoverTimer = null;
+        }
+        if (this.joinBrokerFailoverTimer2) {
+          clearTimeout(this.joinBrokerFailoverTimer2);
+          this.joinBrokerFailoverTimer2 = null;
+        }
+        if (this.handshakeRetryTimer) {
+          clearInterval(this.handshakeRetryTimer);
+          this.handshakeRetryTimer = null;
+        }
         if (msg.localId) this.localPlayerId = msg.localId;
         this.roomCode = msg.roomCode;
         this.settings = msg.settings;
@@ -883,6 +960,18 @@
         }
         this.renderLobbyUI();
       } else if (msg.type === 'REJECT') {
+        if (this.connectTimeout) {
+          clearTimeout(this.connectTimeout);
+          this.connectTimeout = null;
+        }
+        if (this.joinBrokerFailoverTimer) {
+          clearTimeout(this.joinBrokerFailoverTimer);
+          this.joinBrokerFailoverTimer = null;
+        }
+        if (this.joinBrokerFailoverTimer2) {
+          clearTimeout(this.joinBrokerFailoverTimer2);
+          this.joinBrokerFailoverTimer2 = null;
+        }
         this.showJoinError(msg.reason || 'Join rejected');
         this.leaveRoom();
       } else if (msg.type === 'MATCH_START') {
@@ -1034,6 +1123,11 @@
         this.modal.classList.remove('hidden');
         this.modal.style.display = '';
       }
+      const tabBar = document.querySelector('.mp-tab-bar');
+      if (tabBar) {
+        tabBar.classList.add('hidden');
+        tabBar.style.display = 'none';
+      }
       if (this.panelCreate) {
         this.panelCreate.classList.add('hidden');
         this.panelCreate.style.display = 'none';
@@ -1044,7 +1138,7 @@
       }
       if (this.lobbyView) {
         this.lobbyView.classList.remove('hidden');
-        this.lobbyView.style.display = '';
+        this.lobbyView.style.display = 'flex';
       }
 
       if (this.lobbyRoomCode) this.lobbyRoomCode.textContent = this.roomCode;
@@ -1281,6 +1375,12 @@
         console.warn('Overlay hide notice:', err);
       }
 
+      if (this.autoReturnTimer) {
+        clearInterval(this.autoReturnTimer);
+        this.autoReturnTimer = null;
+      }
+      this.revealSpotId = null;
+
       this.game.isMultiplayer = true;
       this.game.mpManager = this;
       this.game.selectedMapId = this.settings.mapId;
@@ -1377,6 +1477,7 @@
       // 2. Broadcast GAME_SYNC snapshot
       const syncData = {
         type: 'GAME_SYNC',
+        t: Date.now(),
         phase: this.phase,
         matchActive: this.phase === 'mp_hiding_countdown' || this.phase === 'mp_hunting',
         countdown: Math.max(0, Math.round(this.countdown * 10) / 10),
@@ -1738,6 +1839,7 @@
     showResultModal(data) {
       if (!this.resultModal) return;
       this.resultModal.classList.remove('hidden');
+      this.resultModal.style.display = 'flex';
 
       if (this.countdownOverlay) this.countdownOverlay.classList.add('hidden');
       if (this.countdownSeekerBanner) this.countdownSeekerBanner.classList.add('hidden');
@@ -1787,10 +1889,36 @@
       if (me) {
         const iWon = (isSeekerWin && me.role === 'seeker') || (!isSeekerWin && me.role === 'hider' && !me.eliminated);
         if (typeof Sound !== 'undefined') {
-          if (iWon) Sound.playWin();
-          else Sound.playLose();
+          if (iWon && Sound.playWin) Sound.playWin();
+          else if (Sound.playLose) Sound.playLose();
         }
       }
+
+      // Automated 6-second auto-return to lobby
+      if (this.autoReturnTimer) {
+        clearInterval(this.autoReturnTimer);
+        this.autoReturnTimer = null;
+      }
+      let autoReturnSecs = 6;
+      if (this.btnReturnLobby) {
+        this.btnReturnLobby.textContent = `Return to Lobby (${autoReturnSecs}s)`;
+      }
+      this.autoReturnTimer = setInterval(() => {
+        autoReturnSecs--;
+        if (autoReturnSecs > 0) {
+          if (this.btnReturnLobby) {
+            this.btnReturnLobby.textContent = `Return to Lobby (${autoReturnSecs}s)`;
+          }
+        } else {
+          clearInterval(this.autoReturnTimer);
+          this.autoReturnTimer = null;
+          if (this.isHost) {
+            this.hostReturnToLobby();
+          } else {
+            this.clientReturnToLobby();
+          }
+        }
+      }, 1000);
     }
 
     /* ========================================================
@@ -1821,6 +1949,7 @@
         if (!this.isHost) {
           this.sendToHost({
             type: 'PLAYER_INPUT',
+            t: Date.now(),
             id: this.localPlayerId,
             x: me.x,
             y: me.y,
@@ -1864,6 +1993,11 @@
 
     applyGameSync(sync) {
       if (!sync || this.isHost) return;
+
+      if (sync.t) {
+        if (this.lastSyncTime && sync.t < this.lastSyncTime) return;
+        this.lastSyncTime = sync.t;
+      }
 
       const clientNotInGame = !this.game.isMultiplayer || this.phase === 'lobby' || this.game.phase === 'menu' || (this.modal && (!this.modal.classList.contains('hidden') || this.modal.style.display !== 'none'));
       const serverMatchActive = !!(sync.matchActive || sync.phase === 'mp_hiding_countdown' || sync.phase === 'mp_hunting');
@@ -2033,14 +2167,41 @@
     }
 
     clientReturnToLobby() {
+      if (this.autoReturnTimer) {
+        clearInterval(this.autoReturnTimer);
+        this.autoReturnTimer = null;
+      }
+      if (this.btnReturnLobby) {
+        this.btnReturnLobby.textContent = 'Return to Lobby';
+      }
       this.phase = 'lobby';
       this.wasEliminatedAnnounced = false;
       this.revealSpotId = null;
 
-      if (this.resultModal) this.resultModal.classList.add('hidden');
+      if (this.resultModal) {
+        this.resultModal.classList.add('hidden');
+        this.resultModal.style.display = 'none';
+      }
       if (this.spectatorBanner) this.spectatorBanner.classList.add('hidden');
       if (this.countdownOverlay) this.countdownOverlay.classList.add('hidden');
       if (this.countdownSeekerBanner) this.countdownSeekerBanner.classList.add('hidden');
+
+      this.players.forEach(p => {
+        p.eliminated = false;
+        p.isHidden = false;
+        p.hiddenSpotId = null;
+        p.isReady = false;
+        p.revealedSpotId = null;
+        p.hasRelocated = false;
+        p.isMoving = false;
+      });
+
+      if (this.game && this.game.player) {
+        this.game.player.isMoving = false;
+        this.game.player.isHidden = false;
+        this.game.player.hiddenSpot = null;
+        this.game.player.speed = (typeof CFG !== 'undefined' && CFG.playerSpeed) ? CFG.playerSpeed : 3.5;
+      }
 
       this.game.isMultiplayer = false;
       this.game.phase = 'menu';
@@ -2089,6 +2250,11 @@
       if (this.modal) {
         this.modal.classList.add('hidden');
         this.modal.style.display = 'none';
+      }
+      const tabBar = document.querySelector('.mp-tab-bar');
+      if (tabBar) {
+        tabBar.classList.remove('hidden');
+        tabBar.style.display = 'flex';
       }
       if (this.lobbyView) {
         this.lobbyView.classList.add('hidden');
@@ -2144,6 +2310,18 @@
     }
 
     cleanup() {
+      if (this.autoReturnTimer) {
+        clearInterval(this.autoReturnTimer);
+        this.autoReturnTimer = null;
+      }
+      if (this.joinBrokerFailoverTimer) {
+        clearTimeout(this.joinBrokerFailoverTimer);
+        this.joinBrokerFailoverTimer = null;
+      }
+      if (this.joinBrokerFailoverTimer2) {
+        clearTimeout(this.joinBrokerFailoverTimer2);
+        this.joinBrokerFailoverTimer2 = null;
+      }
       if (this.lobbyPingInterval) {
         clearInterval(this.lobbyPingInterval);
         this.lobbyPingInterval = null;

@@ -321,8 +321,23 @@ class ApartmentRenderer {
                 continue;
               }
               // Rule 3: Moving out in open within Line of Sight
-              this.drawCharacter(ctx, pl.x, pl.y, pl.angle, pl.color, label, false, pl.isMoving);
+              this.drawCharacter(ctx, posX, posY, posAngle, pl.color, label, false, posMoving);
             }
+          }
+        }
+      }
+
+      // 8. Seeker Flashlight Cone (in Dark Mode - rendered for local Seeker or remote Seeker)
+      if (this.theme === 'dark') {
+        if (gameState.role === 'seeker' && gameState.player) {
+          this.drawFlashlightCone(ctx, gameState.player.x, gameState.player.y, gameState.player.angle, 'rgba(253, 224, 71, 0.16)');
+        } else if (gameState.mpPlayers) {
+          const mpSeeker = gameState.mpPlayers.find(p => p.role === 'seeker');
+          if (mpSeeker && (!isHidingCountdown || isMeEliminated)) {
+            const sx = (mpSeeker.renderX !== undefined) ? mpSeeker.renderX : mpSeeker.x;
+            const sy = (mpSeeker.renderY !== undefined) ? mpSeeker.renderY : mpSeeker.y;
+            const sa = (mpSeeker.renderAngle !== undefined) ? mpSeeker.renderAngle : mpSeeker.angle;
+            this.drawFlashlightCone(ctx, sx, sy, sa, 'rgba(253, 224, 71, 0.18)');
           }
         }
       }
