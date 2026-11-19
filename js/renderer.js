@@ -767,6 +767,212 @@ class ApartmentRenderer {
         ctx.fillRect(gx, prop.y + 6, 12, prop.h / 2 - 10);
         ctx.fillRect(gx, prop.y + prop.h / 2 + 4, 12, prop.h / 2 - 10);
       }
+    } else if (prop.type === 'decoy_truck') {
+      // Heavy Armored Cash Transport Truck (Solid Cover, Non-Hiding)
+      ctx.fillStyle = '#0f172a';
+      this.roundRect(ctx, prop.x, prop.y, prop.w, prop.h, 6);
+      ctx.fill();
+      // Armor body
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, prop.x + 2, prop.y + 2, prop.w - 4, prop.h - 4, 5);
+      ctx.fill();
+      // Ballistic windshield
+      ctx.fillStyle = '#0284c7';
+      ctx.fillRect(prop.x + 6, prop.y + 6, 20, prop.h - 12);
+      // Wheels
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(prop.x + 12, prop.y - 2, 16, 4);
+      ctx.fillRect(prop.x + 12, prop.y + prop.h - 2, 16, 4);
+      ctx.fillRect(prop.x + prop.w - 28, prop.y - 2, 18, 4);
+      ctx.fillRect(prop.x + prop.w - 28, prop.y + prop.h - 2, 18, 4);
+      // Dual hazard stripes
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(prop.x + 32, prop.y + prop.h / 2 - 3, prop.w - 40, 6);
+      // Stencil badge
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '8px monospace';
+      ctx.fillText('ARMORED', prop.x + 36, prop.y + prop.h / 2 + 12);
+    } else if (prop.type === 'security_booth') {
+      // Parking Toll Security Booth
+      ctx.fillStyle = '#334155';
+      this.roundRect(ctx, prop.x, prop.y, prop.w, prop.h, 4);
+      ctx.fill();
+      // Observation windows
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(prop.x + 4, prop.y + 4, prop.w - 8, 16);
+      // Barrier arm base & red indicator
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath(); ctx.arc(prop.x + prop.w - 6, prop.y + 6, 4, 0, Math.PI * 2); ctx.fill();
+      // Yellow barrier arm
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(prop.x + prop.w - 2, prop.y + prop.h / 2, 22, 6);
+    } else if (prop.type === 'decoy_generator' || prop.type === 'decoy_turbine') {
+      // Industrial Heavy Turbine Unit
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, prop.x, prop.y, prop.w, prop.h, 6);
+      ctx.fill();
+      // Circular ventilation fan
+      const cx = prop.x + 28;
+      const cy = prop.y + prop.h / 2;
+      ctx.fillStyle = '#475569';
+      ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#0284c7';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // Hazard warning panel
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(prop.x + prop.w - 32, prop.y + 10, 24, 16);
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 9px sans-serif';
+      ctx.fillText('⚡', prop.x + prop.w - 26, prop.y + 22);
+    } else if (prop.type === 'decoy_crates') {
+      // High-Security Freight Shipping Crate
+      ctx.fillStyle = '#3b82f6';
+      this.roundRect(ctx, prop.x, prop.y, prop.w, prop.h, 4);
+      ctx.fill();
+      ctx.strokeStyle = '#1d4ed8';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(prop.x + 3, prop.y + 3, prop.w - 6, prop.h - 6);
+      // Cross braces
+      ctx.beginPath();
+      ctx.moveTo(prop.x + 4, prop.y + 4); ctx.lineTo(prop.x + prop.w - 4, prop.y + prop.h - 4);
+      ctx.moveTo(prop.x + prop.w - 4, prop.y + 4); ctx.lineTo(prop.x + 4, prop.y + prop.h - 4);
+      ctx.stroke();
+    } else if (prop.type === 'decoy_boiler') {
+      // Pressure Cylinder Tank
+      const cx = prop.x + prop.w / 2;
+      const cy = prop.y + prop.h / 2;
+      ctx.fillStyle = '#713f12';
+      this.roundRect(ctx, prop.x, prop.y, prop.w, prop.h, 12);
+      ctx.fill();
+      ctx.strokeStyle = '#ca8a04';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // Pressure dial
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(cx, cy, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#dc2626';
+      ctx.fillRect(cx - 1, cy - 8, 2, 8);
+    } else if (prop.type === 'decoy_car_podium') {
+      // Showroom Display Coupe on Podium
+      const pcx = prop.x + prop.w / 2;
+      const pcy = prop.y + prop.h / 2;
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+      ctx.beginPath(); ctx.ellipse(pcx, pcy, prop.w / 2 + 6, prop.h / 2 + 6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      // Car chassis
+      ctx.fillStyle = '#e11d48'; // Sports Crimson
+      this.roundRect(ctx, prop.x + 4, prop.y + 4, prop.w - 8, prop.h - 8, 8);
+      ctx.fill();
+      // Panoramic tinted glass
+      ctx.fillStyle = '#0f172a';
+      this.roundRect(ctx, prop.x + 22, prop.y + 8, prop.w - 44, prop.h - 16, 5);
+      ctx.fill();
+      // Headlights
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(prop.x + prop.w - 8, prop.y + 8, 4, 6);
+      ctx.fillRect(prop.x + prop.w - 8, prop.y + prop.h - 14, 4, 6);
+    } else if (prop.type === 'decoy_escalator') {
+      // Stainless Steel Escalator Bank
+      ctx.fillStyle = '#334155';
+      this.roundRect(ctx, prop.x, prop.y, prop.w, prop.h, 4);
+      ctx.fill();
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(prop.x + 2, prop.y + 2, prop.w - 4, prop.h - 4);
+      // Step treads
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 1;
+      for (let ey = prop.y + 8; ey < prop.y + prop.h - 8; ey += 12) {
+        ctx.beginPath(); ctx.moveTo(prop.x + 8, ey); ctx.lineTo(prop.x + prop.w - 8, ey); ctx.stroke();
+      }
+    } else if (prop.type === 'decoy_kiosk') {
+      // Information Dome Kiosk
+      const kcx = prop.x + prop.w / 2;
+      const kcy = prop.y + prop.h / 2;
+      ctx.fillStyle = '#0284c7';
+      this.roundRect(ctx, prop.x, prop.y, prop.w, prop.h, 8);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('ℹ', kcx, kcy);
+    } else if (prop.type === 'decoy_ticket_booth') {
+      // Amusement Castle Ticket Booth
+      ctx.fillStyle = '#991b1b';
+      this.roundRect(ctx, prop.x, prop.y, prop.w, prop.h, 4);
+      ctx.fill();
+      // Striped awning
+      const numStripes = 6;
+      const sW = prop.w / numStripes;
+      for (let s = 0; s < numStripes; s++) {
+        ctx.fillStyle = (s % 2 === 0) ? '#ef4444' : '#ffffff';
+        ctx.fillRect(prop.x + s * sW, prop.y, sW, 10);
+      }
+      // Ticket window
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(prop.x + 12, prop.y + 16, prop.w - 24, 18);
+    } else if (prop.type === 'decoy_ship') {
+      // Pirate Ship Ride Bow
+      ctx.fillStyle = '#451a03';
+      ctx.beginPath();
+      ctx.moveTo(prop.x, prop.y);
+      ctx.lineTo(prop.x + prop.w - 20, prop.y);
+      ctx.lineTo(prop.x + prop.w, prop.y + prop.h / 2);
+      ctx.lineTo(prop.x + prop.w - 20, prop.y + prop.h);
+      ctx.lineTo(prop.x, prop.y + prop.h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#ca8a04';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // Cannon ports
+      ctx.fillStyle = '#000000';
+      ctx.beginPath(); ctx.arc(prop.x + 20, prop.y + 12, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(prop.x + 55, prop.y + 12, 5, 0, Math.PI * 2); ctx.fill();
+    } else if (prop.type === 'decoy_statue') {
+      // Bronze Clocktower Mascot Statue
+      const scx = prop.x + prop.w / 2;
+      const scy = prop.y + prop.h / 2;
+      ctx.fillStyle = '#475569';
+      this.roundRect(ctx, prop.x + 4, prop.y + 4, prop.w - 8, prop.h - 8, 8);
+      ctx.fill();
+      ctx.fillStyle = '#d97706';
+      ctx.beginPath(); ctx.arc(scx, scy - 4, 14, 0, Math.PI * 2); ctx.fill();
+      ctx.fillRect(scx - 6, scy + 8, 12, 10);
+    } else if (prop.type === 'decoy_charging_bay') {
+      // High-Voltage Bumper Car Substation
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, prop.x, prop.y, prop.w, prop.h, 4);
+      ctx.fill();
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(prop.x + 4, prop.y + 4, prop.w - 8, 6);
+      ctx.fillRect(prop.x + 4, prop.y + prop.h - 10, prop.w - 8, 6);
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('⚡', prop.x + prop.w / 2 - 6, prop.y + prop.h / 2 + 5);
+    } else if (prop.type === 'decoy_popcorn') {
+      // Vintage Popcorn Cart Trailer
+      ctx.fillStyle = '#dc2626';
+      this.roundRect(ctx, prop.x, prop.y, prop.w, prop.h, 6);
+      ctx.fill();
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(prop.x + 8, prop.y + 6, prop.w - 16, prop.h - 16);
+      ctx.strokeStyle = '#ca8a04';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(prop.x + 16, prop.y + prop.h, 8, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(prop.x + prop.w - 16, prop.y + prop.h, 8, 0, Math.PI * 2); ctx.stroke();
+    } else {
+      // Architectural solid fallback
+      ctx.fillStyle = '#334155';
+      this.roundRect(ctx, prop.x, prop.y, prop.w, prop.h, 4);
+      ctx.fill();
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(prop.x + 2, prop.y + 2, prop.w - 4, prop.h - 4);
     }
 
     ctx.restore();

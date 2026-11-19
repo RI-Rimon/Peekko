@@ -41,30 +41,30 @@
       ]
     },
     3: { // Underground Basement
-      seeker: { x: 660, y: 700, angle: Math.PI / 2 },
+      seeker: { x: 680, y: 720, angle: Math.PI / 2 },
       hiders: [
-        { x: 480, y: 220, angle: -Math.PI / 2 }, // Parking Bay
-        { x: 240, y: 630, angle: 0 },             // Storage Bay
-        { x: 1060, y: 260, angle: Math.PI },      // Maintenance Workshop
-        { x: 1060, y: 630, angle: 0 }             // Boiler Vault
+        { x: 350, y: 240, angle: -Math.PI / 2 }, // Parking Bay
+        { x: 230, y: 640, angle: 0 },             // Storage Bay
+        { x: 1080, y: 280, angle: Math.PI },      // Maintenance Workshop
+        { x: 1060, y: 670, angle: 0 }             // Boiler Vault
       ]
     },
     4: { // Grand Shopping Mall
-      seeker: { x: 760, y: 840, angle: Math.PI / 2 },
+      seeker: { x: 680, y: 760, angle: Math.PI / 2 },
       hiders: [
-        { x: 760, y: 470, angle: -Math.PI / 2 }, // Grand Atrium
-        { x: 240, y: 240, angle: 0 },             // Fashion Wing
-        { x: 1280, y: 240, angle: Math.PI },      // Cinema & VR Arcade
-        { x: 240, y: 680, angle: 0 }              // Tech Superstore
+        { x: 680, y: 360, angle: -Math.PI / 2 }, // Grand Atrium
+        { x: 200, y: 220, angle: 0 },             // Fashion Wing
+        { x: 1100, y: 220, angle: Math.PI },      // Cinema & VR Arcade
+        { x: 200, y: 600, angle: 0 }              // Tech Superstore
       ]
     },
     5: { // Wonderland Park
-      seeker: { x: 660, y: 700, angle: Math.PI / 2 },
+      seeker: { x: 680, y: 760, angle: Math.PI / 2 },
       hiders: [
-        { x: 240, y: 600, angle: 0 },             // Carnival Midway
-        { x: 250, y: 250, angle: -Math.PI / 2 }, // Fantasy Carousel Court
-        { x: 780, y: 220, angle: 0 },             // Thunder Coaster Lagoon
-        { x: 1040, y: 600, angle: Math.PI }       // Bumper Cars & Retro Arcade
+        { x: 360, y: 640, angle: 0 },             // Carnival Midway
+        { x: 360, y: 340, angle: -Math.PI / 2 }, // Fantasy Carousel Court
+        { x: 1080, y: 320, angle: 0 },            // Thunder Coaster Lagoon
+        { x: 1010, y: 625, angle: Math.PI }       // Bumper Cars & Retro Arcade
       ]
     }
   };
