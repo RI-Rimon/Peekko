@@ -4,15 +4,15 @@
    ======================================================== */
 
 const PEEKKO_CONFIG = Object.freeze({
-  version: '7.0',
+  version: '8.0',
   difficulties: {
     easy: {
       label: 'Easy',
       botSpeed: 3.5,
       losMaxDist: 150,
       losConeHalfAngle: 0.65,
-      maxAttemptsSeeker: 13,
-      maxAttemptsHider: 7,
+      maxAttemptsSeeker: 15,
+      maxAttemptsHider: 5,
       hearingRadius: 200,
       hintBands: ['hot', 'warm', 'cool']
     },
@@ -31,8 +31,8 @@ const PEEKKO_CONFIG = Object.freeze({
       botSpeed: 2.85,
       losMaxDist: 200,
       losConeHalfAngle: 0.88,
-      maxAttemptsSeeker: 7,
-      maxAttemptsHider: 14,
+      maxAttemptsSeeker: 5,
+      maxAttemptsHider: 15,
       hearingRadius: 300,
       hintBands: ['hot']
     }
@@ -55,7 +55,10 @@ const PEEKKO_CONFIG = Object.freeze({
     minPlayers: 2,
     maxPlayers: 5,
     defaultAttempts: 10,
-    allowedAttempts: [7, 10, 15, 20],
+    allowedAttempts: [5, 10, 15],
+    minTimerMinutes: 1,
+    maxTimerMinutes: 10,
+    defaultTimerMinutes: 3,
     hiderPalette: ['#38bdf8', '#10b981', '#a855f7', '#ec4899', '#f43f5e'],
     seekerColor: '#f59e0b',
     syncHz: 8

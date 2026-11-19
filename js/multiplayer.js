@@ -41,30 +41,30 @@
       ]
     },
     3: { // Underground Basement
-      seeker: { x: 670, y: 690, angle: Math.PI / 2 },
+      seeker: { x: 660, y: 700, angle: Math.PI / 2 },
       hiders: [
-        { x: 450, y: 220, angle: -Math.PI / 2 }, // Parking Bay
-        { x: 260, y: 600, angle: 0 },             // Cargo Storage
-        { x: 1020, y: 240, angle: Math.PI },      // Maintenance Workshop
-        { x: 1020, y: 600, angle: 0 }             // Power Vault
+        { x: 480, y: 220, angle: -Math.PI / 2 }, // Parking Bay
+        { x: 240, y: 630, angle: 0 },             // Storage Bay
+        { x: 1060, y: 260, angle: Math.PI },      // Maintenance Workshop
+        { x: 1060, y: 630, angle: 0 }             // Boiler Vault
       ]
     },
     4: { // Grand Shopping Mall
-      seeker: { x: 780, y: 825, angle: Math.PI / 2 },
+      seeker: { x: 760, y: 840, angle: Math.PI / 2 },
       hiders: [
-        { x: 780, y: 400, angle: -Math.PI / 2 }, // Central Plaza
-        { x: 215, y: 245, angle: 0 },             // West Retail Wing
-        { x: 1260, y: 245, angle: Math.PI },      // East Food Court
-        { x: 780, y: 145, angle: 0 }              // North Promenade
+        { x: 760, y: 470, angle: -Math.PI / 2 }, // Grand Atrium
+        { x: 240, y: 240, angle: 0 },             // Fashion Wing
+        { x: 1280, y: 240, angle: Math.PI },      // Cinema & VR Arcade
+        { x: 240, y: 680, angle: 0 }              // Tech Superstore
       ]
     },
     5: { // Wonderland Park
-      seeker: { x: 630, y: 690, angle: Math.PI / 2 },
+      seeker: { x: 660, y: 700, angle: Math.PI / 2 },
       hiders: [
-        { x: 220, y: 570, angle: 0 },             // Carnival Midway
-        { x: 240, y: 260, angle: -Math.PI / 2 }, // Wonder Rides Plaza
-        { x: 740, y: 210, angle: 0 },             // Thrill Coaster Cove
-        { x: 1010, y: 560, angle: Math.PI }       // Bumper Cars & Retro Arcade
+        { x: 240, y: 600, angle: 0 },             // Carnival Midway
+        { x: 250, y: 250, angle: -Math.PI / 2 }, // Fantasy Carousel Court
+        { x: 780, y: 220, angle: 0 },             // Thunder Coaster Lagoon
+        { x: 1040, y: 600, angle: Math.PI }       // Bumper Cars & Retro Arcade
       ]
     }
   };
@@ -100,7 +100,9 @@
       this.settings = {
         mapId: 1,
         lightingMode: 'dark',
-        attemptsLimit: 10
+        winRule: 'attempts', // 'attempts' | 'timer'
+        attemptsLimit: 10,
+        timerMinutes: 1
       };
 
       // Live Room Players
@@ -110,6 +112,8 @@
       this.phase = 'lobby'; // 'lobby' | 'mp_hiding_countdown' | 'mp_hunting' | 'mp_ended'
       this.countdown = MP_CFG.hidingPhaseSeconds;
       this.countdownEndTime = 0;
+      this.huntEndTime = 0;
+      this.huntRemaining = 0;
       this.attemptsLeft = 10;
       this.checkedSpots = [];
       this.rankings = [];
@@ -217,6 +221,13 @@
       this.btnReturnLobby = document.getElementById('btn-mp-return-lobby');
       this.btnLeaveGame = document.getElementById('btn-mp-leave-game');
 
+      // Win Condition & Match Timer Stepper
+      this.ruleAttemptsGroup = document.getElementById('mp-rule-attempts-group');
+      this.ruleTimerGroup = document.getElementById('mp-rule-timer-group');
+      this.timerDisplay = document.getElementById('mp-timer-display');
+      this.timerMinus = document.getElementById('mp-timer-minus');
+      this.timerPlus = document.getElementById('mp-timer-plus');
+
       this.bindEvents();
     }
 
@@ -257,6 +268,39 @@
           this.hostInitialRole = btn.dataset.role || 'hider';
         });
       });
+
+      // Win Rule: Attempts Limit vs Match Timer
+      const ruleOptions = document.querySelectorAll('.mp-setting-rule');
+      ruleOptions.forEach(btn => {
+        btn.addEventListener('click', () => {
+          ruleOptions.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const rule = btn.dataset.rule || 'attempts';
+          this.settings.winRule = rule;
+          if (this.ruleAttemptsGroup) {
+            this.ruleAttemptsGroup.classList.toggle('hidden', rule !== 'attempts');
+            this.ruleAttemptsGroup.style.display = rule === 'attempts' ? '' : 'none';
+          }
+          if (this.ruleTimerGroup) {
+            this.ruleTimerGroup.classList.toggle('hidden', rule !== 'timer');
+            this.ruleTimerGroup.style.display = rule === 'timer' ? '' : 'none';
+          }
+        });
+      });
+
+      // Timer Stepper (1 to 10 min)
+      if (this.timerMinus) {
+        this.timerMinus.addEventListener('click', () => {
+          this.settings.timerMinutes = Math.max(1, (this.settings.timerMinutes || 1) - 1);
+          if (this.timerDisplay) this.timerDisplay.textContent = `${this.settings.timerMinutes} Min`;
+        });
+      }
+      if (this.timerPlus) {
+        this.timerPlus.addEventListener('click', () => {
+          this.settings.timerMinutes = Math.min(10, (this.settings.timerMinutes || 1) + 1);
+          if (this.timerDisplay) this.timerDisplay.textContent = `${this.settings.timerMinutes} Min`;
+        });
+      }
 
       const attemptOptions = document.querySelectorAll('.mp-setting-attempts');
       attemptOptions.forEach(btn => {
@@ -1164,7 +1208,13 @@
       };
       if (this.lobbyMapName) this.lobbyMapName.textContent = mapNames[this.settings.mapId] || 'Map 1';
       if (this.lobbyLighting) this.lobbyLighting.textContent = this.settings.lightingMode === 'light' ? 'Day (Light)' : 'Night (Dark)';
-      if (this.lobbyAttempts) this.lobbyAttempts.textContent = `${this.settings.attemptsLimit} Checks`;
+      if (this.lobbyAttempts) {
+        if (this.settings.winRule === 'timer') {
+          this.lobbyAttempts.textContent = `⏱ ${this.settings.timerMinutes} Min Timer`;
+        } else {
+          this.lobbyAttempts.textContent = `${this.settings.attemptsLimit} Checks`;
+        }
+      }
 
       const seekerCount = this.players.filter(p => p.role === 'seeker').length;
       const count = this.players.length;
@@ -1421,8 +1471,13 @@
       this.game.topHud.classList.remove('hidden');
       this.game.topHud.style.display = 'flex';
       this.game.attemptsBox.classList.remove('hidden');
-      this.game.attemptsLabel.textContent = 'SEEKER CHECKS';
-      this.game.attemptsValue.textContent = `${this.attemptsLeft} / ${this.settings.attemptsLimit}`;
+      if (this.settings.winRule === 'timer') {
+        this.game.attemptsLabel.textContent = 'MATCH TIMER';
+        this.game.attemptsValue.textContent = `⏱ ${this.settings.timerMinutes || 1}:00`;
+      } else {
+        this.game.attemptsLabel.textContent = 'SEEKER CHECKS';
+        this.game.attemptsValue.textContent = `${this.attemptsLeft} / ${this.settings.attemptsLimit}`;
+      }
 
       this.game.tryFullscreenAndLandscape();
       if (this.game.touchPad) this.game.touchPad.classList.remove('hidden');
@@ -1476,6 +1531,10 @@
       if (this.phase === 'mp_hiding_countdown') {
         this.updateCountdownFromClock();
       } else if (this.phase === 'mp_hunting') {
+        if (this.settings.winRule === 'timer' && this.huntEndTime > 0) {
+          const remMs = this.huntEndTime - Date.now();
+          this.huntRemaining = Math.max(0, Math.ceil(remMs / 1000));
+        }
         this.checkHuntLineOfSightCatches();
         this.checkMatchEndConditions();
       }
@@ -1488,6 +1547,8 @@
         matchActive: this.phase === 'mp_hiding_countdown' || this.phase === 'mp_hunting',
         countdown: Math.max(0, Math.round(this.countdown * 10) / 10),
         countdownEndTime: this.countdownEndTime || 0,
+        huntEndTime: this.huntEndTime || 0,
+        huntRemaining: this.huntRemaining || 0,
         attemptsLeft: this.attemptsLeft,
         settings: this.settings,
         revealSpotId: this.revealSpotId || null,
@@ -1529,6 +1590,14 @@
       if (this.game) this.game.phase = 'mp_hunting';
       this.countdown = 0;
       this.countdownEndTime = 0;
+      if (this.settings.winRule === 'timer') {
+        const durationMs = (this.settings.timerMinutes || 1) * 60 * 1000;
+        this.huntEndTime = Date.now() + durationMs;
+        this.huntRemaining = (this.settings.timerMinutes || 1) * 60;
+      } else {
+        this.huntEndTime = 0;
+        this.huntRemaining = 0;
+      }
       if (typeof Sound !== 'undefined' && Sound.playAlert) {
         Sound.playAlert();
       }
@@ -1559,12 +1628,14 @@
        ======================================================== */
     processSeekerSearch(spotId, seekerId) {
       if (!this.isHost || this.phase !== 'mp_hunting') return;
-      if (this.attemptsLeft <= 0) return;
+      if (this.settings.winRule !== 'timer' && this.attemptsLeft <= 0) return;
 
       const spot = this.game.apt.hidingSpots.find(s => s.id === spotId);
       if (!spot) return;
 
-      this.attemptsLeft = Math.max(0, this.attemptsLeft - 1);
+      if (this.settings.winRule !== 'timer') {
+        this.attemptsLeft = Math.max(0, this.attemptsLeft - 1);
+      }
       if (!this.checkedSpots.includes(spotId)) {
         this.checkedSpots.push(spotId);
       }
@@ -1751,14 +1822,25 @@
         return;
       }
 
-      // Condition 2: Seeker exhausted attempts -> Surviving Hiders win!
-      if (this.attemptsLeft <= 0) {
-        if (!this.matchEndTimeout) {
-          this.matchEndTimeout = setTimeout(() => {
-            this.endMatch('hider_win');
-          }, 1800);
+      // Condition 2: Match timer expired OR Seeker exhausted attempts -> Surviving Hiders win!
+      if (this.settings.winRule === 'timer') {
+        if (this.huntEndTime > 0 && Date.now() >= this.huntEndTime) {
+          if (!this.matchEndTimeout) {
+            this.matchEndTimeout = setTimeout(() => {
+              this.endMatch('hider_win');
+            }, 1800);
+          }
+          return;
         }
-        return;
+      } else {
+        if (this.attemptsLeft <= 0) {
+          if (!this.matchEndTimeout) {
+            this.matchEndTimeout = setTimeout(() => {
+              this.endMatch('hider_win');
+            }, 1800);
+          }
+          return;
+        }
       }
 
       // Condition 3: Seeker disconnected
@@ -1874,14 +1956,19 @@
         });
 
         const caughtCount = hiders.length - survivors.length;
+        const seekerStatus = this.settings.winRule === 'timer' ? 'TIME EXPIRED' : 'OUT OF ATTEMPTS';
+        const seekerBadge = this.settings.winRule === 'timer' ? 'Time Ran Out' : 'Exhausted Search';
+        const seekerJust = this.settings.winRule === 'timer'
+          ? `Found ${caughtCount} / ${hiders.length} Hiders before the match timer expired.`
+          : `Found ${caughtCount} / ${hiders.length} Hiders before search attempts ran out.`;
         rankings.push({
           rank: currentRank,
           name: seeker.name,
           role: 'seeker',
           color: MP_CFG.seekerColor,
-          status: 'OUT OF ATTEMPTS',
-          badge: 'Exhausted Search',
-          justification: `Found ${caughtCount} / ${hiders.length} Hiders before search attempts ran out.`
+          status: seekerStatus,
+          badge: seekerBadge,
+          justification: seekerJust
         });
       }
 
@@ -1982,9 +2069,14 @@
       this.inputInterval = setInterval(() => {
         if (this.phase === 'lobby' || this.phase === 'mp_ended') return;
 
-        if (!this.isHost && this.phase === 'mp_hiding_countdown') {
-          this.updateCountdownFromClock();
-          this.updateMultiplayerHUD();
+        if (!this.isHost) {
+          if (this.phase === 'mp_hiding_countdown') {
+            this.updateCountdownFromClock();
+            this.updateMultiplayerHUD();
+          } else if (this.phase === 'mp_hunting' && this.settings.winRule === 'timer' && this.huntEndTime > 0) {
+            this.huntRemaining = Math.max(0, Math.ceil((this.huntEndTime - Date.now()) / 1000));
+            this.updateMultiplayerHUD();
+          }
         }
 
         const me = this.players.find(p => p.id === this.localPlayerId);
@@ -2111,6 +2203,9 @@
 
       this.phase = sync.phase;
       if (this.game) this.game.phase = sync.phase;
+      if (sync.settings) this.settings = sync.settings;
+      if (sync.huntEndTime !== undefined) this.huntEndTime = sync.huntEndTime;
+      if (sync.huntRemaining !== undefined) this.huntRemaining = sync.huntRemaining;
       if (sync.countdownEndTime) {
         this.countdownEndTime = sync.countdownEndTime;
       }
@@ -2185,8 +2280,21 @@
       }
       const myRole = (me && me.role) || this.game.role || (this.isHost ? 'seeker' : 'hider');
 
-      if (this.game.attemptsValue) {
-        this.game.attemptsValue.textContent = `${this.attemptsLeft} / ${this.settings.attemptsLimit}`;
+      if (this.settings.winRule === 'timer') {
+        if (this.game.attemptsLabel) this.game.attemptsLabel.textContent = 'MATCH TIMER';
+        if (this.game.attemptsValue) {
+          const remSec = (this.phase === 'mp_hunting')
+            ? Math.max(0, this.huntRemaining || 0)
+            : ((this.settings.timerMinutes || 1) * 60);
+          const m = Math.floor(remSec / 60);
+          const s = String(remSec % 60).padStart(2, '0');
+          this.game.attemptsValue.textContent = `⏱ ${m}:${s}`;
+        }
+      } else {
+        if (this.game.attemptsLabel) this.game.attemptsLabel.textContent = 'SEEKER CHECKS';
+        if (this.game.attemptsValue) {
+          this.game.attemptsValue.textContent = `${this.attemptsLeft} / ${this.settings.attemptsLimit}`;
+        }
       }
 
       if (this.phase === 'mp_hiding_countdown') {

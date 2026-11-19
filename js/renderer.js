@@ -727,6 +727,35 @@ class ApartmentRenderer {
       });
       ctx.fillStyle = '#eadbc2';
       ctx.beginPath(); ctx.arc(bcx, bcy, 18, 0, Math.PI * 2); ctx.fill();
+    } else if (prop.type === 'pillar') {
+      // Structural architectural pillar
+      const cx = prop.x + prop.w / 2;
+      const cy = prop.y + prop.h / 2;
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, prop.x, prop.y, prop.w, prop.h, 6);
+      ctx.fill();
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // Inner core
+      ctx.fillStyle = '#334155';
+      this.roundRect(ctx, prop.x + 4, prop.y + 4, prop.w - 8, prop.h - 8, 4);
+      ctx.fill();
+      // Hazard yellow/black core accent
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(cx - 4, cy - 4, 8, 8);
+    } else if (prop.type === 'bench') {
+      // Park / Mall bench
+      ctx.fillStyle = '#334155'; // iron frame
+      ctx.fillRect(prop.x + 2, prop.y, 4, prop.h);
+      ctx.fillRect(prop.x + prop.w - 6, prop.y, 4, prop.h);
+      // Wood slats
+      ctx.fillStyle = '#b45309';
+      const slatH = Math.max(3, (prop.h - 10) / 3);
+      for (let s = 0; s < 3; s++) {
+        this.roundRect(ctx, prop.x + 4, prop.y + 2 + s * (slatH + 2), prop.w - 8, slatH, 2);
+        ctx.fill();
+      }
     } else if (prop.type === 'gondola_prop') {
       ctx.fillStyle = '#334155';
       ctx.fillRect(prop.x, prop.y, prop.w, prop.h);

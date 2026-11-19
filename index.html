@@ -407,13 +407,30 @@
             </div>
 
             <div class="mp-setting-col">
+              <span class="mp-setting-label">MATCH WIN RULE</span>
+              <div class="mp-btn-pills">
+                <button type="button" class="mp-pill mp-setting-rule active" data-rule="attempts">Attempts Limit</button>
+                <button type="button" class="mp-pill mp-setting-rule" data-rule="timer">Match Timer</button>
+              </div>
+            </div>
+
+            <div id="mp-rule-attempts-group" class="mp-setting-col">
               <span class="mp-setting-label">SEEKER ATTEMPTS LIMIT</span>
               <div class="mp-btn-pills">
-                <button type="button" class="mp-pill mp-setting-attempts" data-attempts="7">7</button>
+                <button type="button" class="mp-pill mp-setting-attempts" data-attempts="5">5</button>
                 <button type="button" class="mp-pill mp-setting-attempts active" data-attempts="10">10</button>
                 <button type="button" class="mp-pill mp-setting-attempts" data-attempts="15">15</button>
-                <button type="button" class="mp-pill mp-setting-attempts" data-attempts="20">20</button>
               </div>
+            </div>
+
+            <div id="mp-rule-timer-group" class="mp-setting-col hidden" style="display: none;">
+              <span class="mp-setting-label">MATCH TIMER (1 - 10 MIN)</span>
+              <div class="mp-stepper-control">
+                <button type="button" id="mp-timer-minus" class="mp-stepper-btn" aria-label="Decrease time">◀</button>
+                <span id="mp-timer-display" class="mp-stepper-val">1 Min</span>
+                <button type="button" id="mp-timer-plus" class="mp-stepper-btn" aria-label="Increase time">▶</button>
+              </div>
+              <span class="mp-setting-hint">Unlimited seeker checks; survive until time expires!</span>
             </div>
 
             <div class="mp-setting-col">
