@@ -435,13 +435,13 @@ class ApartmentMap {
       { id: 'b_elevator_hub', name: 'Inside North Elevator Alcove', roomId: 'security_foyer', roomName: 'Security Dispatch & Foyer', type: 'elevator', x: 780, y: 725, w: 80, h: 46, hideX: 820, hideY: 748, ix: 740, iy: 748, stealthWeight: 0.9, checked: false },
 
       // 2. Executive Parking Bay (7 Spots)
-      { id: 'b_car_red', name: 'Behind Red Sports Coupe', roomId: 'parking_bay', roomName: 'Executive Parking Bay', type: 'compact_car', x: 70, y: 65, w: 85, h: 46, hideX: 112, hideY: 88, ix: 112, iy: 140, stealthWeight: 1.0, checked: false },
-      { id: 'b_car_silver', name: 'Behind Silver Sedan', roomId: 'parking_bay', roomName: 'Executive Parking Bay', type: 'compact_car', x: 230, y: 65, w: 85, h: 46, hideX: 272, hideY: 88, ix: 272, iy: 140, stealthWeight: 1.0, checked: false },
-      { id: 'b_car_black', name: 'Behind Black Executive SUV', roomId: 'parking_bay', roomName: 'Executive Parking Bay', type: 'compact_car', x: 390, y: 65, w: 88, h: 48, hideX: 434, hideY: 89, ix: 434, iy: 142, stealthWeight: 1.05, checked: false },
-      { id: 'b_car_blue', name: 'Behind Blue Compact', roomId: 'parking_bay', roomName: 'Executive Parking Bay', type: 'compact_car', x: 550, y: 65, w: 85, h: 46, hideX: 592, hideY: 88, ix: 592, iy: 140, stealthWeight: 1.0, checked: false },
-      { id: 'b_car_white', name: 'Behind White Limousine', roomId: 'parking_bay', roomName: 'Executive Parking Bay', type: 'compact_car', x: 710, y: 65, w: 90, h: 46, hideX: 755, hideY: 88, ix: 755, iy: 140, stealthWeight: 1.0, checked: false },
-      { id: 'b_car_yellow', name: 'Behind Yellow Service Van', roomId: 'parking_bay', roomName: 'Executive Parking Bay', type: 'compact_car', x: 100, y: 430, w: 90, h: 48, hideX: 145, hideY: 454, ix: 145, iy: 375, stealthWeight: 1.0, checked: false },
-      { id: 'b_car_green', name: 'Behind Green Station Wagon', roomId: 'parking_bay', roomName: 'Executive Parking Bay', type: 'compact_car', x: 360, y: 430, w: 88, h: 46, hideX: 404, hideY: 453, ix: 404, iy: 375, stealthWeight: 1.0, checked: false },
+      { id: 'b_car_red', name: 'Behind Red Sports Coupe', roomId: 'parking_bay', roomName: 'Executive Parking Bay', type: 'car_red', x: 70, y: 65, w: 85, h: 46, hideX: 112, hideY: 88, ix: 112, iy: 140, stealthWeight: 1.0, checked: false },
+      { id: 'b_car_silver', name: 'Behind Silver Sedan', roomId: 'parking_bay', roomName: 'Executive Parking Bay', type: 'car_silver', x: 230, y: 65, w: 85, h: 46, hideX: 272, hideY: 88, ix: 272, iy: 140, stealthWeight: 1.0, checked: false },
+      { id: 'b_car_black', name: 'Behind Black Executive SUV', roomId: 'parking_bay', roomName: 'Executive Parking Bay', type: 'car_black', x: 390, y: 65, w: 88, h: 48, hideX: 434, hideY: 89, ix: 434, iy: 142, stealthWeight: 1.05, checked: false },
+      { id: 'b_car_blue', name: 'Behind Blue Compact', roomId: 'parking_bay', roomName: 'Executive Parking Bay', type: 'car_blue', x: 550, y: 65, w: 85, h: 46, hideX: 592, hideY: 88, ix: 592, iy: 140, stealthWeight: 1.0, checked: false },
+      { id: 'b_car_white', name: 'Behind White Limousine', roomId: 'parking_bay', roomName: 'Executive Parking Bay', type: 'car_van', x: 710, y: 65, w: 90, h: 46, hideX: 755, hideY: 88, ix: 755, iy: 140, stealthWeight: 1.0, checked: false },
+      { id: 'b_car_yellow', name: 'Behind Yellow Service Van', roomId: 'parking_bay', roomName: 'Executive Parking Bay', type: 'car_yellow', x: 100, y: 430, w: 90, h: 48, hideX: 145, hideY: 454, ix: 145, iy: 375, stealthWeight: 1.0, checked: false },
+      { id: 'b_car_green', name: 'Behind Green Station Wagon', roomId: 'parking_bay', roomName: 'Executive Parking Bay', type: 'car_green', x: 360, y: 430, w: 88, h: 46, hideX: 404, hideY: 453, ix: 404, iy: 375, stealthWeight: 1.0, checked: false },
 
       // 3. Maintenance Workshop (5 Spots)
       { id: 'b_workbench', name: 'Behind Heavy Steel Workbench', roomId: 'workshop', roomName: 'Maintenance Workshop', type: 'workbench_prop', x: 930, y: 65, w: 100, h: 48, hideX: 980, hideY: 89, ix: 980, iy: 140, stealthWeight: 1.0, checked: false },

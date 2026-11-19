@@ -1153,9 +1153,16 @@ class ApartmentRenderer {
       for (let ky = spot.y + 14; ky < spot.y + spot.h - 14; ky += 10) {
         ctx.fillRect(spot.x + spot.w - 16, ky, 7, 4);
       }
-    } else if (spot.type.startsWith('car_')) {
+    } else if (spot.type.startsWith('car_') || spot.type === 'compact_car') {
       // Compact Top-Down Parked Vehicle
       const carColors = {
+        compact_car: (spot.id && spot.id.includes('red')) ? '#dc2626' :
+                     (spot.id && spot.id.includes('silver')) ? '#94a3b8' :
+                     (spot.id && spot.id.includes('black')) ? '#1e293b' :
+                     (spot.id && spot.id.includes('blue')) ? '#2563eb' :
+                     (spot.id && spot.id.includes('white')) ? '#e2e8f0' :
+                     (spot.id && spot.id.includes('yellow')) ? '#eab308' :
+                     (spot.id && spot.id.includes('green')) ? '#16a34a' : '#64748b',
         car_red: '#dc2626',
         car_silver: '#94a3b8',
         car_black: '#1e293b',
@@ -2158,6 +2165,638 @@ class ApartmentRenderer {
       ctx.fillStyle = '#475569';
       ctx.fillRect(spot.x + spot.w - 4, spot.y + 10, 8, 5);
       ctx.fillRect(spot.x + spot.w - 4, spot.y + spot.h - 15, 8, 5);
+    } else if (spot.type === 'security_desk') {
+      // Heavy security dispatch desk with surveillance monitors & console
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 5);
+      ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      this.roundRect(ctx, spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8, 3);
+      ctx.fill();
+      // Dual glowing CCTV screens
+      ctx.fillStyle = '#0284c7';
+      ctx.fillRect(spot.x + 8, spot.y + 7, 24, spot.h - 14);
+      ctx.fillRect(spot.x + 36, spot.y + 7, 24, spot.h - 14);
+      // Status indicator lights
+      ctx.fillStyle = '#22c55e';
+      ctx.beginPath(); ctx.arc(spot.x + spot.w - 10, spot.y + 12, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath(); ctx.arc(spot.x + spot.w - 10, spot.y + 22, 3, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'keycard_rack') {
+      // Turnstile security terminal with illuminated card reader
+      ctx.fillStyle = '#334155';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(spot.x + 3, spot.y + 3, spot.w - 6, spot.h - 6);
+      // Glowing blue RFID reader pad
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath(); ctx.arc(spot.x + spot.w / 2, spot.y + spot.h / 2, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(spot.x + spot.w / 2 - 4, spot.y + spot.h / 2 - 4, 8, 8);
+    } else if (spot.type === 'workbench_prop' || spot.type === 'workbench') {
+      // Industrial steel workshop bench with vice and tools
+      ctx.fillStyle = '#78350f';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      ctx.fillStyle = '#94a3b8';
+      this.roundRect(ctx, spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8, 3);
+      ctx.fill();
+      // Heavy vice & tools
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(spot.x + 6, spot.y + 6, 16, 12);
+      ctx.fillStyle = '#d97706';
+      ctx.fillRect(spot.x + 30, spot.y + 8, spot.w - 40, 6);
+      ctx.fillStyle = '#0284c7';
+      ctx.fillRect(spot.x + 30, spot.y + spot.h - 14, 28, 6);
+    } else if (spot.type === 'changing_stall') {
+      // Luxury velvet curtain dressing cabin
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(spot.x + 8, spot.y + 4, spot.w - 16, 4);
+      ctx.fillStyle = '#be123c';
+      for (let fx = spot.x + 6; fx < spot.x + spot.w - 8; fx += 14) {
+        ctx.beginPath(); ctx.ellipse(fx + 7, spot.y + spot.h - 8, 7, 6, 0, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (spot.type === 'mall_counter') {
+      // Retail boutique cashier counter with POS register
+      ctx.fillStyle = '#334155';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 5);
+      ctx.fill();
+      ctx.fillStyle = '#f1f5f9';
+      this.roundRect(ctx, spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8, 3);
+      ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(spot.x + 12, spot.y + 8, 22, 16);
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(spot.x + 14, spot.y + 10, 18, 10);
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(spot.x + spot.w - 24, spot.y + 12, 14, 6);
+    } else if (spot.type === 'mall_gondola') {
+      // Luxury merchandise island showcase
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8);
+      const cols = ['#dc2626', '#3b82f6', '#10b981', '#f59e0b', '#ec4899'];
+      let ci = 0;
+      for (let gx = spot.x + 12; gx < spot.x + spot.w - 12; gx += 18) {
+        ctx.fillStyle = cols[(ci++) % cols.length];
+        this.roundRect(ctx, gx, spot.y + 10, 12, spot.h - 20, 2);
+        ctx.fill();
+      }
+    } else if (spot.type === 'food_island') {
+      // Gourmet cooking island with induction cooktop
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.fillStyle = '#cbd5e1';
+      this.roundRect(ctx, spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8, 4);
+      ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      [0.25, 0.5, 0.75].forEach(rx => {
+        ctx.beginPath(); ctx.arc(spot.x + spot.w * rx, spot.y + spot.h / 2, 10, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 1.5; ctx.stroke();
+      });
+    } else if (spot.type === 'food_kiosk') {
+      // Gelato & smoothie kiosk with colorful canopy
+      ctx.fillStyle = '#fef08a';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      const stripes = 6;
+      const sw = spot.w / stripes;
+      for (let i = 0; i < stripes; i++) {
+        ctx.fillStyle = (i % 2 === 0) ? '#f43f5e' : '#ffffff';
+        ctx.fillRect(spot.x + i * sw, spot.y, sw, 10);
+      }
+      const tubCols = ['#ec4899', '#38bdf8', '#22c55e', '#f59e0b'];
+      tubCols.forEach((col, idx) => {
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(spot.x + 16 + idx * 18, spot.y + spot.h / 2 + 4, 7, 0, Math.PI * 2); ctx.fill();
+      });
+    } else if (spot.type === 'arcade_unit' || spot.type === 'arcade_cabinet') {
+      // Retro arcade cabinet bank
+      ctx.fillStyle = '#0f172a';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      const scrCount = Math.max(2, Math.floor(spot.w / 40));
+      const scrW = (spot.w - (scrCount + 1) * 6) / scrCount;
+      for (let i = 0; i < scrCount; i++) {
+        const sx = spot.x + 6 + i * (scrW + 6);
+        ctx.fillStyle = (i % 2 === 0) ? '#06b6d4' : '#a855f7';
+        ctx.fillRect(sx, spot.y + 6, scrW, spot.h - 18);
+        ctx.fillStyle = '#f43f5e';
+        ctx.fillRect(sx, spot.y + 3, scrW, 3);
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath(); ctx.arc(sx + scrW / 2, spot.y + spot.h - 6, 3, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (spot.type === 'concession_stand') {
+      // Cinema popcorn & refreshment counter
+      ctx.fillStyle = '#991b1b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 5);
+      ctx.fill();
+      ctx.fillStyle = '#fef08a';
+      this.roundRect(ctx, spot.x + 8, spot.y + 6, spot.w * 0.45, spot.h - 12, 3);
+      ctx.fill();
+      ctx.fillStyle = '#d97706';
+      for (let px = spot.x + 12; px < spot.x + spot.w * 0.45; px += 6) {
+        ctx.beginPath(); ctx.arc(px, spot.y + spot.h / 2, 2.5, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(spot.x + spot.w * 0.58, spot.y + 8, spot.w * 0.36, spot.h - 16);
+      ['#ef4444', '#f59e0b', '#3b82f6'].forEach((col, idx) => {
+        ctx.fillStyle = col;
+        ctx.fillRect(spot.x + spot.w * 0.62 + idx * 9, spot.y + spot.h / 2 - 2, 6, 8);
+      });
+    } else if (spot.type === 'vr_pod') {
+      // Futuristic cylindrical VR immersion capsule
+      const pcx = spot.x + spot.w / 2;
+      const pcy = spot.y + spot.h / 2;
+      ctx.fillStyle = '#090d16';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 14);
+      ctx.fill();
+      ctx.strokeStyle = '#06b6d4';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, spot.x + 10, spot.y + 8, spot.w - 20, spot.h - 16, 8);
+      ctx.fill();
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath(); ctx.ellipse(pcx, pcy - 4, 12, 6, 0, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'cinema_bench') {
+      // Velvet VIP cinema lounge seating
+      ctx.fillStyle = '#450a0a';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 8);
+      ctx.fill();
+      ctx.fillStyle = '#991b1b';
+      this.roundRect(ctx, spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8, 6);
+      ctx.fill();
+      const cCount = Math.max(2, Math.floor(spot.w / 40));
+      const cW = (spot.w - 12 - (cCount - 1) * 3) / cCount;
+      for (let i = 0; i < cCount; i++) {
+        ctx.fillStyle = '#dc2626';
+        this.roundRect(ctx, spot.x + 6 + i * (cW + 3), spot.y + 8, cW, spot.h - 16, 4);
+        ctx.fill();
+      }
+    } else if (spot.type === 'mall_fountain' || spot.type === 'park_fountain') {
+      // Concentric tiered ornamental fountain with sparkling water
+      const fcx = spot.x + spot.w / 2;
+      const fcy = spot.y + spot.h / 2;
+      const rMax = Math.min(spot.w, spot.h) / 2 - 2;
+      ctx.fillStyle = '#e2e8f0';
+      ctx.beginPath(); ctx.arc(fcx, fcy, rMax, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath(); ctx.arc(fcx, fcy, rMax - 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#cbd5e1';
+      ctx.beginPath(); ctx.arc(fcx, fcy, rMax * 0.58, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath(); ctx.arc(fcx, fcy, rMax * 0.48, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(fcx, fcy, rMax * 0.2, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'mall_planter') {
+      // Tropical indoor palm planter
+      ctx.fillStyle = '#78350f';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.fillStyle = '#14532d';
+      this.roundRect(ctx, spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8, 4);
+      ctx.fill();
+      const pcx = spot.x + spot.w / 2;
+      const pcy = spot.y + spot.h / 2;
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+        ctx.strokeStyle = '#22c55e';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(pcx, pcy);
+        ctx.lineTo(pcx + Math.cos(a) * (spot.w * 0.38), pcy + Math.sin(a) * (spot.h * 0.38));
+        ctx.stroke();
+      }
+    } else if (spot.type === 'directory_screen') {
+      // 3D wayfinding touchscreen directory kiosk
+      ctx.fillStyle = '#0f172a';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 5);
+      ctx.fill();
+      ctx.fillStyle = '#0284c7';
+      this.roundRect(ctx, spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8, 3);
+      ctx.fill();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(spot.x + 8, spot.y + 8, spot.w - 16, spot.h - 16);
+      ctx.beginPath();
+      ctx.moveTo(spot.x + 8, spot.y + spot.h / 2); ctx.lineTo(spot.x + spot.w - 8, spot.y + spot.h / 2);
+      ctx.moveTo(spot.x + spot.w / 2, spot.y + 8); ctx.lineTo(spot.x + spot.w / 2, spot.y + spot.h - 8);
+      ctx.stroke();
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath(); ctx.arc(spot.x + spot.w / 2, spot.y + spot.h / 2, 3, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'mall_cart') {
+      // Striped merchandising cart
+      ctx.fillStyle = '#ca8a04';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      const numS = 5;
+      const sWidth = spot.w / numS;
+      for (let i = 0; i < numS; i++) {
+        ctx.fillStyle = (i % 2 === 0) ? '#e11d48' : '#f8fafc';
+        ctx.fillRect(spot.x + i * sWidth, spot.y + 2, sWidth, spot.h * 0.4);
+      }
+      ctx.fillStyle = '#713f12';
+      ctx.beginPath(); ctx.arc(spot.x + 8, spot.y + spot.h - 4, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(spot.x + spot.w - 8, spot.y + spot.h - 4, 5, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'glass_elevator') {
+      // Panoramic illuminated glass elevator shaft
+      ctx.fillStyle = '#0f172a';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
+      this.roundRect(ctx, spot.x + 3, spot.y + 3, spot.w - 6, spot.h - 6, 3);
+      ctx.fill();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(spot.x + 3, spot.y + 3, spot.w - 6, spot.h - 6);
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(spot.x + spot.w / 2, spot.y + 4); ctx.lineTo(spot.x + spot.w / 2, spot.y + spot.h - 4);
+      ctx.stroke();
+    } else if (spot.type === 'tech_island') {
+      // Flagship minimalist tech showcase counter
+      ctx.fillStyle = '#f8fafc';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      const devCount = 4;
+      const dw = (spot.w - 16) / devCount;
+      for (let i = 0; i < devCount; i++) {
+        const dx = spot.x + 8 + i * dw;
+        ctx.fillStyle = '#0f172a';
+        this.roundRect(ctx, dx + 2, spot.y + 8, dw - 6, spot.h - 16, 2);
+        ctx.fill();
+        ctx.fillStyle = (i % 2 === 0) ? '#38bdf8' : '#ec4899';
+        ctx.fillRect(dx + 4, spot.y + 10, dw - 10, spot.h - 20);
+      }
+    } else if (spot.type === 'audio_booth') {
+      // Acoustic soundproof listening booth
+      const acx = spot.x + spot.w / 2;
+      const acy = spot.y + spot.h / 2;
+      ctx.fillStyle = '#1e1b4b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 5);
+      ctx.fill();
+      ctx.strokeStyle = '#6366f1';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#818cf8';
+      ctx.beginPath(); ctx.arc(acx, acy, 11, Math.PI, 0); ctx.stroke();
+      ctx.fillRect(acx - 14, acy - 2, 6, 10);
+      ctx.fillRect(acx + 8, acy - 2, 6, 10);
+    } else if (spot.type === 'gaming_pod') {
+      // RGB Esports battlestation
+      ctx.fillStyle = '#09090b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 5);
+      ctx.fill();
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(spot.x + 2, spot.y + 2, spot.w - 4, spot.h - 4);
+      ctx.fillStyle = '#3b82f6';
+      ctx.fillRect(spot.x + 12, spot.y + 6, spot.w - 24, 10);
+      ctx.fillStyle = '#e11d48';
+      ctx.fillRect(spot.x + 20, spot.y + spot.h - 14, spot.w - 40, 6);
+    } else if (spot.type === 'smarthome_display') {
+      // Modern smart home living showcase
+      ctx.fillStyle = '#334155';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(spot.x + 10, spot.y + 6, spot.w - 20, 8);
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(spot.x + 12, spot.y + 7, spot.w - 24, 6);
+      ctx.fillStyle = '#e2e8f0';
+      ctx.beginPath(); ctx.arc(spot.x + 20, spot.y + spot.h - 12, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(spot.x + spot.w - 20, spot.y + spot.h - 12, 6, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'camping_tent') {
+      // All-weather expedition dome tent
+      ctx.fillStyle = '#15803d';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 12);
+      ctx.fill();
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(spot.x + 4, spot.y + 4); ctx.lineTo(spot.x + spot.w - 4, spot.y + spot.h - 4);
+      ctx.moveTo(spot.x + spot.w - 4, spot.y + 4); ctx.lineTo(spot.x + 4, spot.y + spot.h - 4);
+      ctx.stroke();
+      ctx.fillStyle = '#166534';
+      ctx.beginPath();
+      ctx.moveTo(spot.x + spot.w / 2 - 14, spot.y + spot.h - 2);
+      ctx.lineTo(spot.x + spot.w / 2, spot.y + spot.h / 2);
+      ctx.lineTo(spot.x + spot.w / 2 + 14, spot.y + spot.h - 2);
+      ctx.closePath();
+      ctx.fill();
+    } else if (spot.type === 'kayak_rack') {
+      // Vertical sports rack with kayaks
+      ctx.fillStyle = '#334155';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      const kCols = ['#f97316', '#06b6d4', '#eab308'];
+      kCols.forEach((col, idx) => {
+        ctx.fillStyle = col;
+        const kx = spot.x + 10 + idx * 26;
+        ctx.beginPath();
+        ctx.ellipse(kx + 10, spot.y + spot.h / 2, 10, spot.h / 2 - 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    } else if (spot.type === 'gym_rack') {
+      // Pro treadmill & fitness station
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.fillStyle = '#020617';
+      this.roundRect(ctx, spot.x + 6, spot.y + 8, spot.w - 24, spot.h - 16, 3);
+      ctx.fill();
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(spot.x + spot.w - 14, spot.y + 10, 8, spot.h - 20);
+    } else if (spot.type === 'ski_rack') {
+      // Alpine winter sports ski rack
+      ctx.fillStyle = '#475569';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 3);
+      ctx.fill();
+      const skiCols = ['#dc2626', '#2563eb', '#16a34a', '#ca8a04'];
+      for (let i = 0; i < 4; i++) {
+        ctx.fillStyle = skiCols[i];
+        ctx.fillRect(spot.x + 8 + i * 20, spot.y + 4, 6, spot.h - 8);
+        ctx.fillRect(spot.x + 16 + i * 20, spot.y + 4, 6, spot.h - 8);
+      }
+    } else if (spot.type === 'carousel_center') {
+      // Grand carousel band organ central pillar
+      ctx.fillStyle = '#78350f';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 8);
+      ctx.fill();
+      ctx.fillStyle = '#f59e0b';
+      for (let px = spot.x + 10; px < spot.x + spot.w - 10; px += 8) {
+        ctx.fillRect(px, spot.y + 6, 5, spot.h - 12);
+      }
+      ctx.strokeStyle = '#fef08a';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8);
+    } else if (spot.type === 'swan_boat') {
+      // Enchanted swan paddle boat
+      const scx = spot.x + spot.w / 2;
+      const scy = spot.y + spot.h / 2;
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+      ctx.beginPath(); ctx.ellipse(scx, scy, spot.w / 2, spot.h / 2, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.ellipse(scx, scy, spot.w / 2 - 6, spot.h / 2 - 6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#f97316';
+      ctx.beginPath(); ctx.arc(spot.x + spot.w - 10, scy, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#38bdf8';
+      this.roundRect(ctx, spot.x + 14, scy - 8, spot.w * 0.4, 16, 3);
+      ctx.fill();
+    } else if (spot.type === 'tea_cup') {
+      // Giant spinning porcelain teacup
+      const tcx = spot.x + spot.w / 2;
+      const tcy = spot.y + spot.h / 2;
+      const rad = Math.min(spot.w, spot.h) / 2 - 3;
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath(); ctx.arc(tcx, tcy, rad + 2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#f43f5e';
+      ctx.beginPath(); ctx.arc(tcx, tcy, rad - 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(tcx, tcy, rad * 0.55, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ca8a04';
+      ctx.beginPath(); ctx.arc(tcx, tcy, 6, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'prize_wall') {
+      // Massive plush toy prize wall
+      ctx.fillStyle = '#78350f';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      const pCols = ['#ec4899', '#3b82f6', '#eab308', '#10b981', '#a855f7'];
+      let pi = 0;
+      for (let px = spot.x + 10; px < spot.x + spot.w - 10; px += 16) {
+        for (let py = spot.y + 10; py < spot.y + spot.h - 10; py += 16) {
+          ctx.fillStyle = pCols[(pi++) % pCols.length];
+          ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    } else if (spot.type === 'food_cart') {
+      // Carnival food cart
+      ctx.fillStyle = '#f472b6';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.fillStyle = '#fef08a';
+      this.roundRect(ctx, spot.x + 6, spot.y + 6, spot.w - 12, spot.h - 16, 4);
+      ctx.fill();
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath(); ctx.arc(spot.x + spot.w / 2, spot.y + spot.h / 2 - 2, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#9d174d';
+      ctx.beginPath(); ctx.arc(spot.x + 10, spot.y + spot.h, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(spot.x + spot.w - 10, spot.y + spot.h, 6, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'coaster_train') {
+      // Thunder coaster roller coaster train
+      ctx.fillStyle = '#dc2626';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 8);
+      ctx.fill();
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(spot.x + 4, spot.y + spot.h / 2 - 2, spot.w - 8, 4);
+      const bCount = 3;
+      const bw = (spot.w - 16) / bCount;
+      for (let i = 0; i < bCount; i++) {
+        const bx = spot.x + 8 + i * bw;
+        ctx.fillStyle = '#0f172a';
+        this.roundRect(ctx, bx + 2, spot.y + 6, bw - 4, spot.h - 12, 3);
+        ctx.fill();
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(bx + 4, spot.y + spot.h / 2 - 2, bw - 8, 4);
+      }
+    } else if (spot.type === 'ship_stern') {
+      // Galleon pirate ship aft cabin
+      ctx.fillStyle = '#451a03';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 1.5;
+      for (let px = spot.x + 12; px < spot.x + spot.w - 10; px += 14) {
+        ctx.beginPath(); ctx.moveTo(px, spot.y + 4); ctx.lineTo(px, spot.y + spot.h - 4); ctx.stroke();
+      }
+      ctx.fillStyle = '#fef08a';
+      for (let wx = spot.x + 14; wx < spot.x + spot.w - 14; wx += 18) {
+        ctx.fillRect(wx, spot.y + 6, 10, 8);
+      }
+    } else if (spot.type === 'treasure_chest') {
+      // Gilded pirate treasure chest
+      ctx.fillStyle = '#78350f';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8);
+      ctx.fillStyle = '#facc15';
+      for (let gx = spot.x + 10; gx < spot.x + spot.w - 10; gx += 8) {
+        ctx.beginPath(); ctx.arc(gx, spot.y + spot.h / 2, 3.5, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = '#ec4899';
+      ctx.beginPath(); ctx.arc(spot.x + spot.w / 2, spot.y + spot.h / 2 - 2, 4, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'cannon_prop') {
+      // Iron fortress cannon on timber carriage
+      ctx.fillStyle = '#78350f';
+      this.roundRect(ctx, spot.x, spot.y + 6, spot.w, spot.h - 12, 4);
+      ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      this.roundRect(ctx, spot.x + 6, spot.y + 4, spot.w - 12, spot.h - 8, 6);
+      ctx.fill();
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(spot.x + spot.w - 8, spot.y + 6, 6, spot.h - 12);
+      ctx.beginPath(); ctx.arc(spot.x + 12, spot.y + spot.h / 2, 5, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'rock_grotto') {
+      // Natural stone cave grotto
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 10);
+      ctx.fill();
+      ctx.fillStyle = '#334155';
+      this.roundRect(ctx, spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8, 8);
+      ctx.fill();
+      ctx.strokeStyle = '#15803d';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(spot.x + 8, spot.y + spot.h / 2);
+      ctx.lineTo(spot.x + spot.w / 2, spot.y + 10);
+      ctx.lineTo(spot.x + spot.w - 8, spot.y + spot.h / 2);
+      ctx.stroke();
+    } else if (spot.type === 'game_booth') {
+      // Classic carnival game stall with striped awning
+      ctx.fillStyle = '#78350f';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 5);
+      ctx.fill();
+      const numSt = 6;
+      const stW = spot.w / numSt;
+      for (let i = 0; i < numSt; i++) {
+        ctx.fillStyle = (i % 2 === 0) ? '#dc2626' : '#f8fafc';
+        ctx.fillRect(spot.x + i * stW, spot.y, stW, 12);
+      }
+      ctx.fillStyle = '#facc15';
+      for (let bx = spot.x + 12; bx < spot.x + spot.w - 12; bx += 14) {
+        ctx.beginPath(); ctx.arc(bx, spot.y + spot.h - 12, 4, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (spot.type === 'mirror_maze') {
+      // Funhouse hall of mirrors with reflective panels
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+      this.roundRect(ctx, spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8, 4);
+      ctx.fill();
+      ctx.strokeStyle = '#e0f2fe';
+      ctx.lineWidth = 1.5;
+      for (let mx = spot.x + 12; mx < spot.x + spot.w - 10; mx += 14) {
+        ctx.beginPath(); ctx.moveTo(mx, spot.y + 6); ctx.lineTo(mx + 6, spot.y + spot.h - 6); ctx.stroke();
+      }
+    } else if (spot.type === 'shooting_gallery') {
+      // Laser shooting gallery target range
+      ctx.fillStyle = '#0f172a';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      const tgts = [0.25, 0.5, 0.75];
+      tgts.forEach(rx => {
+        const tx = spot.x + spot.w * rx;
+        const ty = spot.y + spot.h / 2;
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath(); ctx.arc(tx, ty, 9, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(tx, ty, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath(); ctx.arc(tx, ty, 3, 0, Math.PI * 2); ctx.fill();
+      });
+    } else if (spot.type === 'fortune_wagon') {
+      // Mystical fortune teller caravan
+      const fcx = spot.x + spot.w / 2;
+      const fcy = spot.y + spot.h / 2;
+      ctx.fillStyle = '#581c87';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 8);
+      ctx.fill();
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8);
+      ctx.fillStyle = '#c084fc';
+      ctx.beginPath(); ctx.arc(fcx, fcy, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(fcx - 3, fcy - 3, 3, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'bumper_car_red' || spot.type === 'bumper_car_blue') {
+      // Electric bumper car top-down
+      const bcx = spot.x + spot.w / 2;
+      const bcy = spot.y + spot.h / 2;
+      ctx.fillStyle = '#090d16';
+      ctx.beginPath(); ctx.ellipse(bcx, bcy, spot.w / 2, spot.h / 2, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = spot.type.includes('red') ? '#dc2626' : '#2563eb';
+      ctx.beginPath(); ctx.ellipse(bcx, bcy, spot.w / 2 - 5, spot.h / 2 - 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath(); ctx.arc(bcx, bcy + 2, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath(); ctx.arc(bcx, bcy - 5, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath(); ctx.arc(bcx, bcy + spot.h / 2 - 6, 3.5, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'redemption_counter') {
+      // Arcade prize redemption counter
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 5);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.3)';
+      this.roundRect(ctx, spot.x + 6, spot.y + 6, spot.w - 12, spot.h - 12, 3);
+      ctx.fill();
+      ctx.fillStyle = '#f59e0b';
+      for (let rx = spot.x + 12; rx < spot.x + spot.w - 12; rx += 14) {
+        ctx.fillRect(rx, spot.y + spot.h / 2 - 3, 9, 6);
+      }
+    } else if (spot.type === 'air_hockey') {
+      // Neon glowing air hockey table
+      ctx.fillStyle = '#0f172a';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.fillStyle = '#f8fafc';
+      this.roundRect(ctx, spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8, 4);
+      ctx.fill();
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(spot.x + spot.w / 2, spot.y + 4); ctx.lineTo(spot.x + spot.w / 2, spot.y + spot.h - 4);
+      ctx.stroke();
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath(); ctx.arc(spot.x + spot.w / 2, spot.y + spot.h / 2, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#3b82f6';
+      ctx.beginPath(); ctx.arc(spot.x + 16, spot.y + spot.h / 2, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(spot.x + spot.w - 16, spot.y + spot.h / 2, 6, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'clocktower_base') {
+      // Grand Victorian clocktower stone base
+      const ccx = spot.x + spot.w / 2;
+      const ccy = spot.y + spot.h / 2;
+      ctx.fillStyle = '#334155';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8);
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath(); ctx.arc(ccx, ccy, 14, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(ccx, ccy); ctx.lineTo(ccx, ccy - 9);
+      ctx.moveTo(ccx, ccy); ctx.lineTo(ccx + 6, ccy);
+      ctx.stroke();
+    } else {
+      // Universal architectural obstacle fallback (guarantees NEVER a black void!)
+      ctx.fillStyle = p.woodFurniture || '#334155';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.strokeStyle = p.woodFurnitureLight || '#64748b';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(spot.x + 3, spot.y + 3, spot.w - 6, spot.h - 6);
+      ctx.fillStyle = this.theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)';
+      this.roundRect(ctx, spot.x + 6, spot.y + 6, spot.w - 12, spot.h - 12, 4);
+      ctx.fill();
     }
 
     // Highlight border if player is right next to this object
