@@ -126,18 +126,22 @@
 
     <!-- FULL-SCREEN START / ROLE & MAP SELECTION SCREEN -->
     <section id="menu-screen" class="menu-screen">
+      <canvas id="menu-sparks-canvas" class="menu-sparks-canvas"></canvas>
+
       <div class="menu-topbar">
-        <div class="menu-stats-inline">
-          <span>Score: <strong id="menu-score">0</strong></span>
-          <span>Wins: <strong id="menu-wins">0</strong></span>
-          <span>Losses: <strong id="menu-losses">0</strong></span>
+        <div class="menu-stats-capsule">
+          <span class="stat-item"><span class="stat-lbl">SCORE:</span> <strong id="menu-score">0</strong></span>
+          <span class="stat-sep">|</span>
+          <span class="stat-item"><span class="stat-lbl">WINS:</span> <strong id="menu-wins">0</strong></span>
+          <span class="stat-sep">|</span>
+          <span class="stat-item"><span class="stat-lbl">LOSSES:</span> <strong id="menu-losses">0</strong></span>
         </div>
         <div class="menu-top-actions">
-          <button id="btn-modal-theme" class="hud-btn small">
-            <span id="modal-theme-icon">☀️</span> <span id="modal-theme-label">Light Mode</span>
+          <button id="btn-modal-theme" class="hud-pill-amber">
+            <span id="modal-theme-icon">☀️</span> <span id="modal-theme-label">LIGHT MODE</span>
           </button>
-          <button id="btn-menu-fullscreen" class="hud-btn small" title="Toggle Fullscreen Landscape">
-            <span>⛶</span> <span class="fs-text">Fullscreen</span>
+          <button id="btn-menu-fullscreen" class="hud-pill-glass" title="Toggle Fullscreen Landscape">
+            <span>⛶</span> <span class="fs-text">FULLSCREEN</span>
           </button>
         </div>
       </div>
@@ -151,18 +155,22 @@
         <div id="menu-options-panel" class="menu-options-panel pre-reveal">
           <!-- STEP 1: CHOOSE MAP -->
           <div class="selection-block">
-            <div class="section-label"><span class="label-dot"></span>01 · SELECT OPERATION ZONE</div>
+            <div class="section-label sec-cyan"><span class="label-dot dot-cyan"></span>• 01 - SELECT OPERATION ZONE</div>
             <div class="map-selector-grid">
               <button class="map-option active" data-map="1">
+                <span class="cyber-bracket bracket-tl"></span><span class="cyber-bracket bracket-tr"></span>
+                <span class="cyber-bracket bracket-bl"></span><span class="cyber-bracket bracket-br"></span>
                 <div class="map-opt-head">
                   <span class="map-num">MAP 01</span>
-                  <span class="map-spots">20 Spots</span>
+                  <span class="map-spots active-pill">SELECTED</span>
                 </div>
-                <div class="map-opt-name">Skyglass Penthouse</div>
+                <div class="map-opt-name">Skyglass Penthouse <span class="diamond-icon">◈</span></div>
                 <div class="map-opt-desc">Terrace, Master Loft & Lounge Bar</div>
               </button>
 
               <button class="map-option" data-map="2">
+                <span class="cyber-bracket bracket-tl"></span><span class="cyber-bracket bracket-tr"></span>
+                <span class="cyber-bracket bracket-bl"></span><span class="cyber-bracket bracket-br"></span>
                 <div class="map-opt-head">
                   <span class="map-num">MAP 02</span>
                   <span class="map-spots">20 Spots</span>
@@ -172,27 +180,33 @@
               </button>
 
               <button class="map-option" data-map="3">
+                <span class="cyber-bracket bracket-tl"></span><span class="cyber-bracket bracket-tr"></span>
+                <span class="cyber-bracket bracket-bl"></span><span class="cyber-bracket bracket-br"></span>
                 <div class="map-opt-head">
                   <span class="map-num">MAP 03</span>
-                  <span class="map-spots">26 Spots</span>
+                  <span class="map-spots">25 Spots</span>
                 </div>
                 <div class="map-opt-name">Underground Basement</div>
                 <div class="map-opt-desc">Vehicles, Elevators & Boiler Room</div>
               </button>
 
               <button class="map-option" data-map="4">
+                <span class="cyber-bracket bracket-tl"></span><span class="cyber-bracket bracket-tr"></span>
+                <span class="cyber-bracket bracket-bl"></span><span class="cyber-bracket bracket-br"></span>
                 <div class="map-opt-head">
                   <span class="map-num">MAP 04</span>
-                  <span class="map-spots">26 Spots</span>
+                  <span class="map-spots">25 Spots</span>
                 </div>
                 <div class="map-opt-name">Grand Shopping Mall</div>
                 <div class="map-opt-desc">Concourse, Food Court & Retail Aisles</div>
               </button>
 
               <button class="map-option" data-map="5">
+                <span class="cyber-bracket bracket-tl"></span><span class="cyber-bracket bracket-tr"></span>
+                <span class="cyber-bracket bracket-bl"></span><span class="cyber-bracket bracket-br"></span>
                 <div class="map-opt-head">
                   <span class="map-num">MAP 05</span>
-                  <span class="map-spots">32 Spots</span>
+                  <span class="map-spots">25 Spots</span>
                 </div>
                 <div class="map-opt-name">Wonderland Park</div>
                 <div class="map-opt-desc">Amusement Rides, Midway & Plaza</div>
@@ -202,12 +216,17 @@
 
           <!-- STEP 2: CHOOSE ROLE -->
           <div class="selection-block">
-            <div class="section-label"><span class="label-dot"></span>02 · SELECT AGENT ROLE</div>
+            <div class="section-label sec-green"><span class="label-dot dot-green"></span>• 02 - SELECT AGENT ROLE</div>
             <div class="role-grid">
               <button id="btn-choose-hider" class="role-card hider-card active" data-role="hider">
+                <span class="cyber-bracket bracket-tl"></span><span class="cyber-bracket bracket-tr"></span>
+                <span class="cyber-bracket bracket-bl"></span><span class="cyber-bracket bracket-br"></span>
                 <div class="role-card-top">
-                  <h3>Hider</h3>
-                  <span class="role-tag hider-tag">STEALTH</span>
+                  <div class="role-title-wrap">
+                    <span class="role-icon">🕶️</span>
+                    <h3>Hider</h3>
+                  </div>
+                  <span class="role-tag hider-tag">🎭 STEALTH</span>
                 </div>
                 <p id="hider-desc">
                   Infiltrate the map and conceal yourself in spots with Spacebar before the Seeker arrives.
@@ -219,9 +238,14 @@
               </button>
 
               <button id="btn-choose-seeker" class="role-card seeker-card" data-role="seeker">
+                <span class="cyber-bracket bracket-tl"></span><span class="cyber-bracket bracket-tr"></span>
+                <span class="cyber-bracket bracket-bl"></span><span class="cyber-bracket bracket-br"></span>
                 <div class="role-card-top">
-                  <h3>Seeker</h3>
-                  <span class="role-tag seeker-tag">HUNT</span>
+                  <div class="role-title-wrap">
+                    <span class="role-icon">🎯</span>
+                    <h3>Seeker</h3>
+                  </div>
+                  <span class="role-tag seeker-tag">🔍 HUNT</span>
                 </div>
                 <p id="seeker-desc">
                   Track down the hidden Bot across rooms and scan suspect spots before attempts run out.
@@ -236,17 +260,23 @@
 
           <!-- STEP 3: CHOOSE DIFFICULTY -->
           <div class="selection-block">
-            <div class="section-label"><span class="label-dot"></span>03 · BOT SEARCH PROTOCOL</div>
+            <div class="section-label sec-amber"><span class="label-dot dot-amber"></span>• 03 - BOT SEARCH PROTOCOL</div>
             <div class="diff-selector-row" role="radiogroup" aria-label="Select Game Difficulty">
               <button class="diff-btn" data-diff="easy" role="radio" aria-checked="false">
+                <span class="cyber-bracket bracket-tl"></span><span class="cyber-bracket bracket-tr"></span>
+                <span class="cyber-bracket bracket-bl"></span><span class="cyber-bracket bracket-br"></span>
                 <span class="diff-name">Easy</span>
                 <span class="diff-sub">Relaxed</span>
               </button>
               <button class="diff-btn active" data-diff="normal" role="radio" aria-checked="true">
+                <span class="cyber-bracket bracket-tl"></span><span class="cyber-bracket bracket-tr"></span>
+                <span class="cyber-bracket bracket-bl"></span><span class="cyber-bracket bracket-br"></span>
                 <span class="diff-name">Normal</span>
                 <span class="diff-sub">Balanced</span>
               </button>
               <button class="diff-btn" data-diff="hard" role="radio" aria-checked="false">
+                <span class="cyber-bracket bracket-tl"></span><span class="cyber-bracket bracket-tr"></span>
+                <span class="cyber-bracket bracket-bl"></span><span class="cyber-bracket bracket-br"></span>
                 <span class="diff-name">Hard</span>
                 <span class="diff-sub">Sharp</span>
               </button>
@@ -256,10 +286,11 @@
           <!-- STEP 4: EXPLICIT START BUTTON & CUSTOM ROOMS ON RIGHT -->
           <div class="start-action-row">
             <div class="start-row-side-spacer" aria-hidden="true"></div>
-            <button id="btn-start-game" class="btn-start-game">START GAME</button>
+            <button id="btn-start-game" class="btn-start-game">START GAME <span class="start-chevrons">&gt;&gt;</span></button>
             <div class="start-row-side-action">
               <button id="btn-open-multiplayer" class="btn-multiplayer" type="button">
-                <span class="mp-btn-icon">👥</span>
+                <span class="mp-beacon-dot"></span>
+                <span class="mp-btn-icon">📶</span>
                 <span class="mp-btn-text">Custom Rooms</span>
               </button>
             </div>
@@ -270,7 +301,7 @@
       <!-- BOTTOM NAVBAR WITH ABOUT CREATOR & SUPPORTED TEXT ONLY -->
       <footer class="menu-bottom-nav">
         <button id="btn-about-creator" class="creator-nav-btn">About Creator</button>
-        <div class="nav-hint">Desktop &amp; Mobile Landscape Supported</div>
+        <div class="nav-hint">💻 Desktop &amp; Mobile Landscape Supported</div>
       </footer>
     </section>
 

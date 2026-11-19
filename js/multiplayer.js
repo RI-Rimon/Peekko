@@ -40,13 +40,13 @@
         { x: 330, y: 690, angle: 0 }              // West Gallery
       ]
     },
-    3: { // Warehouse Basement
-      seeker: { x: 740, y: 674, angle: Math.PI / 2 },
+    3: { // Underground Basement
+      seeker: { x: 670, y: 690, angle: Math.PI / 2 },
       hiders: [
-        { x: 730, y: 270, angle: -Math.PI / 2 }, // Central Vault
-        { x: 240, y: 270, angle: 0 },             // West Storage Bay
-        { x: 1080, y: 260, angle: Math.PI },      // East Generator Room
-        { x: 335, y: 635, angle: 0 }              // Loading Dock
+        { x: 450, y: 220, angle: -Math.PI / 2 }, // Parking Bay
+        { x: 260, y: 600, angle: 0 },             // Cargo Storage
+        { x: 1020, y: 240, angle: Math.PI },      // Maintenance Workshop
+        { x: 1020, y: 600, angle: 0 }             // Power Vault
       ]
     },
     4: { // Grand Shopping Mall
@@ -55,16 +55,16 @@
         { x: 780, y: 400, angle: -Math.PI / 2 }, // Central Plaza
         { x: 215, y: 245, angle: 0 },             // West Retail Wing
         { x: 1260, y: 245, angle: Math.PI },      // East Food Court
-        { x: 780, y: 145, angle: 0 }              // North Electronics Promenade
+        { x: 780, y: 145, angle: 0 }              // North Promenade
       ]
     },
     5: { // Wonderland Park
-      seeker: { x: 920, y: 930, angle: Math.PI / 2 },
+      seeker: { x: 630, y: 690, angle: Math.PI / 2 },
       hiders: [
-        { x: 920, y: 745, angle: -Math.PI / 2 }, // Central Fountain Plaza
-        { x: 300, y: 810, angle: 0 },             // West Carnival Midway
-        { x: 620, y: 345, angle: 0 },             // North Picnic Meadow
-        { x: 1480, y: 925, angle: Math.PI }       // East Amusement Arcade
+        { x: 220, y: 570, angle: 0 },             // Carnival Midway
+        { x: 240, y: 260, angle: -Math.PI / 2 }, // Wonder Rides Plaza
+        { x: 740, y: 210, angle: 0 },             // Thrill Coaster Cove
+        { x: 1010, y: 560, angle: Math.PI }       // Bumper Cars & Retro Arcade
       ]
     }
   };

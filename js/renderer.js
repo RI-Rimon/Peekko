@@ -1815,6 +1815,114 @@ class ApartmentRenderer {
       ctx.fillStyle = '#86efac';
       ctx.beginPath(); ctx.arc(cx - 5, cy - 4, 4, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.arc(cx + 6, cy + 3, 3, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'tool_chest') {
+      // Red industrial tool rolling chest
+      ctx.fillStyle = '#b91c1c';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      ctx.fillStyle = '#7f1d1d';
+      this.roundRect(ctx, spot.x + 3, spot.y + 3, spot.w - 6, spot.h - 6, 2);
+      ctx.fill();
+      // Chrome drawer handles
+      ctx.fillStyle = '#e2e8f0';
+      const dh = Math.max(8, (spot.h - 14) / 4);
+      for (let dy = spot.y + 6; dy < spot.y + spot.h - 6; dy += dh) {
+        ctx.fillRect(spot.x + 10, dy, spot.w - 20, 3);
+      }
+    } else if (spot.type === 'air_compressor') {
+      // Blue cylindrical compressor tank
+      ctx.fillStyle = '#0284c7';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 8);
+      ctx.fill();
+      ctx.fillStyle = '#0369a1';
+      ctx.fillRect(spot.x + 6, spot.y + 6, spot.w - 12, spot.h - 12);
+      // Dial & motor head
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath(); ctx.arc(spot.x + spot.w / 2, spot.y + spot.h / 2, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(spot.x + spot.w / 2, spot.y + spot.h / 2); ctx.lineTo(spot.x + spot.w / 2 + 5, spot.y + spot.h / 2 - 4); ctx.stroke();
+    } else if (spot.type === 'breaker_panel') {
+      // Steel electrical control panel
+      ctx.fillStyle = '#334155';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(spot.x + 3, spot.y + 3, spot.w - 6, spot.h - 6);
+      // Breaker switch rows
+      ctx.fillStyle = '#f59e0b';
+      for (let bx = spot.x + 8; bx < spot.x + spot.w - 8; bx += 10) {
+        ctx.fillRect(bx, spot.y + 8, 5, 8);
+        ctx.fillRect(bx, spot.y + spot.h - 16, 5, 8);
+      }
+    } else if (spot.type === 'transformer') {
+      // Heavy high-voltage power transformer
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      // Cooling fins
+      ctx.fillStyle = '#475569';
+      for (let fx = spot.x + 6; fx < spot.x + spot.w - 6; fx += 10) {
+        ctx.fillRect(fx, spot.y + 4, 4, spot.h - 8);
+      }
+      // Warning lightning badge
+      ctx.fillStyle = '#eab308';
+      ctx.beginPath();
+      const tcx = spot.x + spot.w / 2, tcy = spot.y + spot.h / 2;
+      ctx.moveTo(tcx, tcy - 8); ctx.lineTo(tcx - 6, tcy + 1); ctx.lineTo(tcx, tcy + 1);
+      ctx.lineTo(tcx - 2, tcy + 8); ctx.lineTo(tcx + 6, tcy); ctx.lineTo(tcx + 1, tcy);
+      ctx.closePath(); ctx.fill();
+    } else if (spot.type === 'vent_duct') {
+      // Galvanized steel ventilation shaft
+      ctx.fillStyle = '#64748b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8);
+      // Grate slots
+      ctx.fillStyle = '#1e293b';
+      for (let vy = spot.y + 8; vy < spot.y + spot.h - 8; vy += 8) {
+        ctx.fillRect(spot.x + 8, vy, spot.w - 16, 3);
+      }
+    } else if (spot.type === 'pallet_stack') {
+      // Wooden cargo pallet stack
+      ctx.fillStyle = '#854d0e';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      ctx.fillStyle = '#a16207';
+      for (let py = spot.y + 4; py < spot.y + spot.h - 4; py += 12) {
+        ctx.fillRect(spot.x + 4, py, spot.w - 8, 8);
+      }
+      // Steel strapping
+      ctx.strokeStyle = '#0284c7';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(spot.x + 10, spot.y + 2, spot.w - 20, spot.h - 4);
+    } else if (spot.type === 'pipe_rack') {
+      // Industrial conduit pipe assembly
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      const pColors = ['#f97316', '#38bdf8', '#eab308'];
+      let pIdx = 0;
+      for (let py = spot.y + 6; py < spot.y + spot.h - 6; py += 12) {
+        ctx.fillStyle = pColors[(pIdx++) % pColors.length];
+        ctx.fillRect(spot.x + 4, py, spot.w - 8, 6);
+      }
+    } else if (spot.type === 'forklift') {
+      // Industrial yellow forklift
+      ctx.fillStyle = '#eab308';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      // Black roll-cage roof
+      ctx.fillStyle = '#0f172a';
+      this.roundRect(ctx, spot.x + 12, spot.y + 8, spot.w - 24, spot.h - 16, 4);
+      ctx.fill();
+      // Fork tines
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(spot.x + spot.w - 4, spot.y + 10, 8, 5);
+      ctx.fillRect(spot.x + spot.w - 4, spot.y + spot.h - 15, 8, 5);
     }
 
     // Highlight border if player is right next to this object

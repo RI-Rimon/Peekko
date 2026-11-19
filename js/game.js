@@ -123,6 +123,7 @@
 
       this.bindDOM();
       this.bindEvents();
+      this.initMenuSparks();
       this.selectMap(this.selectedMapId);
       this.selectRole(this.selectedRole);
       this.selectDifficulty(this.selectedDifficulty);
@@ -235,6 +236,92 @@
           this.volumeValDisplay.textContent = `${Math.round(this.volumeSlider.value * 100)}%`;
         }
       }
+    }
+
+    initMenuSparks() {
+      const canvas = document.getElementById('menu-sparks-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const resizeSparks = () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      };
+      resizeSparks();
+      window.addEventListener('resize', resizeSparks);
+
+      const sparks = [];
+      const SPARK_COUNT = 42;
+      for (let i = 0; i < SPARK_COUNT; i++) {
+        const isLeft = Math.random() < 0.52;
+        sparks.push({
+          x: Math.random() * window.innerWidth,
+          y: Math.random() * window.innerHeight,
+          r: 1.0 + Math.random() * 2.2,
+          vy: 0.25 + Math.random() * 0.75,
+          vx: (Math.random() - 0.5) * 0.35,
+          alpha: 0.2 + Math.random() * 0.7,
+          color: isLeft ? '#00f0ff' : '#f59e0b',
+          glow: isLeft ? 'rgba(0, 240, 255, 0.6)' : 'rgba(245, 158, 11, 0.6)'
+        });
+      }
+
+      const drawSparks = () => {
+        if (!this.menuScreen || this.menuScreen.classList.contains('hidden') || this.menuScreen.style.display === 'none') {
+          requestAnimationFrame(drawSparks);
+          return;
+        }
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Faint concentric radar range circles behind the logo
+        const cx = canvas.width / 2;
+        const cy = Math.max(90, canvas.height * 0.18);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.04)';
+        ctx.lineWidth = 1;
+        [100, 220, 360, 520, 720].forEach(rad => {
+          ctx.beginPath();
+          ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+        // Faint crosshair line
+        ctx.beginPath();
+        ctx.moveTo(cx - 380, cy); ctx.lineTo(cx + 380, cy);
+        ctx.moveTo(cx, cy - 180); ctx.lineTo(cx, cy + 300);
+        ctx.stroke();
+        ctx.restore();
+
+        // Render & update floating embers / sparks
+        for (const sp of sparks) {
+          sp.y -= sp.vy;
+          sp.x += sp.vx;
+          sp.alpha += Math.sin(performance.now() * 0.003 + sp.x) * 0.01;
+          const a = Math.max(0.12, Math.min(0.85, sp.alpha));
+
+          ctx.save();
+          ctx.fillStyle = sp.color;
+          ctx.shadowColor = sp.glow;
+          ctx.shadowBlur = 6;
+          ctx.globalAlpha = a;
+          ctx.beginPath();
+          ctx.arc(sp.x, sp.y, sp.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+
+          if (sp.y < -10) {
+            sp.y = canvas.height + 10;
+            sp.x = Math.random() * canvas.width;
+          }
+          if (sp.x < -10) sp.x = canvas.width + 10;
+          if (sp.x > canvas.width + 10) sp.x = -10;
+        }
+
+        requestAnimationFrame(drawSparks);
+      };
+
+      requestAnimationFrame(drawSparks);
     }
 
     playIntroBlink() {
@@ -625,8 +712,47 @@
       this.renderer.resize();
       this.saveStats();
 
+      const mapSpotCounts = {
+        1: '20 Spots',
+        2: '20 Spots',
+        3: '25 Spots',
+        4: '25 Spots',
+        5: '25 Spots'
+      };
+
+      const mapNames = {
+        1: 'Skyglass Penthouse',
+        2: 'Heritage Manor',
+        3: 'Underground Basement',
+        4: 'Grand Shopping Mall',
+        5: 'Wonderland Park'
+      };
+
       document.querySelectorAll('.map-option').forEach(el => {
-        el.classList.toggle('active', Number(el.dataset.map) === mapId);
+        const id = Number(el.dataset.map);
+        const isActive = id === mapId;
+        el.classList.toggle('active', isActive);
+
+        const spotsBadge = el.querySelector('.map-spots');
+        if (spotsBadge) {
+          if (isActive) {
+            spotsBadge.classList.add('active-pill');
+            spotsBadge.textContent = 'SELECTED';
+          } else {
+            spotsBadge.classList.remove('active-pill');
+            spotsBadge.textContent = mapSpotCounts[id] || '25 Spots';
+          }
+        }
+
+        const nameEl = el.querySelector('.map-opt-name');
+        if (nameEl) {
+          const baseName = mapNames[id] || el.getAttribute('data-name') || 'Zone';
+          if (isActive) {
+            nameEl.innerHTML = `${baseName} <span class="diamond-icon">◈</span>`;
+          } else {
+            nameEl.textContent = baseName;
+          }
+        }
       });
       this.mapPill.textContent = this.apt.mapName.toUpperCase();
     }
