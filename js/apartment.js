@@ -466,14 +466,14 @@ class ApartmentMap {
 
     // Prominent Non-Hiding Decoy Obstacles (Solid cover, realistic, cannot be hidden in or scanned!)
     this.decorProps = [
-      { type: 'decoy_truck', name: 'Armored Cash Transport', roomId: 'parking_bay', x: 620, y: 425, w: 110, h: 50 },
-      { type: 'security_booth', name: 'Parking Toll Booth', roomId: 'parking_bay', x: 720, y: 240, w: 60, h: 50 },
+      { type: 'decoy_truck', name: 'Armored Cash Transport', roomId: 'parking_bay', x: 70, y: 230, w: 110, h: 50 },
+      { type: 'security_booth', name: 'Parking Toll Booth', roomId: 'parking_bay', x: 810, y: 350, w: 60, h: 50 },
       { type: 'pillar', roomId: 'parking_bay', x: 230, y: 240, w: 38, h: 38 },
-      { type: 'pillar', roomId: 'parking_bay', x: 470, y: 240, w: 38, h: 38 },
-      { type: 'decoy_generator', name: 'Industrial Turbine Unit', roomId: 'workshop', x: 930, y: 230, w: 85, h: 55 },
+      { type: 'pillar', roomId: 'parking_bay', x: 470, y: 170, w: 38, h: 38 },
+      { type: 'decoy_generator', name: 'Industrial Turbine Unit', roomId: 'workshop', x: 1060, y: 65, w: 80, h: 50 },
       { type: 'decoy_crates', name: 'High-Security Steel Crate', roomId: 'storage_bay', x: 210, y: 545, w: 80, h: 50 },
-      { type: 'decoy_boiler', name: 'Pressure Cylinder Tank', roomId: 'boiler_vault', x: 1040, y: 550, w: 60, h: 55 },
-      { type: 'traffic_cone', roomId: 'parking_bay', x: 820, y: 240, w: 24, h: 24 }
+      { type: 'decoy_boiler', name: 'Pressure Cylinder Tank', roomId: 'boiler_vault', x: 1070, y: 735, w: 60, h: 55 },
+      { type: 'traffic_cone', roomId: 'parking_bay', x: 870, y: 70, w: 24, h: 24 }
     ];
 
     this.ambientLights = [
@@ -492,15 +492,16 @@ class ApartmentMap {
       storage_center: { x: 230, y: 640, neighbors: ['storage_door', 'storage_north'] },
       storage_north: { x: 280, y: 513, neighbors: ['storage_center', 'parking_south'] },
       boiler_door: { x: 873, y: 650, neighbors: ['foyer_spawn', 'boiler_center'] },
-      boiler_center: { x: 1060, y: 670, neighbors: ['boiler_door', 'boiler_north'] },
-      boiler_north: { x: 1100, y: 513, neighbors: ['boiler_center', 'workshop_center'] },
+      boiler_center: { x: 1070, y: 640, neighbors: ['boiler_door', 'boiler_north'] },
+      boiler_north: { x: 1100, y: 513, neighbors: ['boiler_center', 'workshop_south'] },
       parking_south: { x: 680, y: 340, neighbors: ['foyer_north', 'storage_north', 'parking_center', 'parking_east'] },
       parking_center: { x: 350, y: 240, neighbors: ['parking_south', 'parking_north'] },
       parking_north: { x: 470, y: 150, neighbors: ['parking_center', 'parking_east'] },
       parking_east: { x: 800, y: 240, neighbors: ['parking_south', 'parking_north', 'workshop_door'] },
       workshop_door: { x: 893, y: 270, neighbors: ['parking_east', 'workshop_center'] },
-      workshop_center: { x: 1080, y: 280, neighbors: ['workshop_door', 'workshop_north', 'boiler_north'] },
-      workshop_north: { x: 1080, y: 140, neighbors: ['workshop_center'] }
+      workshop_center: { x: 1080, y: 260, neighbors: ['workshop_door', 'workshop_north', 'workshop_south'] },
+      workshop_north: { x: 1080, y: 160, neighbors: ['workshop_center'] },
+      workshop_south: { x: 1080, y: 370, neighbors: ['workshop_center', 'boiler_north'] }
     };
 
     this.roomHubNode = {
@@ -555,10 +556,7 @@ class ApartmentMap {
       { x: 933, y: 40, w: 14, h: 60 },
       { x: 933, y: 360, w: 14, h: 60 },
       { x: 933, y: 420, w: 14, h: 60 },
-      { x: 933, y: 740, w: 14, h: 60 },
-
-      { x: 420, y: 233, w: 40, h: 14 },
-      { x: 880, y: 233, w: 60, h: 14 }
+      { x: 933, y: 740, w: 14, h: 60 }
     ];
 
     this.glassWalls = [];
@@ -572,10 +570,10 @@ class ApartmentMap {
       { id: 'm_handbag_tower', name: 'Behind Luxury Handbag Showcase', roomId: 'fashion_wing', roomName: 'Luxury Boutiques & Fashion', type: 'mall_gondola', x: 290, y: 330, w: 90, h: 48, hideX: 335, hideY: 354, ix: 335, iy: 280, stealthWeight: 0.95, checked: false },
 
       // 2. Gourmet Food Galleria (4 Spots)
-      { id: 'm_espresso_bar', name: 'Behind Italian Espresso Bar', roomId: 'food_galleria', roomName: 'Gourmet Food Galleria', type: 'food_island', x: 450, y: 65, w: 95, h: 50, hideX: 497, hideY: 90, ix: 497, iy: 140, stealthWeight: 1.05, checked: false },
-      { id: 'm_sushi_station', name: 'Behind Conveyor Sushi Island', roomId: 'food_galleria', roomName: 'Gourmet Food Galleria', type: 'food_island', x: 630, y: 65, w: 95, h: 50, hideX: 677, hideY: 90, ix: 677, iy: 140, stealthWeight: 1.1, checked: false },
-      { id: 'm_bakery_case', name: 'Behind Pastry Glass Display', roomId: 'food_galleria', roomName: 'Gourmet Food Galleria', type: 'mall_gondola', x: 810, y: 65, w: 95, h: 50, hideX: 857, hideY: 90, ix: 857, iy: 140, stealthWeight: 0.95, checked: false },
-      { id: 'm_juice_booth', name: 'Behind Smoothie & Gelato Kiosk', roomId: 'food_galleria', roomName: 'Gourmet Food Galleria', type: 'food_kiosk', x: 630, y: 155, w: 95, h: 45, hideX: 677, hideY: 177, ix: 677, iy: 120, stealthWeight: 1.0, checked: false },
+      { id: 'm_espresso_bar', name: 'Behind Italian Espresso Bar', roomId: 'food_galleria', roomName: 'Gourmet Food Galleria', type: 'food_island', x: 460, y: 60, w: 80, h: 45, hideX: 500, hideY: 82, ix: 500, iy: 135, stealthWeight: 1.05, checked: false },
+      { id: 'm_sushi_station', name: 'Behind Conveyor Sushi Island', roomId: 'food_galleria', roomName: 'Gourmet Food Galleria', type: 'food_island', x: 580, y: 60, w: 80, h: 45, hideX: 620, hideY: 82, ix: 620, iy: 135, stealthWeight: 1.1, checked: false },
+      { id: 'm_bakery_case', name: 'Behind Pastry Glass Display', roomId: 'food_galleria', roomName: 'Gourmet Food Galleria', type: 'mall_gondola', x: 700, y: 60, w: 80, h: 45, hideX: 740, hideY: 82, ix: 740, iy: 135, stealthWeight: 0.95, checked: false },
+      { id: 'm_juice_booth', name: 'Behind Smoothie & Gelato Kiosk', roomId: 'food_galleria', roomName: 'Gourmet Food Galleria', type: 'food_kiosk', x: 820, y: 60, w: 80, h: 45, hideX: 860, hideY: 82, ix: 860, iy: 135, stealthWeight: 1.0, checked: false },
 
       // 3. Cineplex & VR Arcade (4 Spots)
       { id: 'm_cinema_kiosk', name: 'Behind Touchscreen Ticket Terminal', roomId: 'cinema_arcade', roomName: 'Cineplex & VR Arcade', type: 'arcade_unit', x: 970, y: 65, w: 90, h: 45, hideX: 1015, hideY: 87, ix: 1015, iy: 135, stealthWeight: 0.9, checked: false },
@@ -584,17 +582,17 @@ class ApartmentMap {
       { id: 'm_cinema_sofa', name: 'Behind VIP Velvet Cinema Lounge', roomId: 'cinema_arcade', roomName: 'Cineplex & VR Arcade', type: 'cinema_bench', x: 1190, y: 330, w: 95, h: 48, hideX: 1237, hideY: 354, ix: 1237, iy: 280, stealthWeight: 0.9, checked: false },
 
       // 4. Grand Atrium & Fountain Rotunda (5 Spots)
-      { id: 'm_fountain_rotunda', name: 'Behind Grand Marble Atrium Fountain', roomId: 'main_atrium', roomName: 'Grand Atrium & Rotunda', type: 'mall_fountain', x: 630, y: 270, w: 100, h: 60, hideX: 680, hideY: 300, ix: 680, iy: 360, stealthWeight: 1.2, checked: false },
-      { id: 'm_palm_island', name: 'Behind Tropical Palm Planter', roomId: 'main_atrium', roomName: 'Grand Atrium & Rotunda', type: 'mall_planter', x: 460, y: 410, w: 75, h: 48, hideX: 497, hideY: 434, ix: 555, iy: 434, stealthWeight: 0.95, checked: false },
-      { id: 'm_directory_kiosk', name: 'Behind 3D Wayfinding Interactive Screen', roomId: 'main_atrium', roomName: 'Grand Atrium & Rotunda', type: 'directory_screen', x: 820, y: 410, w: 75, h: 48, hideX: 857, hideY: 434, ix: 800, iy: 434, stealthWeight: 0.9, checked: false },
-      { id: 'm_holiday_cart', name: 'Behind Seasonal Specialty Pavilion', roomId: 'main_atrium', roomName: 'Grand Atrium & Rotunda', type: 'mall_cart', x: 460, y: 540, w: 85, h: 48, hideX: 502, hideY: 564, ix: 565, iy: 564, stealthWeight: 1.0, checked: false },
-      { id: 'm_glass_elevator', name: 'Behind Panoramic Glass Elevator Bank', roomId: 'main_atrium', roomName: 'Grand Atrium & Rotunda', type: 'glass_elevator', x: 810, y: 540, w: 95, h: 50, hideX: 857, hideY: 565, ix: 790, iy: 565, stealthWeight: 1.0, checked: false },
+      { id: 'm_fountain_rotunda', name: 'Behind Grand Marble Atrium Fountain', roomId: 'main_atrium', roomName: 'Grand Atrium & Rotunda', type: 'mall_fountain', x: 640, y: 360, w: 80, h: 60, hideX: 680, hideY: 390, ix: 680, iy: 450, stealthWeight: 1.2, checked: false },
+      { id: 'm_palm_island', name: 'Behind Tropical Palm Planter', roomId: 'main_atrium', roomName: 'Grand Atrium & Rotunda', type: 'mall_planter', x: 450, y: 380, w: 65, h: 42, hideX: 482, hideY: 401, ix: 540, iy: 401, stealthWeight: 0.95, checked: false },
+      { id: 'm_directory_kiosk', name: 'Behind 3D Wayfinding Interactive Screen', roomId: 'main_atrium', roomName: 'Grand Atrium & Rotunda', type: 'directory_screen', x: 845, y: 480, w: 65, h: 42, hideX: 877, hideY: 501, ix: 780, iy: 501, stealthWeight: 0.9, checked: false },
+      { id: 'm_holiday_cart', name: 'Behind Seasonal Specialty Pavilion', roomId: 'main_atrium', roomName: 'Grand Atrium & Rotunda', type: 'mall_cart', x: 845, y: 380, w: 65, h: 42, hideX: 877, hideY: 401, ix: 780, iy: 401, stealthWeight: 1.0, checked: false },
+      { id: 'm_glass_elevator', name: 'Behind Panoramic Glass Elevator Bank', roomId: 'main_atrium', roomName: 'Grand Atrium & Rotunda', type: 'glass_elevator', x: 845, y: 550, w: 75, h: 45, hideX: 882, hideY: 572, ix: 780, iy: 572, stealthWeight: 1.0, checked: false },
 
       // 5. Smart Tech Superstore (4 Spots)
-      { id: 'm_phone_island', name: 'Behind Flagship Smartphone Island', roomId: 'tech_hub', roomName: 'Smart Tech Superstore', type: 'tech_island', x: 70, y: 450, w: 95, h: 48, hideX: 117, hideY: 474, ix: 117, iy: 525, stealthWeight: 1.0, checked: false },
-      { id: 'm_audio_lounge', name: 'Behind Hi-Fi Sound Experience Booth', roomId: 'tech_hub', roomName: 'Smart Tech Superstore', type: 'audio_booth', x: 290, y: 450, w: 90, h: 50, hideX: 335, hideY: 475, ix: 335, iy: 525, stealthWeight: 0.95, checked: false },
-      { id: 'm_gaming_laptops', name: 'Behind RGB Esports Battlestation', roomId: 'tech_hub', roomName: 'Smart Tech Superstore', type: 'gaming_pod', x: 70, y: 715, w: 95, h: 48, hideX: 117, hideY: 739, ix: 117, iy: 665, stealthWeight: 1.05, checked: false },
-      { id: 'm_smarthome_hub', name: 'Behind Smart Living Showcase Display', roomId: 'tech_hub', roomName: 'Smart Tech Superstore', type: 'smarthome_display', x: 290, y: 715, w: 90, h: 48, hideX: 335, hideY: 739, ix: 335, iy: 665, stealthWeight: 0.9, checked: false },
+      { id: 'm_phone_island', name: 'Behind Flagship Smartphone Island', roomId: 'tech_hub', roomName: 'Smart Tech Superstore', type: 'tech_island', x: 70, y: 450, w: 90, h: 45, hideX: 115, hideY: 472, ix: 115, iy: 530, stealthWeight: 1.0, checked: false },
+      { id: 'm_audio_lounge', name: 'Behind Hi-Fi Sound Experience Booth', roomId: 'tech_hub', roomName: 'Smart Tech Superstore', type: 'audio_booth', x: 290, y: 450, w: 85, h: 45, hideX: 332, hideY: 472, ix: 332, iy: 530, stealthWeight: 0.95, checked: false },
+      { id: 'm_gaming_laptops', name: 'Behind RGB Esports Battlestation', roomId: 'tech_hub', roomName: 'Smart Tech Superstore', type: 'gaming_pod', x: 70, y: 715, w: 90, h: 45, hideX: 115, hideY: 737, ix: 115, iy: 670, stealthWeight: 1.05, checked: false },
+      { id: 'm_smarthome_hub', name: 'Behind Smart Living Showcase Display', roomId: 'tech_hub', roomName: 'Smart Tech Superstore', type: 'smarthome_display', x: 290, y: 715, w: 85, h: 45, hideX: 332, hideY: 737, ix: 332, iy: 670, stealthWeight: 0.9, checked: false },
 
       // 6. Outdoor & Sports Megastore (4 Spots)
       { id: 'm_camping_tent', name: 'Inside All-Weather Expedition Tent', roomId: 'sports_outlet', roomName: 'Outdoor & Sports Megastore', type: 'camping_tent', x: 970, y: 450, w: 95, h: 55, hideX: 1017, hideY: 477, ix: 1017, iy: 530, stealthWeight: 1.1, checked: false },
@@ -605,13 +603,13 @@ class ApartmentMap {
 
     // Prominent Non-Hiding Decoy Obstacles (Looks like cover/hiding spot, but cannot be hidden in or scanned!)
     this.decorProps = [
-      { type: 'decoy_car_podium', name: 'Luxury Display Coupe on Podium', roomId: 'main_atrium', x: 630, y: 450, w: 100, h: 50 },
-      { type: 'decoy_escalator', name: 'Stainless Steel Escalator Bank', roomId: 'main_atrium', x: 550, y: 350, w: 45, h: 80 },
-      { type: 'decoy_escalator', name: 'Stainless Steel Escalator Bank', roomId: 'main_atrium', x: 765, y: 350, w: 45, h: 80 },
-      { type: 'pillar', roomId: 'main_atrium', x: 550, y: 540, w: 34, h: 34 },
-      { type: 'pillar', roomId: 'main_atrium', x: 775, y: 540, w: 34, h: 34 },
-      { type: 'bench', roomId: 'entry_portal', x: 640, y: 610, w: 80, h: 28 },
-      { type: 'decoy_kiosk', name: 'Guest Information Dome', roomId: 'food_galleria', x: 640, y: 150, w: 80, h: 42 }
+      { type: 'decoy_car_podium', name: 'Luxury Display Coupe on Podium', roomId: 'main_atrium', x: 450, y: 500, w: 85, h: 45 },
+      { type: 'decoy_escalator', name: 'Stainless Steel Escalator Bank', roomId: 'main_atrium', x: 605, y: 260, w: 34, h: 65 },
+      { type: 'decoy_escalator', name: 'Stainless Steel Escalator Bank', roomId: 'main_atrium', x: 720, y: 260, w: 34, h: 65 },
+      { type: 'pillar', roomId: 'main_atrium', x: 440, y: 510, w: 26, h: 26 },
+      { type: 'pillar', roomId: 'main_atrium', x: 890, y: 510, w: 26, h: 26 },
+      { type: 'bench', roomId: 'entry_portal', x: 440, y: 660, w: 60, h: 24 },
+      { type: 'decoy_kiosk', name: 'Guest Information Dome', roomId: 'food_galleria', x: 450, y: 65, w: 70, h: 40 }
     ];
 
     this.ambientLights = [
@@ -626,18 +624,40 @@ class ApartmentMap {
     this.navNodes = {
       mall_spawn: { x: 680, y: 715, neighbors: ['mall_bot', 'atrium_south'] },
       mall_bot: { x: 680, y: 760, neighbors: ['mall_spawn'] },
-      atrium_south: { x: 680, y: 580, neighbors: ['mall_spawn', 'atrium_center', 'tech_door', 'sports_door'] },
-      atrium_center: { x: 680, y: 360, neighbors: ['atrium_south', 'atrium_north', 'fashion_door', 'cinema_door'] },
-      atrium_north: { x: 680, y: 220, neighbors: ['atrium_center', 'food_mid'] },
-      food_mid: { x: 680, y: 110, neighbors: ['atrium_north'] },
-      fashion_door: { x: 413, y: 220, neighbors: ['atrium_center', 'fashion_mid'] },
-      fashion_mid: { x: 200, y: 220, neighbors: ['fashion_door'] },
-      tech_door: { x: 413, y: 600, neighbors: ['atrium_south', 'tech_mid'] },
-      tech_mid: { x: 200, y: 600, neighbors: ['tech_door'] },
-      cinema_door: { x: 933, y: 220, neighbors: ['atrium_center', 'cinema_mid'] },
-      cinema_mid: { x: 1100, y: 220, neighbors: ['cinema_door'] },
-      sports_door: { x: 933, y: 600, neighbors: ['atrium_south', 'sports_mid'] },
-      sports_mid: { x: 1100, y: 600, neighbors: ['sports_door'] }
+      atrium_south: { x: 680, y: 620, neighbors: ['mall_spawn', 'atrium_west_south', 'atrium_east_south', 'tech_door', 'sports_door'] },
+      
+      atrium_west_south: { x: 540, y: 500, neighbors: ['atrium_south', 'atrium_west_mid'] },
+      atrium_west_mid: { x: 540, y: 380, neighbors: ['atrium_west_south', 'atrium_west_north'] },
+      atrium_west_north: { x: 540, y: 220, neighbors: ['atrium_west_mid', 'atrium_north', 'fashion_door'] },
+
+      atrium_east_south: { x: 800, y: 500, neighbors: ['atrium_south', 'atrium_east_mid'] },
+      atrium_east_mid: { x: 800, y: 380, neighbors: ['atrium_east_south', 'atrium_east_north'] },
+      atrium_east_north: { x: 800, y: 220, neighbors: ['atrium_east_mid', 'atrium_north', 'cinema_door'] },
+
+      atrium_north: { x: 680, y: 220, neighbors: ['atrium_west_north', 'atrium_east_north', 'food_mid'] },
+      food_mid: { x: 680, y: 135, neighbors: ['atrium_north', 'food_west', 'food_east'] },
+      food_west: { x: 502, y: 140, neighbors: ['food_mid'] },
+      food_east: { x: 852, y: 140, neighbors: ['food_mid'] },
+
+      fashion_door: { x: 413, y: 220, neighbors: ['atrium_west_north', 'fashion_mid'] },
+      fashion_mid: { x: 200, y: 220, neighbors: ['fashion_door', 'fashion_north', 'fashion_south'] },
+      fashion_north: { x: 200, y: 140, neighbors: ['fashion_mid'] },
+      fashion_south: { x: 200, y: 330, neighbors: ['fashion_mid'] },
+
+      tech_door: { x: 413, y: 610, neighbors: ['atrium_south', 'tech_mid'] },
+      tech_mid: { x: 200, y: 610, neighbors: ['tech_door', 'tech_north', 'tech_south'] },
+      tech_north: { x: 200, y: 520, neighbors: ['tech_mid'] },
+      tech_south: { x: 200, y: 670, neighbors: ['tech_mid'] },
+
+      cinema_door: { x: 933, y: 220, neighbors: ['atrium_east_north', 'cinema_mid'] },
+      cinema_mid: { x: 1100, y: 220, neighbors: ['cinema_door', 'cinema_north', 'cinema_south'] },
+      cinema_north: { x: 1100, y: 135, neighbors: ['cinema_mid'] },
+      cinema_south: { x: 1100, y: 330, neighbors: ['cinema_mid'] },
+
+      sports_door: { x: 933, y: 610, neighbors: ['atrium_south', 'sports_mid'] },
+      sports_mid: { x: 1100, y: 610, neighbors: ['sports_door', 'sports_north', 'sports_south'] },
+      sports_north: { x: 1100, y: 520, neighbors: ['sports_mid'] },
+      sports_south: { x: 1100, y: 670, neighbors: ['sports_mid'] }
     };
 
     this.roomHubNode = {
@@ -707,47 +727,47 @@ class ApartmentMap {
       // 1. Fantasy Carousel & Ferris Meadow (5 Spots)
       { id: 'p_carousel_organ', name: 'Behind Grand Carousel Band Organ', roomId: 'fantasy_court', roomName: 'Fantasy Carousel & Ferris Meadow', type: 'carousel_center', x: 80, y: 70, w: 95, h: 50, hideX: 127, hideY: 95, ix: 127, iy: 145, stealthWeight: 1.1, checked: false },
       { id: 'p_swan_boat', name: 'Behind Enchanted Swan Paddle Boat', roomId: 'fantasy_court', roomName: 'Fantasy Carousel & Ferris Meadow', type: 'swan_boat', x: 270, y: 70, w: 90, h: 50, hideX: 315, hideY: 95, ix: 315, iy: 145, stealthWeight: 1.0, checked: false },
-      { id: 'p_teacup_cart', name: 'Inside Spinning Porcelain Teacup', roomId: 'fantasy_court', roomName: 'Fantasy Carousel & Ferris Meadow', type: 'tea_cup', x: 80, y: 220, w: 85, h: 50, hideX: 122, hideY: 245, ix: 122, iy: 295, stealthWeight: 0.95, checked: false },
-      { id: 'p_teddy_booth', name: 'Behind Giant Plush Prize Booth', roomId: 'fantasy_court', roomName: 'Fantasy Carousel & Ferris Meadow', type: 'prize_wall', x: 270, y: 220, w: 90, h: 50, hideX: 315, hideY: 245, ix: 315, iy: 295, stealthWeight: 0.9, checked: false },
-      { id: 'p_cotton_wagon', name: 'Behind Pink Cotton Candy Wagon', roomId: 'fantasy_court', roomName: 'Fantasy Carousel & Ferris Meadow', type: 'food_cart', x: 180, y: 390, w: 85, h: 48, hideX: 222, hideY: 414, ix: 222, iy: 345, stealthWeight: 1.0, checked: false },
+      { id: 'p_teacup_cart', name: 'Inside Spinning Porcelain Teacup', roomId: 'fantasy_court', roomName: 'Fantasy Carousel & Ferris Meadow', type: 'tea_cup', x: 75, y: 220, w: 80, h: 45, hideX: 115, hideY: 242, ix: 115, iy: 180, stealthWeight: 0.95, checked: false },
+      { id: 'p_teddy_booth', name: 'Behind Giant Plush Prize Booth', roomId: 'fantasy_court', roomName: 'Fantasy Carousel & Ferris Meadow', type: 'prize_wall', x: 290, y: 65, w: 85, h: 48, hideX: 332, hideY: 89, ix: 332, iy: 140, stealthWeight: 0.9, checked: false },
+      { id: 'p_cotton_wagon', name: 'Behind Pink Cotton Candy Wagon', roomId: 'fantasy_court', roomName: 'Fantasy Carousel & Ferris Meadow', type: 'food_cart', x: 75, y: 390, w: 80, h: 45, hideX: 115, hideY: 412, ix: 115, iy: 345, stealthWeight: 1.0, checked: false },
 
       // 2. Thunder Coaster & Pirate Lagoon (5 Spots)
       { id: 'p_coaster_cart', name: 'Behind Thunder Coaster Train', roomId: 'thrill_lagoon', roomName: 'Thunder Coaster & Pirate Lagoon', type: 'coaster_train', x: 980, y: 70, w: 95, h: 48, hideX: 1027, hideY: 94, ix: 1027, iy: 145, stealthWeight: 1.05, checked: false },
       { id: 'p_pirate_stern', name: 'Behind Galleon Captain Cabin Stern', roomId: 'thrill_lagoon', roomName: 'Thunder Coaster & Pirate Lagoon', type: 'ship_stern', x: 1180, y: 70, w: 95, h: 55, hideX: 1227, hideY: 97, ix: 1227, iy: 150, stealthWeight: 1.15, checked: false },
-      { id: 'p_treasure_chest', name: 'Behind Gilded Sunken Treasure Chest', roomId: 'thrill_lagoon', roomName: 'Thunder Coaster & Pirate Lagoon', type: 'treasure_chest', x: 980, y: 220, w: 85, h: 48, hideX: 1022, hideY: 244, ix: 1022, iy: 295, stealthWeight: 0.9, checked: false },
-      { id: 'p_cannon_bunker', name: 'Behind Fortified Iron Cannon Battery', roomId: 'thrill_lagoon', roomName: 'Thunder Coaster & Pirate Lagoon', type: 'cannon_prop', x: 1180, y: 220, w: 90, h: 50, hideX: 1225, hideY: 245, ix: 1225, iy: 295, stealthWeight: 0.95, checked: false },
+      { id: 'p_treasure_chest', name: 'Behind Gilded Sunken Treasure Chest', roomId: 'thrill_lagoon', roomName: 'Thunder Coaster & Pirate Lagoon', type: 'treasure_chest', x: 970, y: 65, w: 80, h: 45, hideX: 1010, hideY: 87, ix: 1010, iy: 140, stealthWeight: 0.9, checked: false },
+      { id: 'p_cannon_bunker', name: 'Behind Fortified Iron Cannon Battery', roomId: 'thrill_lagoon', roomName: 'Thunder Coaster & Pirate Lagoon', type: 'cannon_prop', x: 1200, y: 220, w: 80, h: 45, hideX: 1240, hideY: 242, ix: 1240, iy: 180, stealthWeight: 0.95, checked: false },
       { id: 'p_skull_grotto', name: 'Inside Skull Rock Sea Cave Alcove', roomId: 'thrill_lagoon', roomName: 'Thunder Coaster & Pirate Lagoon', type: 'rock_grotto', x: 1080, y: 390, w: 90, h: 50, hideX: 1125, hideY: 415, ix: 1125, iy: 345, stealthWeight: 1.0, checked: false },
 
       // 3. Carnival Midway & Skill Games (5 Spots)
       { id: 'p_ring_toss', name: 'Behind Carnival Ring Toss Stall', roomId: 'carnival_midway', roomName: 'Carnival Midway & Games', type: 'game_booth', x: 80, y: 535, w: 95, h: 48, hideX: 127, hideY: 559, ix: 127, iy: 610, stealthWeight: 1.0, checked: false },
       { id: 'p_dart_stall', name: 'Behind Neon Balloon Dart Stall', roomId: 'carnival_midway', roomName: 'Carnival Midway & Games', type: 'game_booth', x: 270, y: 535, w: 90, h: 48, hideX: 315, hideY: 559, ix: 315, iy: 610, stealthWeight: 0.95, checked: false },
-      { id: 'p_mirror_maze', name: 'Inside Funhouse Hall of Mirrors', roomId: 'carnival_midway', roomName: 'Carnival Midway & Games', type: 'mirror_maze', x: 80, y: 710, w: 95, h: 50, hideX: 127, hideY: 735, ix: 127, iy: 660, stealthWeight: 1.1, checked: false },
+      { id: 'p_mirror_maze', name: 'Inside Funhouse Hall of Mirrors', roomId: 'carnival_midway', roomName: 'Carnival Midway & Games', type: 'mirror_maze', x: 75, y: 715, w: 85, h: 45, hideX: 117, hideY: 737, ix: 180, iy: 737, stealthWeight: 1.1, checked: false },
       { id: 'p_shooting_booth', name: 'Behind Laser Shooting Gallery Counter', roomId: 'carnival_midway', roomName: 'Carnival Midway & Games', type: 'shooting_gallery', x: 270, y: 710, w: 90, h: 48, hideX: 315, hideY: 734, ix: 315, iy: 660, stealthWeight: 0.9, checked: false },
-      { id: 'p_fortune_wagon', name: 'Behind Mystical Fortune Teller Caravan', roomId: 'carnival_midway', roomName: 'Carnival Midway & Games', type: 'fortune_wagon', x: 180, y: 625, w: 85, h: 50, hideX: 222, hideY: 650, ix: 222, iy: 580, stealthWeight: 1.0, checked: false },
+      { id: 'p_fortune_wagon', name: 'Behind Mystical Fortune Teller Caravan', roomId: 'carnival_midway', roomName: 'Carnival Midway & Games', type: 'fortune_wagon', x: 75, y: 625, w: 80, h: 45, hideX: 115, hideY: 647, ix: 175, iy: 647, stealthWeight: 1.0, checked: false },
 
       // 4. Bumper Cars & Retro Arcade (5 Spots)
       { id: 'p_bumper_red', name: 'Inside Turbo Red Bumper Car', roomId: 'arcade_arena', roomName: 'Bumper Cars & Retro Arcade', type: 'bumper_car_red', x: 980, y: 535, w: 85, h: 48, hideX: 1022, hideY: 559, ix: 1022, iy: 610, stealthWeight: 1.0, checked: false },
       { id: 'p_bumper_blue', name: 'Inside Cobalt Electric Bumper Car', roomId: 'arcade_arena', roomName: 'Bumper Cars & Retro Arcade', type: 'bumper_car_blue', x: 1180, y: 535, w: 85, h: 48, hideX: 1222, hideY: 559, ix: 1222, iy: 610, stealthWeight: 1.0, checked: false },
       { id: 'p_arcade_row', name: 'Behind Vintage 80s Arcade Cabinets', roomId: 'arcade_arena', roomName: 'Bumper Cars & Retro Arcade', type: 'arcade_cabinet', x: 980, y: 710, w: 95, h: 48, hideX: 1027, hideY: 734, ix: 1027, iy: 660, stealthWeight: 0.95, checked: false },
-      { id: 'p_prize_counter', name: 'Behind Arcade Ticket Redemption Counter', roomId: 'arcade_arena', roomName: 'Bumper Cars & Retro Arcade', type: 'redemption_counter', x: 1180, y: 710, w: 90, h: 48, hideX: 1225, hideY: 734, ix: 1225, iy: 660, stealthWeight: 0.9, checked: false },
-      { id: 'p_air_hockey', name: 'Behind Neon Air Hockey Table', roomId: 'arcade_arena', roomName: 'Bumper Cars & Retro Arcade', type: 'air_hockey', x: 1080, y: 625, w: 85, h: 48, hideX: 1122, hideY: 649, ix: 1122, iy: 580, stealthWeight: 0.95, checked: false },
+      { id: 'p_prize_counter', name: 'Behind Arcade Ticket Redemption Counter', roomId: 'arcade_arena', roomName: 'Bumper Cars & Retro Arcade', type: 'redemption_counter', x: 1200, y: 625, w: 80, h: 45, hideX: 1240, hideY: 647, ix: 1160, iy: 647, stealthWeight: 0.9, checked: false },
+      { id: 'p_air_hockey', name: 'Behind Neon Air Hockey Table', roomId: 'arcade_arena', roomName: 'Bumper Cars & Retro Arcade', type: 'air_hockey', x: 1070, y: 715, w: 80, h: 45, hideX: 1110, hideY: 737, ix: 1110, iy: 660, stealthWeight: 0.95, checked: false },
 
       // 5. Grand Clocktower Plaza & Gardens (5 Spots)
-      { id: 'p_clock_pavilion', name: 'Behind Grand Victorian Clocktower', roomId: 'wonder_gardens', roomName: 'Clocktower Plaza & Gardens', type: 'clocktower_base', x: 650, y: 70, w: 100, h: 55, hideX: 700, hideY: 97, ix: 700, iy: 150, stealthWeight: 1.2, checked: false },
-      { id: 'p_fountain_monument', name: 'Behind Central Tiered Dolphin Fountain', roomId: 'wonder_gardens', roomName: 'Clocktower Plaza & Gardens', type: 'park_fountain', x: 650, y: 300, w: 100, h: 55, hideX: 700, hideY: 327, ix: 700, iy: 380, stealthWeight: 1.1, checked: false },
-      { id: 'p_popcorn_vendor', name: 'Behind Golden Kettle Corn Cart', roomId: 'wonder_plaza', roomName: 'Clocktower Plaza & Gardens', type: 'popcorn_cart', x: 500, y: 440, w: 80, h: 45, hideX: 540, hideY: 462, ix: 540, iy: 510, stealthWeight: 0.95, checked: false },
-      { id: 'p_photo_kiosk', name: 'Inside Retro Polaroid Photo Booth', roomId: 'wonder_plaza', roomName: 'Clocktower Plaza & Gardens', type: 'photo_booth', x: 820, y: 440, w: 80, h: 48, hideX: 860, hideY: 464, ix: 860, iy: 510, stealthWeight: 0.9, checked: false },
-      { id: 'p_info_pagoda', name: 'Behind Park Map & Guest Services Pagoda', roomId: 'wonder_plaza', roomName: 'Clocktower Plaza & Gardens', type: 'info_kiosk', x: 500, y: 560, w: 85, h: 50, hideX: 542, hideY: 585, ix: 600, iy: 585, stealthWeight: 1.0, checked: false }
+      { id: 'p_clock_pavilion', name: 'Behind Grand Victorian Clocktower', roomId: 'wonder_gardens', roomName: 'Clocktower Plaza & Gardens', type: 'clocktower_base', x: 640, y: 65, w: 85, h: 50, hideX: 682, hideY: 90, ix: 682, iy: 140, stealthWeight: 1.2, checked: false },
+      { id: 'p_fountain_monument', name: 'Behind Central Tiered Dolphin Fountain', roomId: 'wonder_gardens', roomName: 'Clocktower Plaza & Gardens', type: 'park_fountain', x: 520, y: 260, w: 85, h: 50, hideX: 562, hideY: 285, ix: 562, iy: 335, stealthWeight: 1.1, checked: false },
+      { id: 'p_popcorn_vendor', name: 'Behind Golden Kettle Corn Cart', roomId: 'wonder_plaza', roomName: 'Clocktower Plaza & Gardens', type: 'popcorn_cart', x: 480, y: 440, w: 75, h: 42, hideX: 517, hideY: 461, ix: 517, iy: 505, stealthWeight: 0.95, checked: false },
+      { id: 'p_photo_kiosk', name: 'Inside Retro Polaroid Photo Booth', roomId: 'wonder_plaza', roomName: 'Clocktower Plaza & Gardens', type: 'photo_booth', x: 835, y: 440, w: 75, h: 45, hideX: 872, hideY: 462, ix: 872, iy: 505, stealthWeight: 0.9, checked: false },
+      { id: 'p_info_pagoda', name: 'Behind Park Map & Guest Services Pagoda', roomId: 'wonder_plaza', roomName: 'Clocktower Plaza & Gardens', type: 'info_kiosk', x: 480, y: 560, w: 75, h: 45, hideX: 517, hideY: 582, ix: 570, iy: 582, stealthWeight: 1.0, checked: false }
     ];
 
     // Prominent Non-Hiding Decoy Obstacles (Solid cover, realistic, cannot be hidden in or scanned!)
     this.decorProps = [
-      { type: 'decoy_ship', name: 'Grand Pirate Ship Bow Structure', roomId: 'thrill_lagoon', x: 1070, y: 150, w: 100, h: 52 },
-      { type: 'decoy_ticket_booth', name: 'Amusement Castle Ticket Booth', roomId: 'wonder_plaza', x: 810, y: 560, w: 75, h: 50 },
-      { type: 'decoy_statue', name: 'Giant Bronze Mascot Statue', roomId: 'wonder_gardens', x: 670, y: 190, w: 60, h: 60 },
-      { type: 'decoy_charging_bay', name: 'Bumper Car Substation Generator', roomId: 'arcade_arena', x: 1180, y: 625, w: 85, h: 50 },
+      { type: 'decoy_ship', name: 'Grand Pirate Ship Bow Structure', roomId: 'thrill_lagoon', x: 1080, y: 65, w: 80, h: 45 },
+      { type: 'decoy_ticket_booth', name: 'Amusement Castle Ticket Booth', roomId: 'wonder_plaza', x: 835, y: 560, w: 70, h: 45 },
+      { type: 'decoy_statue', name: 'Giant Bronze Mascot Statue', roomId: 'wonder_gardens', x: 650, y: 260, w: 60, h: 60 },
+      { type: 'decoy_charging_bay', name: 'Bumper Car Substation Generator', roomId: 'arcade_arena', x: 1200, y: 715, w: 75, h: 48 },
       { type: 'decoy_popcorn', name: 'Vintage Popcorn Wagon Trailer', roomId: 'carnival_midway', x: 180, y: 535, w: 75, h: 45 },
-      { type: 'bench', roomId: 'wonder_plaza', x: 660, y: 610, w: 80, h: 28 },
+      { type: 'bench', roomId: 'wonder_plaza', x: 580, y: 750, w: 60, h: 22 },
       { type: 'pillar', roomId: 'wonder_plaza', x: 520, y: 730, w: 32, h: 32 }
     ];
 
@@ -761,20 +781,27 @@ class ApartmentMap {
     ];
 
     this.navNodes = {
-      plaza_spawn: { x: 680, y: 710, neighbors: ['plaza_bot', 'plaza_mid', 'midway_door', 'arcade_door'] },
+      plaza_spawn: { x: 680, y: 710, neighbors: ['plaza_bot', 'plaza_south', 'midway_door', 'arcade_door'] },
       plaza_bot: { x: 680, y: 760, neighbors: ['plaza_spawn'] },
-      plaza_mid: { x: 680, y: 500, neighbors: ['plaza_spawn', 'plaza_north', 'midway_mid', 'arcade_mid'] },
-      plaza_north: { x: 680, y: 240, neighbors: ['plaza_mid', 'fantasy_mid', 'thrill_mid'] },
-      fantasy_mid: { x: 360, y: 240, neighbors: ['plaza_north', 'fantasy_south'] },
-      fantasy_south: { x: 360, y: 493, neighbors: ['fantasy_mid', 'midway_north'] },
-      midway_north: { x: 360, y: 530, neighbors: ['fantasy_south', 'midway_mid'] },
-      midway_mid: { x: 360, y: 640, neighbors: ['midway_north', 'midway_door'] },
-      midway_door: { x: 453, y: 650, neighbors: ['midway_mid', 'plaza_spawn', 'plaza_mid'] },
-      thrill_mid: { x: 1080, y: 240, neighbors: ['plaza_north', 'thrill_south'] },
-      thrill_south: { x: 1080, y: 493, neighbors: ['thrill_mid', 'arcade_north'] },
-      arcade_north: { x: 1010, y: 530, neighbors: ['thrill_south', 'arcade_mid'] },
-      arcade_mid: { x: 1010, y: 625, neighbors: ['arcade_north', 'arcade_door'] },
-      arcade_door: { x: 933, y: 650, neighbors: ['arcade_mid', 'plaza_spawn', 'plaza_mid'] }
+      plaza_south: { x: 680, y: 560, neighbors: ['plaza_spawn', 'plaza_mid', 'midway_door', 'arcade_door'] },
+      plaza_mid: { x: 680, y: 380, neighbors: ['plaza_south', 'plaza_west', 'plaza_east'] },
+      plaza_west: { x: 550, y: 380, neighbors: ['plaza_mid', 'fantasy_portal'] },
+      plaza_east: { x: 810, y: 380, neighbors: ['plaza_mid', 'thrill_portal'] },
+      clock_node: { x: 680, y: 140, neighbors: ['fantasy_portal', 'thrill_portal'] },
+      fantasy_portal: { x: 453, y: 220, neighbors: ['plaza_west', 'clock_node', 'fantasy_mid'] },
+      fantasy_mid: { x: 220, y: 220, neighbors: ['fantasy_portal', 'fantasy_north', 'fantasy_door'] },
+      fantasy_north: { x: 220, y: 140, neighbors: ['fantasy_mid'] },
+      fantasy_door: { x: 220, y: 493, neighbors: ['fantasy_mid', 'midway_doorway'] },
+      midway_doorway: { x: 220, y: 530, neighbors: ['fantasy_door', 'midway_mid'] },
+      midway_mid: { x: 220, y: 640, neighbors: ['midway_doorway', 'midway_door'] },
+      midway_door: { x: 453, y: 650, neighbors: ['midway_mid', 'plaza_south', 'plaza_spawn'] },
+      thrill_portal: { x: 933, y: 220, neighbors: ['plaza_east', 'clock_node', 'thrill_mid'] },
+      thrill_mid: { x: 1120, y: 220, neighbors: ['thrill_portal', 'thrill_north', 'thrill_door'] },
+      thrill_north: { x: 1120, y: 140, neighbors: ['thrill_mid'] },
+      thrill_door: { x: 1120, y: 493, neighbors: ['thrill_mid', 'arcade_doorway'] },
+      arcade_doorway: { x: 1120, y: 530, neighbors: ['thrill_door', 'arcade_mid'] },
+      arcade_mid: { x: 1120, y: 630, neighbors: ['arcade_doorway', 'arcade_door'] },
+      arcade_door: { x: 933, y: 650, neighbors: ['arcade_mid', 'plaza_south', 'plaza_spawn'] }
     };
 
     this.roomHubNode = {
