@@ -90,7 +90,12 @@ class ApartmentRenderer {
         plant: '#15803d',
         highlight: '#173061',
         checkedBadgeBg: 'rgba(23, 44, 84, 0.85)',
-        checkedBadgeText: '#f6efe2'
+        checkedBadgeText: '#f6efe2',
+        museumMarble: '#f8fafc',
+        museumMarbleLine: 'rgba(100, 116, 139, 0.16)',
+        museumRed: '#881337',
+        museumGreen: '#064e3b',
+        carouselFloor: '#fdf2f8'
       };
     }
 
@@ -134,7 +139,12 @@ class ApartmentRenderer {
       plant: '#15803d',
       highlight: '#f6efe2',
       checkedBadgeBg: 'rgba(11, 22, 44, 0.9)',
-      checkedBadgeText: '#eadbc2'
+      checkedBadgeText: '#eadbc2',
+      museumMarble: '#0f172a',
+      museumMarbleLine: 'rgba(148, 163, 184, 0.12)',
+      museumRed: '#3b0717',
+      museumGreen: '#062d23',
+      carouselFloor: '#241026'
     };
   }
 
@@ -437,6 +447,10 @@ class ApartmentRenderer {
       if (r.floor === 'tile') ctx.fillStyle = p.tile;
       else if (r.floor === 'tile_warm') ctx.fillStyle = p.tileWarm;
       else if (r.floor === 'mall_terrazzo') ctx.fillStyle = p.mallTerrazzo;
+      else if (r.floor === 'museum_marble') ctx.fillStyle = p.museumMarble;
+      else if (r.floor === 'museum_carpet_red') ctx.fillStyle = p.museumRed;
+      else if (r.floor === 'museum_carpet_green') ctx.fillStyle = p.museumGreen;
+      else if (r.floor === 'carousel_floor') ctx.fillStyle = p.carouselFloor;
       else if (r.floor === 'park_grass') ctx.fillStyle = p.parkGrass;
       else if (r.floor === 'carnival_deck') ctx.fillStyle = p.carnivalDeck;
       else if (r.floor === 'amusement_tile') ctx.fillStyle = p.amusementTile;
@@ -474,6 +488,43 @@ class ApartmentRenderer {
         ctx.strokeStyle = this.theme === 'dark' ? 'rgba(246, 239, 226, 0.14)' : 'rgba(23, 44, 84, 0.14)';
         ctx.lineWidth = 4;
         ctx.strokeRect(r.x + 12, r.y + 12, r.w - 24, r.h - 24);
+      } else if (r.floor === 'museum_marble') {
+        // Polished Grand Marble Tiles with Inlay Diamonds
+        ctx.strokeStyle = p.museumMarbleLine;
+        ctx.lineWidth = 1.2;
+        const size = 52;
+        for (let tx = r.x; tx <= r.x + r.w; tx += size) {
+          ctx.beginPath(); ctx.moveTo(tx, r.y); ctx.lineTo(tx, r.y + r.h); ctx.stroke();
+        }
+        for (let ty = r.y; ty <= r.y + r.h; ty += size) {
+          ctx.beginPath(); ctx.moveTo(r.x, ty); ctx.lineTo(r.x + r.w, ty); ctx.stroke();
+        }
+        // Gold corner accents
+        ctx.fillStyle = this.theme === 'dark' ? 'rgba(217, 119, 6, 0.25)' : 'rgba(180, 83, 9, 0.2)';
+        for (let tx = r.x; tx <= r.x + r.w; tx += size) {
+          for (let ty = r.y; ty <= r.y + r.h; ty += size) {
+            ctx.fillRect(tx - 3, ty - 3, 6, 6);
+          }
+        }
+      } else if (r.floor === 'museum_carpet_red' || r.floor === 'museum_carpet_green') {
+        // Velvet Gallery Carpet with Gold Inset Border
+        ctx.strokeStyle = this.theme === 'dark' ? 'rgba(234, 179, 8, 0.22)' : 'rgba(180, 83, 9, 0.28)';
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(r.x + 10, r.y + 10, r.w - 20, r.h - 20);
+        ctx.lineWidth = 1;
+        ctx.strokeRect(r.x + 14, r.y + 14, r.w - 28, r.h - 28);
+      } else if (r.floor === 'carousel_floor') {
+        // Grand Carousel concentric rings & radial wedges
+        const ccx = r.x + r.w / 2;
+        const ccy = r.y + r.h / 2;
+        ctx.strokeStyle = this.theme === 'dark' ? 'rgba(244, 114, 182, 0.15)' : 'rgba(219, 39, 119, 0.18)';
+        ctx.lineWidth = 2;
+        for (let cr = 40; cr < Math.min(r.w, r.h) / 2; cr += 35) {
+          ctx.beginPath(); ctx.arc(ccx, ccy, cr, 0, Math.PI * 2); ctx.stroke();
+        }
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+          ctx.beginPath(); ctx.moveTo(ccx, ccy); ctx.lineTo(ccx + Math.cos(a) * (r.w/2), ccy + Math.sin(a) * (r.h/2)); ctx.stroke();
+        }
       } else if (r.floor === 'park_grass') {
         // Natural lawn with subtle stipples
         ctx.fillStyle = this.theme === 'dark' ? 'rgba(34, 197, 94, 0.10)' : 'rgba(22, 101, 52, 0.08)';
@@ -965,6 +1016,139 @@ class ApartmentRenderer {
       ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(prop.x + 16, prop.y + prop.h, 8, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.arc(prop.x + prop.w - 16, prop.y + prop.h, 8, 0, Math.PI * 2); ctx.stroke();
+    } else if (prop.type === 'museum_fountain') {
+      // Classical Tiered White Marble Water Fountain
+      const fcx = prop.x + prop.w / 2;
+      const fcy = prop.y + prop.h / 2;
+      ctx.fillStyle = this.theme === 'dark' ? '#1e293b' : '#f1f5f9';
+      ctx.beginPath(); ctx.ellipse(fcx, fcy, prop.w / 2, prop.h / 2, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath(); ctx.ellipse(fcx, fcy, prop.w / 2 - 8, prop.h / 2 - 6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.ellipse(fcx, fcy, 14, 10, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath(); ctx.arc(fcx, fcy, 4, 0, Math.PI * 2); ctx.fill();
+    } else if (prop.type === 'museum_column') {
+      // Fluted Classical Ionic Column
+      const cx = prop.x + prop.w / 2;
+      const cy = prop.y + prop.h / 2;
+      ctx.fillStyle = this.theme === 'dark' ? '#334155' : '#e2e8f0';
+      this.roundRect(ctx, prop.x, prop.y, prop.w, prop.h, 6);
+      ctx.fill();
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = this.theme === 'dark' ? '#1e293b' : '#f8fafc';
+      ctx.beginPath(); ctx.arc(cx, cy, prop.w / 2 - 4, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = '#cbd5e1';
+      ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI * 2); ctx.fill();
+    } else if (prop.type === 'velvet_stanchions') {
+      // Brass Stanchions with Velvet Rope
+      const sy = prop.y + prop.h / 2;
+      ctx.strokeStyle = '#e11d48';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(prop.x + 8, sy);
+      ctx.quadraticCurveTo(prop.x + prop.w / 2, sy + 6, prop.x + prop.w - 8, sy);
+      ctx.stroke();
+      [prop.x + 8, prop.x + prop.w - 8].forEach(px => {
+        ctx.fillStyle = '#ca8a04';
+        ctx.beginPath(); ctx.arc(px, sy, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath(); ctx.arc(px, sy, 3.5, 0, Math.PI * 2); ctx.fill();
+      });
+    } else if (prop.type === 'server_rack') {
+      // Museum Security Server & Network Rack
+      ctx.fillStyle = '#0f172a';
+      this.roundRect(ctx, prop.x, prop.y, prop.w, prop.h, 4);
+      ctx.fill();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(prop.x + 2, prop.y + 2, prop.w - 4, prop.h - 4);
+      const leds = ['#22c55e', '#38bdf8', '#facc15', '#22c55e'];
+      for (let i = 0; i < 4; i++) {
+        ctx.fillStyle = leds[i];
+        ctx.beginPath(); ctx.arc(prop.x + 8 + i * 8, prop.y + 6, 2, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1;
+      for (let ly = prop.y + 12; ly < prop.y + prop.h - 4; ly += 5) {
+        ctx.beginPath(); ctx.moveTo(prop.x + 6, ly); ctx.lineTo(prop.x + prop.w - 6, ly); ctx.stroke();
+      }
+    } else if (prop.type === 'park_water_fountain') {
+      // Tiered Stone Dolphin Water Fountain
+      const pcx = prop.x + prop.w / 2;
+      const pcy = prop.y + prop.h / 2;
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath(); ctx.ellipse(pcx, pcy, prop.w / 2, prop.h / 2, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.fillStyle = '#0369a1';
+      ctx.beginPath(); ctx.ellipse(pcx, pcy, prop.w / 3, prop.h / 3, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#e2e8f0';
+      ctx.beginPath(); ctx.arc(pcx, pcy, 7, 0, Math.PI * 2); ctx.fill();
+    } else if (prop.type === 'ferris_support_leg') {
+      // Ferris Wheel Heavy Steel A-Frame Leg
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, prop.x, prop.y, prop.w, prop.h, 4);
+      ctx.fill();
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(prop.x + 2, prop.y + 2, prop.w - 4, prop.h - 4);
+      ctx.beginPath();
+      ctx.moveTo(prop.x + 3, prop.y + 3); ctx.lineTo(prop.x + prop.w - 3, prop.y + prop.h - 3);
+      ctx.moveTo(prop.x + prop.w - 3, prop.y + 3); ctx.lineTo(prop.x + 3, prop.y + prop.h - 3);
+      ctx.stroke();
+    } else if (prop.type === 'park_lamp_post') {
+      // Victorian Wrought-Iron Park Lamp Post
+      const lcx = prop.x + prop.w / 2;
+      const lcy = prop.y + prop.h / 2;
+      ctx.fillStyle = 'rgba(253, 224, 71, 0.18)';
+      ctx.beginPath(); ctx.arc(lcx, lcy, 18, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath(); ctx.arc(lcx, lcy, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath(); ctx.arc(lcx, lcy, 4, 0, Math.PI * 2); ctx.fill();
+    } else if (prop.type === 'flowerbed_prop') {
+      // Ornamental Curved Brick Flowerbed
+      ctx.fillStyle = '#78350f';
+      this.roundRect(ctx, prop.x, prop.y, prop.w, prop.h, 6);
+      ctx.fill();
+      ctx.strokeStyle = '#b45309';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      const flowerColors = ['#f43f5e', '#ec4899', '#facc15', '#a855f7', '#38bdf8'];
+      for (let fx = prop.x + 8, i = 0; fx < prop.x + prop.w - 6; fx += 13, i++) {
+        ctx.fillStyle = flowerColors[i % flowerColors.length];
+        ctx.beginPath(); ctx.arc(fx, prop.y + prop.h / 2, 4.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(fx, prop.y + prop.h / 2, 1.5, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (prop.type === 'decoy_pretzel_cart') {
+      // Festive Bavarian Pretzel Cart Stand
+      ctx.fillStyle = '#78350f';
+      this.roundRect(ctx, prop.x, prop.y, prop.w, prop.h, 6);
+      ctx.fill();
+      const cW = prop.w / 6;
+      for (let i = 0; i < 6; i++) {
+        ctx.fillStyle = (i % 2 === 0) ? '#0284c7' : '#ffffff';
+        ctx.fillRect(prop.x + i * cW, prop.y, cW, 10);
+      }
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(prop.x + 10, prop.y + 14, prop.w - 20, prop.h - 22);
+      ctx.strokeStyle = '#ca8a04';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(prop.x + 10, prop.y + 14, prop.w - 20, prop.h - 22);
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(prop.x + 4, prop.y + prop.h - 3, 12, 3);
+      ctx.fillRect(prop.x + prop.w - 16, prop.y + prop.h - 3, 12, 3);
     } else {
       // Architectural solid fallback
       ctx.fillStyle = '#334155';
@@ -2724,13 +2908,13 @@ class ApartmentRenderer {
       ctx.beginPath(); ctx.arc(fcx, fcy, 10, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#ffffff';
       ctx.beginPath(); ctx.arc(fcx - 3, fcy - 3, 3, 0, Math.PI * 2); ctx.fill();
-    } else if (spot.type === 'bumper_car_red' || spot.type === 'bumper_car_blue') {
+    } else if (spot.type === 'bumper_car_red' || spot.type === 'bumper_car_blue' || spot.type === 'bumper_car_gold') {
       // Electric bumper car top-down
       const bcx = spot.x + spot.w / 2;
       const bcy = spot.y + spot.h / 2;
       ctx.fillStyle = '#090d16';
       ctx.beginPath(); ctx.ellipse(bcx, bcy, spot.w / 2, spot.h / 2, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = spot.type.includes('red') ? '#dc2626' : '#2563eb';
+      ctx.fillStyle = spot.type.includes('red') ? '#dc2626' : (spot.type.includes('gold') ? '#f59e0b' : '#2563eb');
       ctx.beginPath(); ctx.ellipse(bcx, bcy, spot.w / 2 - 5, spot.h / 2 - 5, 0, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#0f172a';
       ctx.beginPath(); ctx.arc(bcx, bcy + 2, 8, 0, Math.PI * 2); ctx.fill();
@@ -2738,6 +2922,432 @@ class ApartmentRenderer {
       ctx.beginPath(); ctx.arc(bcx, bcy - 5, 5, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#facc15';
       ctx.beginPath(); ctx.arc(bcx, bcy + spot.h / 2 - 6, 3.5, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'tire_barrier') {
+      // Impact safety rubber tires barrier
+      const numTires = Math.max(2, Math.floor(spot.w / 24));
+      const tW = spot.w / numTires;
+      for (let i = 0; i < numTires; i++) {
+        const tx = spot.x + i * tW + tW / 2;
+        const ty = spot.y + spot.h / 2;
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath(); ctx.ellipse(tx, ty, tW / 2 - 1, spot.h / 2 - 2, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = '#334155';
+        ctx.beginPath(); ctx.arc(tx, ty, 4, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (spot.type === 'sculpture_statue' || spot.type === 'sculpture_winged' || spot.type === 'sculpture_roman') {
+      // Classical Gallery Marble Sculptures & Winged Statues
+      const scx = spot.x + spot.w / 2;
+      const scy = spot.y + spot.h / 2;
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(spot.x + 3, spot.y + 3, spot.w - 6, spot.h - 6);
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath(); ctx.arc(scx, scy, Math.min(spot.w, spot.h) / 2 - 7, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      if (spot.type === 'sculpture_winged') {
+        ctx.fillStyle = '#e2e8f0';
+        ctx.beginPath(); ctx.ellipse(scx - 14, scy, 10, 5, -0.4, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(scx + 14, scy, 10, 5, 0.4, 0, Math.PI * 2); ctx.fill();
+      } else if (spot.type === 'sculpture_roman') {
+        ctx.fillStyle = '#ca8a04';
+        ctx.beginPath(); ctx.arc(scx, scy, 5, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (spot.type === 'glass_pedestal') {
+      // Museum glass display case with illuminated artifact
+      ctx.fillStyle = '#0f172a';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.22)';
+      this.roundRect(ctx, spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8, 3);
+      ctx.fill();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8);
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath(); ctx.arc(spot.x + spot.w / 2, spot.y + spot.h / 2, 6, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'gallery_partition') {
+      // Freestanding gallery partition wall with framed paintings
+      ctx.fillStyle = '#334155';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 3);
+      ctx.fill();
+      const numFrames = Math.max(2, Math.floor(spot.w / 35));
+      const fW = (spot.w - 12) / numFrames;
+      const artPalette = ['#e11d48', '#0284c7', '#ca8a04', '#16a34a'];
+      for (let i = 0; i < numFrames; i++) {
+        const fx = spot.x + 6 + i * fW;
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(fx, spot.y + 2, fW - 4, 4);
+        ctx.fillRect(fx, spot.y + spot.h - 6, fW - 4, 4);
+        ctx.fillStyle = artPalette[i % artPalette.length];
+        ctx.fillRect(fx + 2, spot.y + 3, fW - 8, 2);
+        ctx.fillRect(fx + 2, spot.y + spot.h - 5, fW - 8, 2);
+      }
+    } else if (spot.type === 'museum_curtain') {
+      // Velvet gallery privacy drape
+      ctx.fillStyle = '#881337';
+      for (let cx = spot.x; cx < spot.x + spot.w; cx += 14) {
+        ctx.beginPath();
+        ctx.ellipse(cx + 7, spot.y + spot.h / 2, 8, spot.h / 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#ca8a04';
+      ctx.fillRect(spot.x, spot.y + spot.h / 2 - 2, 6, 4);
+      ctx.fillRect(spot.x + spot.w - 6, spot.y + spot.h / 2 - 2, 6, 4);
+    } else if (spot.type === 'artist_easel') {
+      // Studio easel with canvas painting
+      ctx.fillStyle = '#78350f';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      ctx.fillStyle = '#fef08a';
+      this.roundRect(ctx, spot.x + 6, spot.y + 4, spot.w - 12, spot.h - 14, 3);
+      ctx.fill();
+      ctx.fillStyle = '#2563eb';
+      ctx.beginPath(); ctx.ellipse(spot.x + spot.w / 2, spot.y + spot.h / 2 - 3, 10, 4, -0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ca8a04';
+      ctx.fillRect(spot.x + 8, spot.y + spot.h - 8, spot.w - 16, 4);
+    } else if (spot.type === 'antique_chest') {
+      // Baroque ornamental antique chest
+      ctx.fillStyle = '#451a03';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 5);
+      ctx.fill();
+      ctx.strokeStyle = '#ca8a04';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(spot.x + 3, spot.y + 3, spot.w - 6, spot.h - 6);
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath(); ctx.arc(spot.x + spot.w / 2, spot.y + spot.h / 2, 4.5, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'museum_bench') {
+      // Gallery cushioned leather viewing bench
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.fillStyle = '#475569';
+      this.roundRect(ctx, spot.x + 4, spot.y + 3, spot.w - 8, spot.h - 6, 4);
+      ctx.fill();
+      ctx.fillStyle = '#94a3b8';
+      for (let bx = spot.x + 14; bx < spot.x + spot.w - 10; bx += 16) {
+        ctx.beginPath(); ctx.arc(bx, spot.y + spot.h / 2, 2.5, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (spot.type === 'archive_safe') {
+      // Fortified steel archival vault safe
+      ctx.fillStyle = '#0f172a';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(spot.x + 3, spot.y + 3, spot.w - 6, spot.h - 6);
+      const sdcx = spot.x + spot.w / 2;
+      const sdcy = spot.y + spot.h / 2;
+      ctx.fillStyle = '#ca8a04';
+      ctx.beginPath(); ctx.arc(sdcx, sdcy, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(sdcx, sdcy, 4, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'flat_file') {
+      // Architectural multi-drawer flat file
+      ctx.fillStyle = '#334155';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 1.5;
+      for (let dy = spot.y + 8; dy < spot.y + spot.h - 4; dy += 9) {
+        ctx.beginPath(); ctx.moveTo(spot.x + 6, dy); ctx.lineTo(spot.x + spot.w - 6, dy); ctx.stroke();
+        ctx.fillStyle = '#ca8a04';
+        ctx.fillRect(spot.x + spot.w / 2 - 8, dy - 2, 16, 3);
+      }
+    } else if (spot.type === 'rare_bookcase') {
+      // Antique mahogany rare bookcase
+      ctx.fillStyle = '#451a03';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      const bColors = ['#dc2626', '#2563eb', '#ca8a04', '#16a34a', '#9333ea'];
+      for (let bx = spot.x + 6, i = 0; bx < spot.x + spot.w - 10; bx += 9, i++) {
+        ctx.fillStyle = bColors[i % bColors.length];
+        ctx.fillRect(bx, spot.y + 4, 7, spot.h - 8);
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(bx + 2, spot.y + spot.h / 2 - 2, 3, 4);
+      }
+    } else if (spot.type === 'restoration_desk') {
+      // Conservator restoration desk with magnifying lamp & tools
+      ctx.fillStyle = '#78350f';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      ctx.fillStyle = '#fef3c7';
+      ctx.fillRect(spot.x + 12, spot.y + 6, spot.w - 36, spot.h - 12);
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath(); ctx.arc(spot.x + spot.w - 14, spot.y + spot.h / 2, 7, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'sarcophagus') {
+      // Ancient Egyptian Pharaoh gilded sarcophagus
+      const scx = spot.x + spot.w / 2;
+      const scy = spot.y + spot.h / 2;
+      ctx.fillStyle = '#ca8a04';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 12);
+      ctx.fill();
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      const numStripes = 6;
+      for (let i = 0; i < numStripes; i++) {
+        ctx.fillStyle = (i % 2 === 0) ? '#1e3a8a' : '#facc15';
+        ctx.fillRect(spot.x + 6 + i * ((spot.w - 12) / numStripes), spot.y + 6, (spot.w - 12) / numStripes - 1, 8);
+      }
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath(); ctx.arc(scx, scy + 4, 6, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'golden_idol_case') {
+      // High-security display holding golden idol
+      ctx.fillStyle = '#0f172a';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.7)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(spot.x + 4, spot.y + 4); ctx.lineTo(spot.x + spot.w - 4, spot.y + spot.h - 4);
+      ctx.moveTo(spot.x + spot.w - 4, spot.y + 4); ctx.lineTo(spot.x + 4, spot.y + spot.h - 4);
+      ctx.stroke();
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath(); ctx.arc(spot.x + spot.w / 2, spot.y + spot.h / 2, 8, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'curved_reception') {
+      // Sleek curved reception desk
+      ctx.fillStyle = '#451a03';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 8);
+      ctx.fill();
+      ctx.fillStyle = '#f8fafc';
+      this.roundRect(ctx, spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8, 6);
+      ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(spot.x + spot.w / 2 - 10, spot.y + 6, 20, 6);
+    } else if (spot.type === 'kiosk_prop') {
+      // Multimedia interactive touchscreen kiosk
+      const kcx = spot.x + spot.w / 2;
+      const kcy = spot.y + spot.h / 2;
+      ctx.fillStyle = '#0f172a';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.fillStyle = '#38bdf8';
+      this.roundRect(ctx, spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8, 4);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('MAP', kcx, kcy);
+    } else if (spot.type === 'cloakroom_rack') {
+      // Museum cloakroom hanger rack
+      ctx.fillStyle = '#334155';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      const coatColors = ['#1e293b', '#78350f', '#064e3b', '#881337'];
+      for (let cx = spot.x + 8, i = 0; cx < spot.x + spot.w - 8; cx += 12, i++) {
+        ctx.fillStyle = coatColors[i % coatColors.length];
+        this.roundRect(ctx, cx, spot.y + 4, 8, spot.h - 8, 2);
+        ctx.fill();
+      }
+    } else if (spot.type === 'surveillance_desk') {
+      // CCTV multi-monitor security console
+      ctx.fillStyle = '#0f172a';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      const monCount = Math.max(2, Math.floor(spot.w / 30));
+      const mW = (spot.w - 8) / monCount;
+      for (let i = 0; i < monCount; i++) {
+        ctx.fillStyle = '#064e3b';
+        ctx.fillRect(spot.x + 4 + i * mW, spot.y + 4, mW - 3, 10);
+        ctx.fillStyle = '#22c55e';
+        ctx.fillRect(spot.x + 6 + i * mW, spot.y + 6, 4, 3);
+      }
+    } else if (spot.type === 'security_lockers') {
+      // Grid of visitor security lockers
+      ctx.fillStyle = '#475569';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 1;
+      const numLocks = Math.max(3, Math.floor(spot.w / 18));
+      const lW = spot.w / numLocks;
+      for (let i = 0; i < numLocks; i++) {
+        ctx.strokeRect(spot.x + i * lW + 1, spot.y + 2, lW - 2, spot.h - 4);
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(spot.x + i * lW + lW / 2 - 1, spot.y + spot.h / 2, 2, 3);
+      }
+    } else if (spot.type === 'carousel_organ') {
+      // Grand Wurlitzer military band organ
+      ctx.fillStyle = '#831843';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.fillStyle = '#facc15';
+      for (let px = spot.x + 10; px < spot.x + spot.w - 10; px += 8) {
+        ctx.fillRect(px, spot.y + 6, 5, spot.h - 14);
+      }
+      ctx.strokeStyle = '#ca8a04';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8);
+    } else if (spot.type === 'carousel_horse') {
+      // Carved carousel horse with mounting pole
+      const hcx = spot.x + spot.w / 2;
+      const hcy = spot.y + spot.h / 2;
+      ctx.fillStyle = spot.name.includes('Gold') ? '#ca8a04' : '#0284c7';
+      this.roundRect(ctx, spot.x + 6, spot.y + 8, spot.w - 12, spot.h - 16, 6);
+      ctx.fill();
+      ctx.fillStyle = '#be123c';
+      this.roundRect(ctx, hcx - 12, hcy - 8, 24, 16, 3);
+      ctx.fill();
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath(); ctx.arc(hcx, hcy, 4.5, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'swan_chariot') {
+      // Enchanted carved swan chariot
+      const scx = spot.x + spot.w / 2;
+      const scy = spot.y + spot.h / 2;
+      ctx.fillStyle = '#f8fafc';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 10);
+      ctx.fill();
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#9f1239';
+      this.roundRect(ctx, spot.x + 10, spot.y + 8, spot.w - 20, spot.h - 16, 5);
+      ctx.fill();
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath(); ctx.arc(spot.x + 6, scy, 4, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'ride_podium') {
+      // Ride operator control podium
+      ctx.fillStyle = '#1e293b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(spot.x + 4, spot.y + 3, spot.w - 8, 4);
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath(); ctx.arc(spot.x + 14, spot.y + spot.h / 2 + 2, 5, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'park_clocktower') {
+      // Sunburst park clocktower
+      const pcx = spot.x + spot.w / 2;
+      const pcy = spot.y + spot.h / 2;
+      ctx.fillStyle = '#334155';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.strokeStyle = '#ca8a04';
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(spot.x + 3, spot.y + 3, spot.w - 6, spot.h - 6);
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath(); ctx.arc(pcx, pcy, 12, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(pcx, pcy); ctx.lineTo(pcx, pcy - 8);
+      ctx.moveTo(pcx, pcy); ctx.lineTo(pcx + 5, pcy);
+      ctx.stroke();
+    } else if (spot.type === 'topiary_hedge' || spot.type === 'garden_hedge') {
+      // Trimmed topiary bear or rose garden hedge
+      ctx.fillStyle = '#14532d';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 8);
+      ctx.fill();
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#16a34a';
+      const step = 14;
+      for (let hx = spot.x + 8; hx < spot.x + spot.w - 6; hx += step) {
+        for (let hy = spot.y + 8; hy < spot.y + spot.h - 6; hy += step) {
+          ctx.beginPath(); ctx.arc(hx, hy, 3.5, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    } else if (spot.type === 'park_pergola') {
+      // Shaded Victorian park pergola
+      ctx.fillStyle = '#451a03';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 5);
+      ctx.fill();
+      ctx.strokeStyle = '#ca8a04';
+      ctx.lineWidth = 2;
+      for (let px = spot.x + 6; px < spot.x + spot.w - 4; px += 10) {
+        ctx.beginPath(); ctx.moveTo(px, spot.y + 4); ctx.lineTo(px, spot.y + spot.h - 4); ctx.stroke();
+      }
+    } else if (spot.type === 'ferris_gondola') {
+      // Ferris wheel enclosed observation gondola
+      ctx.fillStyle = '#dc2626';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 10);
+      ctx.fill();
+      ctx.fillStyle = '#38bdf8';
+      this.roundRect(ctx, spot.x + 8, spot.y + 8, spot.w - 16, spot.h - 16, 6);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(spot.x + 8, spot.y + 8, spot.w - 16, spot.h - 16);
+    } else if (spot.type === 'boarding_ramp') {
+      // Steel diamond-plate boarding ramp
+      ctx.fillStyle = '#334155';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 4);
+      ctx.fill();
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(spot.x + 2, spot.y + 2, spot.w - 4, spot.h - 4);
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 1;
+      for (let rx = spot.x + 8; rx < spot.x + spot.w - 6; rx += 8) {
+        ctx.beginPath(); ctx.moveTo(rx, spot.y + 4); ctx.lineTo(rx, spot.y + spot.h - 4); ctx.stroke();
+      }
+    } else if (spot.type === 'ticket_kiosk') {
+      // Wonderland plaza ticket kiosk
+      ctx.fillStyle = '#0284c7';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      const numAwnings = 5;
+      const aW = spot.w / numAwnings;
+      for (let i = 0; i < numAwnings; i++) {
+        ctx.fillStyle = (i % 2 === 0) ? '#f43f5e' : '#ffffff';
+        ctx.fillRect(spot.x + i * aW, spot.y, aW, 8);
+      }
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(spot.x + 8, spot.y + 14, spot.w - 16, spot.h - 20);
+    } else if (spot.type === 'souvenir_cart') {
+      // Plush souvenir cart with toys
+      ctx.fillStyle = '#7c2d12';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 5);
+      ctx.fill();
+      const toyColors = ['#f43f5e', '#38bdf8', '#facc15', '#a855f7'];
+      for (let tx = spot.x + 10, i = 0; tx < spot.x + spot.w - 8; tx += 14, i++) {
+        ctx.fillStyle = toyColors[i % toyColors.length];
+        ctx.beginPath(); ctx.arc(tx, spot.y + spot.h / 2, 5.5, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (spot.type === 'carnival_booth') {
+      // Classic carnival game booth (ring toss / balloon dart)
+      ctx.fillStyle = '#991b1b';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 5);
+      ctx.fill();
+      const cStripes = 6;
+      const csW = spot.w / cStripes;
+      for (let i = 0; i < cStripes; i++) {
+        ctx.fillStyle = (i % 2 === 0) ? '#ef4444' : '#ffffff';
+        ctx.fillRect(spot.x + i * csW, spot.y, csW, 9);
+      }
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(spot.x + 6, spot.y + 14, spot.w - 12, spot.h - 18);
+    } else if (spot.type === 'snack_wagon') {
+      // Fairground snack wagon (cotton candy & popcorn)
+      ctx.fillStyle = '#db2777';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      this.roundRect(ctx, spot.x + 8, spot.y + 6, spot.w - 16, spot.h - 16, 4);
+      ctx.fill();
+      ctx.fillStyle = '#ca8a04';
+      ctx.beginPath(); ctx.arc(spot.x + 8, spot.y + spot.h, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(spot.x + spot.w - 8, spot.y + spot.h, 6, 0, Math.PI * 2); ctx.fill();
+    } else if (spot.type === 'fortune_wagon') {
+      // Mystical fortune teller caravan
+      ctx.fillStyle = '#4c1d95';
+      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 6);
+      ctx.fill();
+      ctx.strokeStyle = '#ca8a04';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(spot.x + 3, spot.y + 3, spot.w - 6, spot.h - 6);
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath(); ctx.arc(spot.x + spot.w / 2, spot.y + spot.h / 2, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(spot.x + spot.w / 2 - 2, spot.y + spot.h / 2 - 2, 2.5, 0, Math.PI * 2); ctx.fill();
     } else if (spot.type === 'redemption_counter') {
       // Arcade prize redemption counter
       ctx.fillStyle = '#1e293b';

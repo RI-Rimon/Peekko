@@ -724,7 +724,7 @@
         1: 'Skyglass Penthouse',
         2: 'Heritage Manor',
         3: 'Underground Basement',
-        4: 'Grand Shopping Mall',
+        4: 'Grand Art Museum',
         5: 'Wonderland Park'
       };
 

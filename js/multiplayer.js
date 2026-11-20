@@ -49,22 +49,22 @@
         { x: 1060, y: 670, angle: 0 }             // Boiler Vault
       ]
     },
-    4: { // Grand Shopping Mall
+    4: { // Grand Art Museum
       seeker: { x: 680, y: 760, angle: Math.PI / 2 },
       hiders: [
-        { x: 680, y: 360, angle: -Math.PI / 2 }, // Grand Atrium
-        { x: 200, y: 220, angle: 0 },             // Fashion Wing
-        { x: 1100, y: 220, angle: Math.PI },      // Cinema & VR Arcade
-        { x: 200, y: 600, angle: 0 }              // Tech Superstore
+        { x: 680, y: 390, angle: -Math.PI / 2 }, // Classical Sculpture Rotunda
+        { x: 230, y: 220, angle: 0 },             // West Velvet Wing
+        { x: 1110, y: 220, angle: Math.PI },      // East Emerald Wing
+        { x: 230, y: 640, angle: 0 }              // Curators' Archive & Vault
       ]
     },
     5: { // Wonderland Park
       seeker: { x: 680, y: 760, angle: Math.PI / 2 },
       hiders: [
-        { x: 360, y: 640, angle: 0 },             // Carnival Midway
-        { x: 360, y: 340, angle: -Math.PI / 2 }, // Fantasy Carousel Court
-        { x: 1080, y: 320, angle: 0 },            // Thunder Coaster Lagoon
-        { x: 1010, y: 625, angle: Math.PI }       // Bumper Cars & Retro Arcade
+        { x: 230, y: 640, angle: 0 },             // Carnival Midway
+        { x: 230, y: 220, angle: -Math.PI / 2 }, // Grand Carousel Meadow
+        { x: 1110, y: 220, angle: 0 },            // Ferris Wheel Plaza
+        { x: 1110, y: 640, angle: Math.PI }       // Bumper Car Arena
       ]
     }
   };
@@ -1203,7 +1203,7 @@
         1: 'Skyglass Penthouse',
         2: 'Midnight Manor',
         3: 'Warehouse Basement',
-        4: 'Grand Shopping Mall',
+        4: 'Grand Art Museum',
         5: 'Wonderland Park'
       };
       if (this.lobbyMapName) this.lobbyMapName.textContent = mapNames[this.settings.mapId] || 'Map 1';

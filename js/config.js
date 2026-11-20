@@ -50,6 +50,13 @@ const PEEKKO_CONFIG = Object.freeze({
     hot: 180,
     warm: 380
   },
+  maps: {
+    1: { id: 1, name: 'Skyglass Penthouse', subtitle: 'Terrace, Master Loft & Lounge Bar', spots: 20 },
+    2: { id: 2, name: 'Heritage Manor', subtitle: 'Grand Atrium, Banquet Hall & Parlor', spots: 20 },
+    3: { id: 3, name: 'Underground Basement', subtitle: 'Vehicles, Elevators & Boiler Room', spots: 25 },
+    4: { id: 4, name: 'Grand Art Museum', subtitle: 'Sculpture Hall, Vaults & Velvet Galleries', spots: 25 },
+    5: { id: 5, name: 'Wonderland Park', subtitle: 'Amusement Rides, Midway & Plaza', spots: 25 }
+  },
   multiplayer: {
     hidingPhaseSeconds: 20,
     minPlayers: 2,
