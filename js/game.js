@@ -374,8 +374,8 @@
     }
 
     revealMenuOptions() {
-      // Compatibility helper
-      this.showSinglePlayerSetup();
+      // Compatibility helper - maintains active Mode Hub
+      this.showModeHub();
     }
 
     bindEvents() {
@@ -392,6 +392,13 @@
           }
           if (this.leaderboardModal && !this.leaderboardModal.classList.contains('hidden')) {
             this.leaderboardModal.classList.add('hidden');
+            return;
+          }
+          const customModal = document.getElementById('custom-room-modal');
+          if (customModal && !customModal.classList.contains('hidden')) {
+            if (this.mpManager) this.mpManager.closeModal();
+            else customModal.classList.add('hidden');
+            this.showModeHub();
             return;
           }
           if (this.isPaused) {
@@ -438,11 +445,6 @@
       window.addEventListener('blur', handleFocusLoss);
       document.addEventListener('visibilitychange', () => {
         if (document.hidden) handleFocusLoss();
-      });
-
-      // Clicking intro skips right to menu options
-      this.menuScreen.addEventListener('click', () => {
-        this.revealMenuOptions();
       });
 
       // High-performance Mobile Touch D-pad & Actions
@@ -519,33 +521,38 @@
 
       // Map selection cards
       document.querySelectorAll('.map-option').forEach(card => {
-        card.addEventListener('click', () => {
+        card.addEventListener('click', (e) => {
+          e.stopPropagation();
           Sound.init();
           this.selectMap(Number(card.dataset.map));
         });
       });
 
       // Role selection cards
-      document.getElementById('btn-choose-hider').addEventListener('click', () => {
+      document.getElementById('btn-choose-hider').addEventListener('click', (e) => {
+        e.stopPropagation();
         Sound.init();
         this.selectRole('hider');
       });
 
-      document.getElementById('btn-choose-seeker').addEventListener('click', () => {
+      document.getElementById('btn-choose-seeker').addEventListener('click', (e) => {
+        e.stopPropagation();
         Sound.init();
         this.selectRole('seeker');
       });
 
       // Difficulty selector buttons
       document.querySelectorAll('.diff-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
           Sound.init();
           this.selectDifficulty(btn.dataset.diff);
         });
       });
 
       // Dedicated Start Button
-      document.getElementById('btn-start-game').addEventListener('click', () => {
+      document.getElementById('btn-start-game').addEventListener('click', (e) => {
+        e.stopPropagation();
         Sound.init();
         this.tryFullscreenAndLandscape();
         this.startRound(this.selectedRole);
@@ -554,7 +561,8 @@
       // Multiplayer Custom Rooms Button
       const btnMp = document.getElementById('btn-open-multiplayer');
       if (btnMp) {
-        btnMp.addEventListener('click', () => {
+        btnMp.addEventListener('click', (e) => {
+          e.stopPropagation();
           Sound.init();
           if (this.mpManager) {
             this.mpManager.openModal();
@@ -606,17 +614,43 @@
 
       // Fullscreen, Theme & Sound
       const btnFs = document.getElementById('btn-fullscreen');
-      if (btnFs) btnFs.addEventListener('click', () => this.toggleFullscreen());
+      if (btnFs) {
+        btnFs.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.toggleFullscreen();
+        });
+      }
       const btnMenuFs = document.getElementById('btn-menu-fullscreen');
-      if (btnMenuFs) btnMenuFs.addEventListener('click', () => this.toggleFullscreen());
+      if (btnMenuFs) {
+        btnMenuFs.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.toggleFullscreen();
+        });
+      }
 
-      document.getElementById('btn-theme-toggle').addEventListener('click', () => this.toggleTheme());
-      document.getElementById('btn-modal-theme').addEventListener('click', () => this.toggleTheme());
+      const btnTheme = document.getElementById('btn-theme-toggle');
+      if (btnTheme) {
+        btnTheme.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.toggleTheme();
+        });
+      }
+      const btnModalTheme = document.getElementById('btn-modal-theme');
+      if (btnModalTheme) {
+        btnModalTheme.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.toggleTheme();
+        });
+      }
 
-      document.getElementById('btn-sound-toggle').addEventListener('click', () => {
-        const muted = Sound.toggleMute();
-        document.getElementById('sound-icon').textContent = muted ? '🔇' : '🔊';
-      });
+      const btnSound = document.getElementById('btn-sound-toggle');
+      if (btnSound) {
+        btnSound.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const muted = Sound.toggleMute();
+          document.getElementById('sound-icon').textContent = muted ? '🔇' : '🔊';
+        });
+      }
 
       // Orientation Prompt Overlay
       this.rotatePrompt = document.getElementById('rotate-device-prompt');
@@ -625,13 +659,15 @@
       this.rotatePromptDismissed = false;
 
       if (this.btnForceLandscape) {
-        this.btnForceLandscape.addEventListener('click', () => {
+        this.btnForceLandscape.addEventListener('click', (e) => {
+          e.stopPropagation();
           this.tryFullscreenAndLandscape();
           if (this.rotatePrompt) this.rotatePrompt.classList.add('hidden');
         });
       }
       if (this.btnDismissRotate) {
-        this.btnDismissRotate.addEventListener('click', () => {
+        this.btnDismissRotate.addEventListener('click', (e) => {
+          e.stopPropagation();
           this.rotatePromptDismissed = true;
           if (this.rotatePrompt) this.rotatePrompt.classList.add('hidden');
         });
@@ -644,49 +680,71 @@
       setTimeout(() => this.checkOrientationPrompt(), 300);
 
       // Creator / Message for You Modal
-      document.getElementById('btn-about-creator').addEventListener('click', () => {
-        this.creatorModal.classList.remove('hidden');
-      });
-      document.getElementById('btn-close-creator').addEventListener('click', () => {
-        this.creatorModal.classList.add('hidden');
-      });
-      this.creatorModal.addEventListener('click', (e) => {
-        if (e.target === this.creatorModal) this.creatorModal.classList.add('hidden');
-      });
+      const btnAboutCreator = document.getElementById('btn-about-creator');
+      if (btnAboutCreator) {
+        btnAboutCreator.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (this.creatorModal) this.creatorModal.classList.remove('hidden');
+        });
+      }
+      const btnCloseCreator = document.getElementById('btn-close-creator');
+      if (btnCloseCreator) {
+        btnCloseCreator.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (this.creatorModal) this.creatorModal.classList.add('hidden');
+        });
+      }
+      if (this.creatorModal) {
+        this.creatorModal.addEventListener('click', (e) => {
+          if (e.target === this.creatorModal) {
+            e.stopPropagation();
+            this.creatorModal.classList.add('hidden');
+          }
+        });
+      }
 
       // Main Mode Cards & Navigation
       if (this.cardModeOnline) {
-        this.cardModeOnline.addEventListener('click', () => {
+        this.cardModeOnline.addEventListener('click', (e) => {
+          e.stopPropagation();
           Sound.init();
           if (this.onlineMaintenanceModal) this.onlineMaintenanceModal.classList.remove('hidden');
         });
       }
       if (this.btnCloseOnlineMaintenance) {
-        this.btnCloseOnlineMaintenance.addEventListener('click', () => {
+        this.btnCloseOnlineMaintenance.addEventListener('click', (e) => {
+          e.stopPropagation();
           if (this.onlineMaintenanceModal) this.onlineMaintenanceModal.classList.add('hidden');
         });
       }
       if (this.onlineMaintenanceModal) {
         this.onlineMaintenanceModal.addEventListener('click', (e) => {
-          if (e.target === this.onlineMaintenanceModal) this.onlineMaintenanceModal.classList.add('hidden');
+          if (e.target === this.onlineMaintenanceModal) {
+            e.stopPropagation();
+            this.onlineMaintenanceModal.classList.add('hidden');
+          }
         });
       }
 
       if (this.cardModeSingle) {
-        this.cardModeSingle.addEventListener('click', () => {
+        this.cardModeSingle.addEventListener('click', (e) => {
+          e.stopPropagation();
           Sound.init();
           this.showSinglePlayerSetup();
         });
       }
       if (this.btnSpBack) {
-        this.btnSpBack.addEventListener('click', () => {
+        this.btnSpBack.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
           Sound.init();
           this.showModeHub();
         });
       }
 
       if (this.cardModeCustom) {
-        this.cardModeCustom.addEventListener('click', () => {
+        this.cardModeCustom.addEventListener('click', (e) => {
+          e.stopPropagation();
           Sound.init();
           if (this.mpManager) {
             this.mpManager.openModal();
@@ -697,8 +755,24 @@
         });
       }
       if (this.btnMpBackHub) {
-        this.btnMpBackHub.addEventListener('click', () => {
+        this.btnMpBackHub.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
           Sound.init();
+          if (this.mpManager) {
+            this.mpManager.closeModal();
+          } else {
+            const modal = document.getElementById('custom-room-modal');
+            if (modal) modal.classList.add('hidden');
+          }
+          this.showModeHub();
+        });
+      }
+      const btnCloseMpModal = document.getElementById('btn-close-mp-modal');
+      if (btnCloseMpModal) {
+        btnCloseMpModal.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
           if (this.mpManager) {
             this.mpManager.closeModal();
           } else {
@@ -711,19 +785,36 @@
 
       // Global Leaderboard Modal
       if (this.btnGlobalLeaderboard) {
-        this.btnGlobalLeaderboard.addEventListener('click', () => {
+        this.btnGlobalLeaderboard.addEventListener('click', (e) => {
+          e.stopPropagation();
           Sound.init();
           if (this.leaderboardModal) this.leaderboardModal.classList.remove('hidden');
         });
       }
       if (this.btnCloseLeaderboard) {
-        this.btnCloseLeaderboard.addEventListener('click', () => {
+        this.btnCloseLeaderboard.addEventListener('click', (e) => {
+          e.stopPropagation();
           if (this.leaderboardModal) this.leaderboardModal.classList.add('hidden');
         });
       }
       if (this.leaderboardModal) {
         this.leaderboardModal.addEventListener('click', (e) => {
-          if (e.target === this.leaderboardModal) this.leaderboardModal.classList.add('hidden');
+          if (e.target === this.leaderboardModal) {
+            e.stopPropagation();
+            this.leaderboardModal.classList.add('hidden');
+          }
+        });
+      }
+
+      // Prevent container clicks from leaking or bubbling
+      if (this.mainModeHub) {
+        this.mainModeHub.addEventListener('click', (e) => {
+          e.stopPropagation();
+        });
+      }
+      if (this.menuOptionsPanel) {
+        this.menuOptionsPanel.addEventListener('click', (e) => {
+          e.stopPropagation();
         });
       }
 

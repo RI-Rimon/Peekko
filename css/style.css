@@ -722,6 +722,9 @@ html[data-theme="light"] .mode-card-amber:hover {
 
 /* Single Player setup header with Back button */
 .sp-setup-header {
+  position: relative;
+  z-index: 30;
+  pointer-events: auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -732,13 +735,18 @@ html[data-theme="light"] .mode-card-amber:hover {
 }
 
 .btn-back-hub {
+  position: relative;
+  z-index: 35;
+  pointer-events: auto !important;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 14px;
+  padding: 6px 14px;
   border-radius: 8px;
-  background: rgba(19, 22, 31, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(19, 22, 31, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   color: #F3F4F6;
   font-family: 'Space Grotesk', sans-serif;
   font-size: 0.78rem;
@@ -749,6 +757,10 @@ html[data-theme="light"] .mode-card-amber:hover {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.btn-back-hub * {
+  pointer-events: none;
+}
+
 .btn-back-hub:hover {
   background: rgba(19, 22, 31, 0.95);
   border-color: #38BDF8;
@@ -757,9 +769,13 @@ html[data-theme="light"] .mode-card-amber:hover {
   box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
 }
 
+.btn-back-hub:active {
+  transform: scale(0.96) translateX(-2px);
+}
+
 .btn-back-hub.compact-back {
-  padding: 4px 10px;
-  font-size: 0.72rem;
+  padding: 5px 12px;
+  font-size: 0.74rem;
 }
 
 .sp-setup-title {
@@ -2005,9 +2021,12 @@ html[data-theme="light"] .modal-overlay {
 }
 
 .mp-modal-header {
+  position: relative;
+  z-index: 30;
+  pointer-events: auto;
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   margin-bottom: 16px;
   border-bottom: 1px solid var(--border-subtle);
   padding-bottom: 12px;

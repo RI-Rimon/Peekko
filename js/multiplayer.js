@@ -233,14 +233,36 @@
 
     bindEvents() {
       if (this.btnOpenMultiplayer) {
-        this.btnOpenMultiplayer.addEventListener('click', () => this.openModal());
+        this.btnOpenMultiplayer.addEventListener('click', (e) => {
+          if (e) e.stopPropagation();
+          this.openModal();
+        });
       }
       if (this.btnCloseModal) {
-        this.btnCloseModal.addEventListener('click', () => this.closeModal());
+        this.btnCloseModal.addEventListener('click', (e) => {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          this.closeModal();
+        });
+      }
+      const btnBackHub = document.getElementById('btn-mp-back-hub');
+      if (btnBackHub) {
+        btnBackHub.addEventListener('click', (e) => {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          this.closeModal();
+        });
       }
       if (this.modal) {
         this.modal.addEventListener('click', (e) => {
-          if (e.target === this.modal) this.closeModal();
+          if (e.target === this.modal) {
+            if (e) e.stopPropagation();
+            this.closeModal();
+          }
         });
       }
 
@@ -487,6 +509,9 @@
       }
       if (this.phase === 'lobby' && !this.game.isMultiplayer) {
         this.cleanup();
+      }
+      if (this.game && typeof this.game.showModeHub === 'function') {
+        this.game.showModeHub();
       }
     }
 
