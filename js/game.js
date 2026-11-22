@@ -124,6 +124,7 @@
       this.bindDOM();
       this.bindEvents();
       this.initMenuSparks();
+      this.initSplashIntro();
       this.selectMap(this.selectedMapId);
       this.selectRole(this.selectedRole);
       this.selectDifficulty(this.selectedDifficulty);
@@ -199,10 +200,23 @@
       this.topHud = document.getElementById('top-hud');
       this.menuScreen = document.getElementById('menu-screen');
       this.menuOptionsPanel = document.getElementById('menu-options-panel');
+      this.mainModeHub = document.getElementById('main-mode-hub');
+      this.splashIntro = document.getElementById('splash-intro');
       this.introLogoWrap = document.getElementById('intro-logo-wrap');
       this.creatorModal = document.getElementById('creator-modal');
       this.pauseModal = document.getElementById('pause-modal');
       this.resultModal = document.getElementById('result-modal');
+      this.onlineMaintenanceModal = document.getElementById('online-maintenance-modal');
+      this.btnCloseOnlineMaintenance = document.getElementById('btn-close-online-maintenance');
+      this.leaderboardModal = document.getElementById('leaderboard-modal');
+      this.btnCloseLeaderboard = document.getElementById('btn-close-leaderboard');
+      this.btnGlobalLeaderboard = document.getElementById('btn-global-leaderboard');
+
+      this.cardModeOnline = document.getElementById('card-mode-online');
+      this.cardModeSingle = document.getElementById('card-mode-single');
+      this.cardModeCustom = document.getElementById('card-mode-custom');
+      this.btnSpBack = document.getElementById('btn-sp-back');
+      this.btnMpBackHub = document.getElementById('btn-mp-back-hub');
 
       this.mapPill = document.getElementById('map-pill');
       this.rolePill = document.getElementById('role-pill');
@@ -324,28 +338,60 @@
       requestAnimationFrame(drawSparks);
     }
 
-    playIntroBlink() {
-      this.introLogoWrap.classList.add('blinking');
-      this.menuOptionsPanel.classList.add('pre-reveal');
+    initSplashIntro() {
+      if (!this.splashIntro) return;
+      if (this.splashShown) {
+        this.splashIntro.style.display = 'none';
+        return;
+      }
+      this.splashShown = true;
+      // 1.3-second splash intro screen centered on Peekko logo with glow pulse
+      setTimeout(() => {
+        if (this.splashIntro) {
+          this.splashIntro.classList.add('fade-out');
+          setTimeout(() => {
+            if (this.splashIntro) this.splashIntro.style.display = 'none';
+          }, 450);
+        }
+      }, 1300);
+    }
 
-      clearTimeout(this.introTimer);
-      this.introTimer = setTimeout(() => {
-        this.revealMenuOptions();
-      }, 500);
+    showModeHub() {
+      if (this.mainModeHub) this.mainModeHub.classList.remove('hidden');
+      if (this.menuOptionsPanel) this.menuOptionsPanel.classList.add('hidden');
+    }
+
+    showSinglePlayerSetup() {
+      if (this.mainModeHub) this.mainModeHub.classList.add('hidden');
+      if (this.menuOptionsPanel) {
+        this.menuOptionsPanel.classList.remove('hidden');
+        this.menuOptionsPanel.classList.remove('pre-reveal');
+      }
+    }
+
+    playIntroBlink() {
+      this.showModeHub();
     }
 
     revealMenuOptions() {
-      clearTimeout(this.introTimer);
-      this.introLogoWrap.classList.remove('blinking');
-      this.menuOptionsPanel.classList.remove('pre-reveal');
+      // Compatibility helper
+      this.showSinglePlayerSetup();
     }
 
     bindEvents() {
       window.addEventListener('keydown', (e) => {
         // Escape toggles Pause modal during active gameplay, or closes modals
         if (e.code === 'Escape') {
-          if (!this.creatorModal.classList.contains('hidden')) {
+          if (this.creatorModal && !this.creatorModal.classList.contains('hidden')) {
             this.creatorModal.classList.add('hidden');
+            return;
+          }
+          if (this.onlineMaintenanceModal && !this.onlineMaintenanceModal.classList.contains('hidden')) {
+            this.onlineMaintenanceModal.classList.add('hidden');
+            return;
+          }
+          if (this.leaderboardModal && !this.leaderboardModal.classList.contains('hidden')) {
+            this.leaderboardModal.classList.add('hidden');
             return;
           }
           if (this.isPaused) {
@@ -597,7 +643,7 @@
       });
       setTimeout(() => this.checkOrientationPrompt(), 300);
 
-      // Creator Modal
+      // Creator / Message for You Modal
       document.getElementById('btn-about-creator').addEventListener('click', () => {
         this.creatorModal.classList.remove('hidden');
       });
@@ -607,6 +653,79 @@
       this.creatorModal.addEventListener('click', (e) => {
         if (e.target === this.creatorModal) this.creatorModal.classList.add('hidden');
       });
+
+      // Main Mode Cards & Navigation
+      if (this.cardModeOnline) {
+        this.cardModeOnline.addEventListener('click', () => {
+          Sound.init();
+          if (this.onlineMaintenanceModal) this.onlineMaintenanceModal.classList.remove('hidden');
+        });
+      }
+      if (this.btnCloseOnlineMaintenance) {
+        this.btnCloseOnlineMaintenance.addEventListener('click', () => {
+          if (this.onlineMaintenanceModal) this.onlineMaintenanceModal.classList.add('hidden');
+        });
+      }
+      if (this.onlineMaintenanceModal) {
+        this.onlineMaintenanceModal.addEventListener('click', (e) => {
+          if (e.target === this.onlineMaintenanceModal) this.onlineMaintenanceModal.classList.add('hidden');
+        });
+      }
+
+      if (this.cardModeSingle) {
+        this.cardModeSingle.addEventListener('click', () => {
+          Sound.init();
+          this.showSinglePlayerSetup();
+        });
+      }
+      if (this.btnSpBack) {
+        this.btnSpBack.addEventListener('click', () => {
+          Sound.init();
+          this.showModeHub();
+        });
+      }
+
+      if (this.cardModeCustom) {
+        this.cardModeCustom.addEventListener('click', () => {
+          Sound.init();
+          if (this.mpManager) {
+            this.mpManager.openModal();
+          } else {
+            const modal = document.getElementById('custom-room-modal');
+            if (modal) modal.classList.remove('hidden');
+          }
+        });
+      }
+      if (this.btnMpBackHub) {
+        this.btnMpBackHub.addEventListener('click', () => {
+          Sound.init();
+          if (this.mpManager) {
+            this.mpManager.closeModal();
+          } else {
+            const modal = document.getElementById('custom-room-modal');
+            if (modal) modal.classList.add('hidden');
+          }
+          this.showModeHub();
+        });
+      }
+
+      // Global Leaderboard Modal
+      if (this.btnGlobalLeaderboard) {
+        this.btnGlobalLeaderboard.addEventListener('click', () => {
+          Sound.init();
+          if (this.leaderboardModal) this.leaderboardModal.classList.remove('hidden');
+        });
+      }
+      if (this.btnCloseLeaderboard) {
+        this.btnCloseLeaderboard.addEventListener('click', () => {
+          if (this.leaderboardModal) this.leaderboardModal.classList.add('hidden');
+        });
+      }
+      if (this.leaderboardModal) {
+        this.leaderboardModal.addEventListener('click', (e) => {
+          if (e.target === this.leaderboardModal) this.leaderboardModal.classList.add('hidden');
+        });
+      }
 
       // Menu & Result buttons
       document.getElementById('btn-menu').addEventListener('click', () => this.openMenu());
@@ -815,7 +934,7 @@
       this.topHud.classList.add('hidden');
       this.menuScreen.classList.remove('hidden');
       this.menuScreen.style.display = '';
-      this.revealMenuOptions();
+      this.showModeHub();
       this.resultModal.classList.add('hidden');
       this.pauseModal.classList.add('hidden');
       this.actionBar.classList.add('hidden');
