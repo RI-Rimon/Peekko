@@ -1520,6 +1520,9 @@
       }
 
       this.game.renderer.resize();
+      if (this.game.renderer.resetCamera && this.game.player) {
+        this.game.renderer.resetCamera(this.game.player.x, this.game.player.y);
+      }
 
       if (typeof Sound !== 'undefined' && Sound.init) {
         Sound.init();
@@ -2545,6 +2548,9 @@
 
       if (this.game.renderer && this.game.renderer.resize) {
         this.game.renderer.resize();
+      if (this.game.renderer.resetCamera && this.game.player) {
+        this.game.renderer.resetCamera(this.game.player.x, this.game.player.y);
+      }
       }
     }
 

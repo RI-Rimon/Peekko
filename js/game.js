@@ -1173,6 +1173,9 @@
       // Reset player at map spawn
       this.player.x = this.apt.spawn.x;
       this.player.y = this.apt.spawn.y;
+      if (this.renderer && this.renderer.resetCamera) {
+        this.renderer.resetCamera(this.player.x, this.player.y);
+      }
       this.player.angle = -Math.PI / 2;
       this.player.isHidden = false;
       this.player.hiddenSpot = null;

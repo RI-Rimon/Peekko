@@ -12,6 +12,12 @@ class ApartmentRenderer {
     this.scale = 1;
     this.offsetX = 0;
     this.offsetY = 0;
+    this.camX = 0;
+    this.camY = 0;
+    this.camInitialized = false;
+    this.viewWidth = 0;
+    this.viewHeight = 0;
+    this.isMobile = false;
 
     this._onResize = () => this.resize();
     this.resize();
@@ -46,7 +52,20 @@ class ApartmentRenderer {
     this.scale = Math.min(availW / this.apt.width, availH / this.apt.height);
     this.offsetX = Math.max(0, (pw - this.apt.width * this.scale) / 2);
     this.offsetY = Math.max(0, (ph - this.apt.height * this.scale) / 2);
+    this.viewWidth = pw;
+    this.viewHeight = ph;
+    this.isMobile = isMobile;
     this.dpr = dpr;
+  }
+
+  resetCamera(targetX, targetY) {
+    if (typeof targetX === 'number' && typeof targetY === 'number') {
+      this.camX = targetX;
+      this.camY = targetY;
+      this.camInitialized = true;
+    } else {
+      this.camInitialized = false;
+    }
   }
 
   getPalette() {
@@ -159,10 +178,64 @@ class ApartmentRenderer {
     ctx.fillStyle = p.voidBg;
     ctx.fillRect(0, 0, cw, ch);
 
-    // Apply responsive transform
+    // Apply responsive transform (Dynamic Follow Camera or Full-Map Fit)
+    const cfg = (typeof window !== 'undefined' && window.PEEKKO_CONFIG) ? window.PEEKKO_CONFIG : {};
+    const useFollowCamera = cfg.USE_FOLLOW_CAMERA !== false && gameState && gameState.player;
+
     ctx.scale(this.dpr, this.dpr);
-    ctx.translate(this.offsetX, this.offsetY);
-    ctx.scale(this.scale, this.scale);
+    if (useFollowCamera && this.viewWidth > 0 && this.viewHeight > 0) {
+      const zoomFactor = this.isMobile ? (cfg.cameraZoomMobile || 1.95) : (cfg.cameraZoomDesktop || 1.75);
+      const effectiveScale = this.scale * zoomFactor;
+      const visibleW = this.viewWidth / effectiveScale;
+      const visibleH = this.viewHeight / effectiveScale;
+
+      let targetX = gameState.player.x;
+      let targetY = gameState.player.y;
+
+      if (visibleW >= this.apt.width) {
+        targetX = this.apt.width / 2;
+      } else {
+        const halfW = visibleW / 2;
+        targetX = Math.max(halfW, Math.min(this.apt.width - halfW, targetX));
+      }
+
+      if (visibleH >= this.apt.height) {
+        targetY = this.apt.height / 2;
+      } else {
+        const halfH = visibleH / 2;
+        targetY = Math.max(halfH, Math.min(this.apt.height - halfH, targetY));
+      }
+
+      if (!this.camInitialized) {
+        this.camX = targetX;
+        this.camY = targetY;
+        this.camInitialized = true;
+      } else {
+        const lerp = cfg.cameraLerp || 0.12;
+        this.camX += (targetX - this.camX) * lerp;
+        this.camY += (targetY - this.camY) * lerp;
+      }
+
+      if (visibleW >= this.apt.width) {
+        this.camX = this.apt.width / 2;
+      } else {
+        const halfW = visibleW / 2;
+        this.camX = Math.max(halfW, Math.min(this.apt.width - halfW, this.camX));
+      }
+      if (visibleH >= this.apt.height) {
+        this.camY = this.apt.height / 2;
+      } else {
+        const halfH = visibleH / 2;
+        this.camY = Math.max(halfH, Math.min(this.apt.height - halfH, this.camY));
+      }
+
+      ctx.translate(this.viewWidth / 2, this.viewHeight / 2);
+      ctx.scale(effectiveScale, effectiveScale);
+      ctx.translate(-this.camX, -this.camY);
+    } else {
+      ctx.translate(this.offsetX, this.offsetY);
+      ctx.scale(this.scale, this.scale);
+    }
 
     // 1. Rooms & Floor Textures
     this.drawFloors(ctx, p);
@@ -410,6 +483,104 @@ class ApartmentRenderer {
     if (gameState.proximityHint && gameState.proximityHint.timer > 0) {
       this.drawProximityHint(ctx, gameState.proximityHint);
     }
+
+    ctx.restore();
+
+    // 10. Top-Left Tactical Mini-Map (Active Gameplay Only, Strict Anti-Cheat)
+    if (gameState && gameState.player && gameState.phase !== 'menu' && this.viewWidth > 0) {
+      this.drawMiniMap(ctx, gameState);
+    }
+  }
+
+  drawMiniMap(ctx, gameState) {
+    const mmW = this.isMobile ? 105 : 130;
+    const mmH = this.isMobile ? 72 : 90;
+    const mmX = this.isMobile ? 10 : 14;
+    const mmY = this.isMobile ? 10 : 14;
+    const pad = 6;
+
+    const innerW = mmW - pad * 2;
+    const innerH = mmH - pad * 2;
+    const mmScale = Math.min(innerW / this.apt.width, innerH / this.apt.height);
+    const mapDrawW = this.apt.width * mmScale;
+    const mapDrawH = this.apt.height * mmScale;
+    const originX = mmX + pad + (innerW - mapDrawW) / 2;
+    const originY = mmY + pad + (innerH - mapDrawH) / 2;
+
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(this.dpr, this.dpr);
+
+    // Translucent tactical container
+    ctx.fillStyle = this.theme === 'light' ? 'rgba(248, 250, 252, 0.84)' : 'rgba(11, 13, 18, 0.72)';
+    this.roundRect(ctx, mmX, mmY, mmW, mmH, 8);
+    ctx.fill();
+    ctx.strokeStyle = this.theme === 'light' ? 'rgba(2, 132, 199, 0.45)' : 'rgba(56, 189, 248, 0.38)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Clip to inner map frame
+    ctx.beginPath();
+    this.roundRect(ctx, mmX + 2, mmY + 2, mmW - 4, mmH - 4, 6);
+    ctx.clip();
+
+    // Simplified room floor boundaries
+    ctx.fillStyle = this.theme === 'light' ? 'rgba(2, 132, 199, 0.06)' : 'rgba(56, 189, 248, 0.06)';
+    ctx.strokeStyle = this.theme === 'light' ? 'rgba(51, 65, 85, 0.28)' : 'rgba(56, 189, 248, 0.22)';
+    ctx.lineWidth = 0.8;
+    for (const r of this.apt.rooms) {
+      const rx = originX + r.x * mmScale;
+      const ry = originY + r.y * mmScale;
+      const rw = r.w * mmScale;
+      const rh = r.h * mmScale;
+      ctx.fillRect(rx, ry, rw, rh);
+      ctx.strokeRect(rx, ry, rw, rh);
+    }
+
+    // Simplified major structural obstacles / hiding spots outlines (no player/bot reveals)
+    if (this.apt.hidingSpots) {
+      ctx.fillStyle = this.theme === 'light' ? 'rgba(100, 116, 139, 0.22)' : 'rgba(148, 163, 184, 0.18)';
+      for (const s of this.apt.hidingSpots) {
+        ctx.fillRect(
+          originX + s.x * mmScale,
+          originY + s.y * mmScale,
+          Math.max(1.5, s.w * mmScale),
+          Math.max(1.5, s.h * mmScale)
+        );
+      }
+    }
+
+    // Simplified room walls in muted slate/cyan lines
+    ctx.fillStyle = this.theme === 'light' ? 'rgba(15, 23, 42, 0.55)' : 'rgba(56, 189, 248, 0.35)';
+    for (const w of this.apt.walls) {
+      ctx.fillRect(
+        originX + w.x * mmScale,
+        originY + w.y * mmScale,
+        Math.max(1.2, w.w * mmScale),
+        Math.max(1.2, w.h * mmScale)
+      );
+    }
+
+    // Local Player ONLY: Glowing pulsing position dot
+    const px = originX + gameState.player.x * mmScale;
+    const py = originY + gameState.player.y * mmScale;
+    const pulse = 0.5 + 0.5 * Math.sin(performance.now() * 0.006);
+    const isSeeker = gameState.role === 'seeker' || (gameState.isMultiplayer && gameState.mpRole === 'seeker');
+    const dotColor = isSeeker ? '#f59e0b' : '#38bdf8';
+    const haloColor = isSeeker ? `rgba(245, 158, 11, ${0.22 + pulse * 0.28})` : `rgba(56, 189, 248, ${0.22 + pulse * 0.28})`;
+
+    ctx.beginPath();
+    ctx.arc(px, py, (this.isMobile ? 4.5 : 5.2) + pulse * 2.2, 0, Math.PI * 2);
+    ctx.fillStyle = haloColor;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(px, py, this.isMobile ? 2.6 : 3.0, 0, Math.PI * 2);
+    ctx.fillStyle = dotColor;
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
 
     ctx.restore();
   }

@@ -5,6 +5,10 @@
 
 const PEEKKO_CONFIG = Object.freeze({
   version: '8.0',
+  USE_FOLLOW_CAMERA: true,
+  cameraZoomDesktop: 1.75,
+  cameraZoomMobile: 1.95,
+  cameraLerp: 0.12,
   difficulties: {
     easy: {
       label: 'Easy',
