@@ -80,6 +80,9 @@
       this.role = null;        // 'hider' | 'seeker'
       this.phase = 'menu';     // 'menu' | 'hider_move' | 'hider_ready' | 'bot_seeking' | 'seeker_hunt' | 'ended'
       this.keys = {};
+      this.joystickActive = false;
+      this.joystickVector = { x: 0, y: 0 };
+      this.joystickTouchId = null;
       this.isPaused = false;
       this.lastBotHiddenSpotId = null;
 
@@ -232,6 +235,9 @@
       this.promptText = document.getElementById('prompt-text');
       this.btnReady = document.getElementById('btn-ready');
       this.btnTouchReady = document.getElementById('btn-touch-ready');
+      this.btnTouchSpace = document.getElementById('btn-touch-space');
+      this.virtualJoystick = document.getElementById('virtual-joystick');
+      this.joystickKnob = document.getElementById('joystick-knob');
       this.statusToast = document.getElementById('status-toast');
       this.controlsFooter = document.getElementById('controls-footer');
       this.spaceLegend = document.getElementById('space-legend');
@@ -438,6 +444,7 @@
       // Clear stuck keys and auto-pause when window loses focus or tab changes
       const handleFocusLoss = () => {
         this.keys = {};
+        this.resetJoystick();
         if (['hider_move', 'hider_ready', 'bot_seeking', 'seeker_hunt'].includes(this.phase) && !this.isPaused) {
           this.pauseGame();
         }
@@ -447,32 +454,98 @@
         if (document.hidden) handleFocusLoss();
       });
 
-      // High-performance Mobile Touch D-pad & Actions
-      document.querySelectorAll('.dpad-btn').forEach(btn => {
-        const code = btn.dataset.key;
-        const pressStart = (e) => {
+      // Smooth 360-degree Mobile Virtual Joystick Wheel
+      if (this.virtualJoystick && this.joystickKnob) {
+        const joystickBase = this.virtualJoystick.querySelector('.joystick-base') || this.virtualJoystick;
+        const updateJoystickFromPoint = (clientX, clientY) => {
+          const rect = joystickBase.getBoundingClientRect();
+          const centerX = rect.left + rect.width / 2;
+          const centerY = rect.top + rect.height / 2;
+          const maxRadius = Math.max(24, rect.width / 2 - 18);
+
+          let dx = clientX - centerX;
+          let dy = clientY - centerY;
+          const dist = Math.hypot(dx, dy);
+
+          if (dist > maxRadius) {
+            dx = (dx / dist) * maxRadius;
+            dy = (dy / dist) * maxRadius;
+          }
+
+          this.joystickKnob.style.transform = `translate3d(${dx.toFixed(1)}px, ${dy.toFixed(1)}px, 0)`;
+
+          const normDist = Math.min(1, dist / maxRadius);
+          if (normDist > 0.12 && dist > 0) {
+            this.joystickActive = true;
+            this.joystickVector.x = dx / dist;
+            this.joystickVector.y = dy / dist;
+          } else {
+            this.joystickActive = false;
+            this.joystickVector.x = 0;
+            this.joystickVector.y = 0;
+          }
+        };
+
+        this.virtualJoystick.addEventListener('touchstart', (e) => {
+          if (this.joystickTouchId !== null) return;
           e.preventDefault();
           Sound.init();
-          this.keys[code] = true;
-          btn.classList.add('active');
+          const touch = e.changedTouches[0];
+          if (!touch) return;
+          this.joystickTouchId = touch.identifier;
+          this.virtualJoystick.classList.add('active');
+          this.joystickKnob.classList.remove('returning');
+          updateJoystickFromPoint(touch.clientX, touch.clientY);
+        }, { passive: false });
+
+        window.addEventListener('touchmove', (e) => {
+          if (this.joystickTouchId === null) return;
+          for (let i = 0; i < e.touches.length; i++) {
+            const t = e.touches[i];
+            if (t.identifier === this.joystickTouchId) {
+              e.preventDefault();
+              updateJoystickFromPoint(t.clientX, t.clientY);
+              break;
+            }
+          }
+        }, { passive: false });
+
+        const handleTouchEnd = (e) => {
+          if (this.joystickTouchId === null) return;
+          for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === this.joystickTouchId) {
+              this.resetJoystick();
+              break;
+            }
+          }
         };
-        const pressEnd = (e) => {
+        window.addEventListener('touchend', handleTouchEnd, { passive: false });
+        window.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+
+        // Pointer fallback for mouse/pen touch testing
+        let joystickPointerId = null;
+        this.virtualJoystick.addEventListener('pointerdown', (e) => {
+          if (e.pointerType === 'touch' || joystickPointerId !== null) return;
           e.preventDefault();
-          this.keys[code] = false;
-          btn.classList.remove('active');
-        };
-
-        btn.addEventListener('touchstart', pressStart, { passive: false });
-        btn.addEventListener('touchend', pressEnd, { passive: false });
-        btn.addEventListener('touchcancel', pressEnd, { passive: false });
-
-        btn.addEventListener('pointerdown', (e) => {
-          try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
-          pressStart(e);
+          Sound.init();
+          joystickPointerId = e.pointerId;
+          try { this.virtualJoystick.setPointerCapture(e.pointerId); } catch (_) {}
+          this.virtualJoystick.classList.add('active');
+          this.joystickKnob.classList.remove('returning');
+          updateJoystickFromPoint(e.clientX, e.clientY);
         });
-        btn.addEventListener('pointerup', pressEnd);
-        btn.addEventListener('pointercancel', pressEnd);
-      });
+        this.virtualJoystick.addEventListener('pointermove', (e) => {
+          if (e.pointerId !== joystickPointerId) return;
+          updateJoystickFromPoint(e.clientX, e.clientY);
+        });
+        const handlePointerEnd = (e) => {
+          if (e.pointerId !== joystickPointerId) return;
+          joystickPointerId = null;
+          this.resetJoystick();
+        };
+        this.virtualJoystick.addEventListener('pointerup', handlePointerEnd);
+        this.virtualJoystick.addEventListener('pointercancel', handlePointerEnd);
+      }
 
       const touchSpace = document.getElementById('btn-touch-space');
       if (touchSpace) {
@@ -1010,7 +1083,36 @@
       document.getElementById('modal-theme-label').textContent = isDark ? 'Light Mode' : 'Dark Mode';
     }
 
+    resetJoystick() {
+      this.joystickActive = false;
+      this.joystickVector.x = 0;
+      this.joystickVector.y = 0;
+      this.joystickTouchId = null;
+      if (this.virtualJoystick) {
+        this.virtualJoystick.classList.remove('active');
+      }
+      if (this.joystickKnob) {
+        this.joystickKnob.classList.add('returning');
+        this.joystickKnob.style.transform = 'translate3d(0px, 0px, 0px)';
+      }
+    }
+
+    updateTouchActionLabel(role) {
+      if (!this.btnTouchSpace) return;
+      if (role === 'hider') {
+        this.btnTouchSpace.textContent = 'HIDE';
+        this.btnTouchSpace.classList.remove('seeker-mode');
+      } else if (role === 'seeker') {
+        this.btnTouchSpace.textContent = 'SEEK';
+        this.btnTouchSpace.classList.add('seeker-mode');
+      } else {
+        this.btnTouchSpace.textContent = 'HIDE / SEEK';
+        this.btnTouchSpace.classList.remove('seeker-mode');
+      }
+    }
+
     openMenu() {
+      this.resetJoystick();
       if (this.isMultiplayer && this.mpManager) {
         this.mpManager.leaveRoom();
         return;
@@ -1038,6 +1140,8 @@
       this.role = role;
       this.isPaused = false;
       this.proximityHint = null;
+      this.resetJoystick();
+      this.updateTouchActionLabel(role);
       this.apt.loadMap(this.selectedMapId);
       this.apt.resetSpots();
 
@@ -1643,6 +1747,11 @@
       if (this.keys['ArrowRight'] || this.keys['KeyD']) dx += 1;
       if (this.keys['ArrowUp'] || this.keys['KeyW']) dy -= 1;
       if (this.keys['ArrowDown'] || this.keys['KeyS']) dy += 1;
+
+      if (this.joystickActive && (this.joystickVector.x !== 0 || this.joystickVector.y !== 0)) {
+        dx += this.joystickVector.x;
+        dy += this.joystickVector.y;
+      }
 
       if (dx !== 0 || dy !== 0) {
         const len = Math.hypot(dx, dy);

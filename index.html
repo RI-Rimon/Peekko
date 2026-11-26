@@ -98,17 +98,15 @@
 
       <!-- TOUCH / MOBILE CONTROLS -->
       <div id="touch-pad" class="touch-pad hidden">
-        <div class="dpad">
-          <button class="dpad-btn up" data-key="ArrowUp">▲</button>
-          <div class="dpad-mid">
-            <button class="dpad-btn left" data-key="ArrowLeft">◀</button>
-            <button class="dpad-btn down" data-key="ArrowDown">▼</button>
-            <button class="dpad-btn right" data-key="ArrowRight">▶</button>
+        <div id="virtual-joystick" class="virtual-joystick" aria-label="Movement Joystick">
+          <div class="joystick-base">
+            <div class="joystick-crosshair"></div>
+            <div id="joystick-knob" class="joystick-knob"></div>
           </div>
         </div>
         <div class="touch-right-actions">
           <button id="btn-touch-ready" class="touch-ready-btn hidden">READY</button>
-          <button id="btn-touch-space" class="touch-action-btn">SPACE</button>
+          <button id="btn-touch-space" class="touch-action-btn">HIDE / SEEK</button>
         </div>
       </div>
 

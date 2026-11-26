@@ -1505,6 +1505,8 @@
       }
 
       this.game.tryFullscreenAndLandscape();
+      if (this.game.resetJoystick) this.game.resetJoystick();
+      if (this.game.updateTouchActionLabel) this.game.updateTouchActionLabel(this.game.role);
       if (this.game.touchPad) this.game.touchPad.classList.remove('hidden');
       if (this.game.actionBar) this.game.actionBar.classList.remove('hidden');
       if (this.game.controlsFooter) this.game.controlsFooter.classList.remove('hidden');
