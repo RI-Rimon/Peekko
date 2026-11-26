@@ -50,6 +50,8 @@ class ApartmentRenderer {
     const availH = Math.max(100, ph - padY);
 
     this.scale = Math.min(availW / this.apt.width, availH / this.apt.height);
+    const refScale = Math.min(availW / 1360, availH / 840);
+    this.camBaseScale = Math.max(this.scale, refScale);
     this.offsetX = Math.max(0, (pw - this.apt.width * this.scale) / 2);
     this.offsetY = Math.max(0, (ph - this.apt.height * this.scale) / 2);
     this.viewWidth = pw;
@@ -118,52 +120,52 @@ class ApartmentRenderer {
       };
     }
 
-    // Dark Navy Blue & Warm Cream Palette
+    // True Obsidian Charcoal & Slate Dark Mode Palette
     return {
-      voidBg: '#081124',
-      wood: '#142442',
-      woodLine: 'rgba(246, 239, 226, 0.05)',
-      woodDark: '#101d36',
-      tile: '#13223e',
-      tileLine: 'rgba(246, 239, 226, 0.07)',
-      tileWarm: '#182a4d',
-      mallTerrazzo: '#1a2d52',
-      parkGrass: '#0f291e',
-      carnivalDeck: '#2e1c12',
-      amusementTile: '#1f1338',
-      bumperFloor: '#0d233a',
-      hauntedCobble: '#131926',
-      concrete: '#16243e',
-      concreteDark: '#111c32',
-      parkingLine: 'rgba(246, 239, 226, 0.45)',
-      wall: '#2b4470',
-      wallEdge: 'rgba(246, 239, 226, 0.35)',
-      doorArc: 'rgba(246, 239, 226, 0.24)',
-      doorLeaf: '#eadbc2',
-      roomLabel: 'rgba(246, 239, 226, 0.20)',
-      furnitureShadow: 'rgba(4, 9, 20, 0.48)',
-      woodFurniture: '#4a382c',
-      woodFurnitureLight: '#664e3e',
-      bedFrame: '#362921',
-      sheet: '#eadbc2',
-      blanket: '#244780',
-      sofa: '#223861',
-      sofaCushion: '#335085',
-      porcelain: '#eadbc2',
-      porcelainRim: '#8a7d69',
-      counter: '#1e3257',
-      counterTop: '#314b7a',
-      metal: '#7c90b0',
-      curtain: '#9f1239',
+      voidBg: '#07090D',
+      wood: '#11141C',
+      woodLine: 'rgba(148, 163, 184, 0.06)',
+      woodDark: '#0E1117',
+      tile: '#151923',
+      tileLine: 'rgba(148, 163, 184, 0.08)',
+      tileWarm: '#181D29',
+      mallTerrazzo: '#151923',
+      parkGrass: '#0E1713',
+      carnivalDeck: '#191412',
+      amusementTile: '#14111D',
+      bumperFloor: '#0F151E',
+      hauntedCobble: '#10131A',
+      concrete: '#151923',
+      concreteDark: '#0E1117',
+      parkingLine: 'rgba(148, 163, 184, 0.35)',
+      wall: '#1E2433',
+      wallEdge: '#334155',
+      doorArc: 'rgba(148, 163, 184, 0.24)',
+      doorLeaf: '#94a3b8',
+      roomLabel: 'rgba(148, 163, 184, 0.22)',
+      furnitureShadow: 'rgba(0, 0, 0, 0.65)',
+      woodFurniture: '#3b2d23',
+      woodFurnitureLight: '#544033',
+      bedFrame: '#291f18',
+      sheet: '#d6ccb8',
+      blanket: '#1e3a5f',
+      sofa: '#1C2333',
+      sofaCushion: '#2A344B',
+      porcelain: '#cbd5e1',
+      porcelainRim: '#64748b',
+      counter: '#171C28',
+      counterTop: '#242C3D',
+      metal: '#64748b',
+      curtain: '#881337',
       plant: '#15803d',
-      highlight: '#f6efe2',
-      checkedBadgeBg: 'rgba(11, 22, 44, 0.9)',
-      checkedBadgeText: '#eadbc2',
-      museumMarble: '#0f172a',
-      museumMarbleLine: 'rgba(148, 163, 184, 0.12)',
-      museumRed: '#3b0717',
-      museumGreen: '#062d23',
-      carouselFloor: '#241026'
+      highlight: '#e2e8f0',
+      checkedBadgeBg: 'rgba(11, 13, 18, 0.92)',
+      checkedBadgeText: '#cbd5e1',
+      museumMarble: '#11141C',
+      museumMarbleLine: 'rgba(148, 163, 184, 0.10)',
+      museumRed: '#260b14',
+      museumGreen: '#0a1f19',
+      carouselFloor: '#17111c'
     };
   }
 
@@ -185,7 +187,7 @@ class ApartmentRenderer {
     ctx.scale(this.dpr, this.dpr);
     if (useFollowCamera && this.viewWidth > 0 && this.viewHeight > 0) {
       const zoomFactor = this.isMobile ? (cfg.cameraZoomMobile || 1.95) : (cfg.cameraZoomDesktop || 1.75);
-      const effectiveScale = this.scale * zoomFactor;
+      const effectiveScale = (this.camBaseScale || this.scale) * zoomFactor;
       const visibleW = this.viewWidth / effectiveScale;
       const visibleH = this.viewHeight / effectiveScale;
 
@@ -901,15 +903,66 @@ class ApartmentRenderer {
     } else if (prop.type === 'plant') {
       const cx = prop.x + prop.w / 2;
       const cy = prop.y + prop.h / 2;
-      ctx.fillStyle = '#7c2d12';
-      ctx.beginPath(); ctx.arc(cx, cy, 12, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = p.plant;
-      for (let i = 0; i < 6; i++) {
-        const a = (i * Math.PI) / 3;
+      const r = Math.min(prop.w, prop.h) * 0.48;
+      ctx.fillStyle = '#92400e';
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.56, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      for (let i = 0; i < 8; i++) {
+        const a = (i * Math.PI) / 4;
+        ctx.fillStyle = i % 2 === 0 ? '#15803d' : '#16a34a';
         ctx.beginPath();
-        ctx.ellipse(cx + Math.cos(a) * 9, cy + Math.sin(a) * 9, 8, 4, a, 0, Math.PI * 2);
+        ctx.ellipse(cx + Math.cos(a) * r * 0.52, cy + Math.sin(a) * r * 0.52, r * 0.55, r * 0.22, a, 0, Math.PI * 2);
         ctx.fill();
       }
+      ctx.fillStyle = '#22c55e';
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.2, 0, Math.PI * 2); ctx.fill();
+    } else if (prop.type === 'park_tree') {
+      const cx = prop.x + prop.w / 2;
+      const cy = prop.y + prop.h / 2;
+      const r = Math.min(prop.w, prop.h) * 0.48;
+      ctx.fillStyle = '#14532d';
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#15803d';
+      ctx.beginPath(); ctx.arc(cx - r * 0.14, cy - r * 0.14, r * 0.78, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#22c55e';
+      ctx.beginPath(); ctx.arc(cx - r * 0.22, cy - r * 0.24, r * 0.45, 0, Math.PI * 2); ctx.fill();
+    } else if (prop.type === 'fireplace') {
+      ctx.fillStyle = this.theme === 'dark' ? '#cbd5e1' : '#e2e8f0';
+      this.roundRect(ctx, prop.x, prop.y, prop.w, prop.h, 4);
+      ctx.fill();
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(prop.x + 12, prop.y + 8, prop.w - 24, prop.h - 14);
+      ctx.fillStyle = '#f97316';
+      ctx.beginPath();
+      ctx.ellipse(prop.x + prop.w / 2, prop.y + prop.h / 2 + 2, (prop.w - 36) * 0.36, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath();
+      ctx.arc(prop.x + prop.w / 2, prop.y + prop.h / 2 + 2, 4, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (prop.type === 'ice_cream_cart') {
+      ctx.fillStyle = '#f8fafc';
+      this.roundRect(ctx, prop.x + 4, prop.y + 6, prop.w - 8, prop.h - 12, 6);
+      ctx.fill();
+      const cx = prop.x + prop.w / 2;
+      const cy = prop.y + prop.h / 2;
+      const r = Math.min(prop.w, prop.h) * 0.44;
+      const colors = ['#ec4899', '#f8fafc', '#38bdf8', '#f8fafc', '#f43f5e', '#f8fafc'];
+      for (let i = 0; i < 6; i++) {
+        ctx.fillStyle = colors[i];
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, r, (i * Math.PI) / 3, ((i + 1) * Math.PI) / 3);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.fill();
     } else if (prop.type === 'shoe_rack' || prop.type === 'coat_rack') {
       ctx.fillStyle = p.woodFurniture;
       this.roundRect(ctx, prop.x, prop.y, prop.w, prop.h, 6);
@@ -1437,16 +1490,34 @@ class ApartmentRenderer {
       this.roundRect(ctx, spot.x + 4, spot.y + spot.h - 13, spot.w - 8, 11, 4);
       ctx.fill();
     } else if (spot.type === 'dining_table') {
-      ctx.fillStyle = p.woodFurniture;
-      const chairCount = Math.max(2, Math.floor(spot.w / 65));
+      // Mahogany Dining Table with Chairs & Candlesticks
+      ctx.fillStyle = '#431407';
+      const chairCount = Math.max(3, Math.floor(spot.w / 60));
       for (let i = 0; i < chairCount; i++) {
         const cx = spot.x + 22 + i * ((spot.w - 44) / Math.max(1, chairCount - 1)) - 11;
-        ctx.fillRect(cx, spot.y - 10, 22, 12);
-        ctx.fillRect(cx, spot.y + spot.h - 2, 22, 12);
+        this.roundRect(ctx, cx, spot.y - 11, 22, 12, 3);
+        ctx.fill();
+        this.roundRect(ctx, cx, spot.y + spot.h - 1, 22, 12, 3);
+        ctx.fill();
       }
-      ctx.fillStyle = p.woodFurnitureLight;
+      ctx.fillStyle = '#6b2d14';
       this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 8);
       ctx.fill();
+      ctx.strokeStyle = '#92400e';
+      ctx.lineWidth = 2;
+      this.roundRect(ctx, spot.x + 3, spot.y + 3, spot.w - 6, spot.h - 6, 6);
+      ctx.stroke();
+      // Embroidered table runner + glowing candlesticks
+      ctx.fillStyle = '#f5f5f4';
+      ctx.fillRect(spot.x + 24, spot.y + spot.h / 2 - 5, spot.w - 48, 10);
+      [0.32, 0.68].forEach(r => {
+        const lx = spot.x + spot.w * r;
+        const ly = spot.y + spot.h / 2;
+        ctx.fillStyle = '#f59e0b';
+        ctx.beginPath(); ctx.arc(lx, ly, 4.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath(); ctx.arc(lx, ly, 2, 0, Math.PI * 2); ctx.fill();
+      });
     } else if (spot.type === 'chest') {
       ctx.fillStyle = p.woodFurniture;
       this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 5);
@@ -1499,14 +1570,38 @@ class ApartmentRenderer {
         ctx.fill();
       });
     } else if (spot.type === 'piano') {
-      ctx.fillStyle = '#0f172a';
-      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 14);
+      // Glossy Black Grand Piano with Curved Lid, Strings & Keys
+      ctx.fillStyle = '#090d16';
+      ctx.beginPath();
+      ctx.moveTo(spot.x + 12, spot.y);
+      ctx.lineTo(spot.x + spot.w, spot.y);
+      ctx.lineTo(spot.x + spot.w, spot.y + spot.h);
+      ctx.lineTo(spot.x + 24, spot.y + spot.h);
+      ctx.quadraticCurveTo(spot.x, spot.y + spot.h * 0.72, spot.x + 4, spot.y + spot.h * 0.35);
+      ctx.quadraticCurveTo(spot.x + 6, spot.y, spot.x + 12, spot.y);
+      ctx.closePath();
       ctx.fill();
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      // Open soundboard & brass strings
+      ctx.fillStyle = '#78350f';
+      this.roundRect(ctx, spot.x + 14, spot.y + 8, spot.w - 38, spot.h - 22, 8);
+      ctx.fill();
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 0.8;
+      for (let sy = spot.y + 14; sy < spot.y + spot.h - 18; sy += 6) {
+        ctx.beginPath();
+        ctx.moveTo(spot.x + 18, sy);
+        ctx.lineTo(spot.x + spot.w - 28, sy - 4);
+        ctx.stroke();
+      }
+      // Crisp keyboard keys
       ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(spot.x + spot.w - 16, spot.y + 10, 12, spot.h - 20);
+      ctx.fillRect(spot.x + spot.w - 17, spot.y + 8, 13, spot.h - 16);
       ctx.fillStyle = '#020617';
-      for (let ky = spot.y + 14; ky < spot.y + spot.h - 14; ky += 10) {
-        ctx.fillRect(spot.x + spot.w - 16, ky, 7, 4);
+      for (let ky = spot.y + 12; ky < spot.y + spot.h - 12; ky += 8) {
+        ctx.fillRect(spot.x + spot.w - 17, ky, 8, 4);
       }
     } else if (spot.type.startsWith('car_') || spot.type === 'compact_car') {
       // Compact Top-Down Parked Vehicle
@@ -1535,6 +1630,9 @@ class ApartmentRenderer {
       ctx.fillStyle = carColors[spot.type] || '#64748b';
       this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 10);
       ctx.fill();
+      // Side Mirrors
+      ctx.fillRect(spot.x + spot.w * 0.62, spot.y - 4, 8, 5);
+      ctx.fillRect(spot.x + spot.w * 0.62, spot.y + spot.h - 1, 8, 5);
       ctx.fillStyle = '#0f172a';
       this.roundRect(ctx, spot.x + 14, spot.y + 6, spot.w - 32, spot.h - 12, 5);
       ctx.fill();
