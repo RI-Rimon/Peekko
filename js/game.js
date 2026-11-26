@@ -1366,6 +1366,11 @@
           }
         } else if (!this.player.isHidden && this.nearestSpot) {
           // Hide in nearest spot
+          const hx = this.nearestSpot.hideX !== undefined ? this.nearestSpot.hideX : (this.nearestSpot.x + (this.nearestSpot.w || 40) / 2);
+          const hy = this.nearestSpot.hideY !== undefined ? this.nearestSpot.hideY : (this.nearestSpot.y + (this.nearestSpot.h || 40) / 2);
+          this.player.x = hx;
+          this.player.y = hy;
+          this.player.isMoving = false;
           this.player.isHidden = true;
           this.player.hiddenSpot = this.nearestSpot;
           this.hasRelocatedDuringSeek = true;
@@ -1373,8 +1378,6 @@
           Sound.playHide();
           this.showToast(`Hidden in ${this.nearestSpot.name}.`);
           if (this.mpManager && this.mpManager.sendHiderInstantAction) {
-            const hx = this.nearestSpot.hideX || this.player.x;
-            const hy = this.nearestSpot.hideY || this.player.y;
             this.mpManager.sendHiderInstantAction(true, this.nearestSpot.id, hx, hy);
           }
         } else if (!this.player.isHidden) {
@@ -1391,7 +1394,7 @@
           return;
         }
         if (this.mpManager) {
-          this.mpManager.sendSeekerSearch(this.nearestSpot.id);
+          this.mpManager.sendSeekerSearch(this.nearestSpot.id, this.player.x, this.player.y);
         }
       }
     }
@@ -1892,6 +1895,10 @@
         }
         const isCountdown = (this.phase === 'mp_hiding_countdown') || (this.mpManager && this.mpManager.phase === 'mp_hiding_countdown');
         if (this.role === 'seeker' && isCountdown) {
+          this.player.isMoving = false;
+          return;
+        }
+        if (this.role === 'hider' && this.player.isHidden) {
           this.player.isMoving = false;
           return;
         }

@@ -31,40 +31,40 @@
         { x: 220, y: 616, angle: 0 }              // Lounge / Balcony
       ]
     },
-    2: { // Midnight Manor
-      seeker: { x: 680, y: 640, angle: Math.PI / 2 },
+    2: { // Heritage Manor (2200x1400)
+      seeker: { x: 380, y: 1220, angle: -Math.PI / 2 },
       hiders: [
-        { x: 680, y: 350, angle: -Math.PI / 2 }, // Central Great Hall
-        { x: 260, y: 250, angle: 0 },             // Library / Study
-        { x: 1080, y: 250, angle: Math.PI },      // Dining Room
-        { x: 330, y: 690, angle: 0 }              // West Gallery
+        { x: 380, y: 420, angle: 0 },              // Royal Library
+        { x: 1100, y: 540, angle: -Math.PI / 2 },  // Banquet Dining Hall
+        { x: 1820, y: 640, angle: Math.PI },       // Master Conservatory
+        { x: 1180, y: 1050, angle: 0 }             // Parlour & Drawing Room
       ]
     },
-    3: { // Underground Basement
-      seeker: { x: 680, y: 720, angle: Math.PI / 2 },
+    3: { // Underground Basement (2200x1400)
+      seeker: { x: 560, y: 1220, angle: -Math.PI / 2 },
       hiders: [
-        { x: 350, y: 240, angle: -Math.PI / 2 }, // Parking Bay
-        { x: 230, y: 640, angle: 0 },             // Storage Bay
-        { x: 1080, y: 280, angle: Math.PI },      // Maintenance Workshop
-        { x: 1060, y: 670, angle: 0 }             // Boiler Vault
+        { x: 550, y: 550, angle: -Math.PI / 2 },   // Underground Parking Bays
+        { x: 1740, y: 260, angle: Math.PI },       // Generator & Power Room
+        { x: 1520, y: 1120, angle: 0 },            // Storage Vault
+        { x: 200, y: 1080, angle: 0 }              // Maintenance Tunnel West
       ]
     },
-    4: { // Grand Art Museum
-      seeker: { x: 680, y: 760, angle: Math.PI / 2 },
+    4: { // Grand Art Museum (2200x1400)
+      seeker: { x: 1100, y: 1220, angle: -Math.PI / 2 },
       hiders: [
-        { x: 680, y: 390, angle: -Math.PI / 2 }, // Classical Sculpture Rotunda
-        { x: 230, y: 220, angle: 0 },             // West Velvet Wing
-        { x: 1110, y: 220, angle: Math.PI },      // East Emerald Wing
-        { x: 230, y: 640, angle: 0 }              // Curators' Archive & Vault
+        { x: 1100, y: 500, angle: -Math.PI / 2 },  // Sculpture Rotunda
+        { x: 350, y: 480, angle: 0 },              // Renaissance Gallery
+        { x: 1840, y: 720, angle: Math.PI },       // Modern Artifact Wing
+        { x: 1760, y: 1100, angle: Math.PI }       // Curator Vault
       ]
     },
-    5: { // Wonderland Park
-      seeker: { x: 680, y: 760, angle: Math.PI / 2 },
+    5: { // Wonderland Park (2200x1400)
+      seeker: { x: 1100, y: 1210, angle: -Math.PI / 2 },
       hiders: [
-        { x: 230, y: 640, angle: 0 },             // Carnival Midway
-        { x: 230, y: 220, angle: -Math.PI / 2 }, // Grand Carousel Meadow
-        { x: 1110, y: 220, angle: 0 },            // Ferris Wheel Plaza
-        { x: 1110, y: 640, angle: Math.PI }       // Bumper Car Arena
+        { x: 400, y: 580, angle: -Math.PI / 2 },   // Grand Carousel Plaza
+        { x: 1100, y: 580, angle: 0 },             // Central Fountain Garden
+        { x: 1800, y: 560, angle: Math.PI },       // Bumper Car Arena
+        { x: 400, y: 1070, angle: 0 }              // Ferris Wheel Boarding Deck
       ]
     }
   };
@@ -933,12 +933,29 @@
           p.angle = msg.angle !== undefined ? msg.angle : p.angle;
           p.isMoving = !!msg.isMoving;
           p.isHidden = !!msg.isHidden;
-          p.hiddenSpotId = msg.hiddenSpotId !== undefined ? msg.hiddenSpotId : p.hiddenSpotId;
+          const spotVal = msg.hidingSpotId !== undefined ? msg.hidingSpotId : msg.hiddenSpotId;
+          if (spotVal !== undefined) {
+            p.hiddenSpotId = spotVal;
+            p.hidingSpotId = spotVal;
+          }
           p.isReady = !!msg.isReady;
           if (msg.hasRelocated) p.hasRelocated = true;
         }
-      } else if (msg.type === 'SEEKER_SEARCH') {
-        this.processSeekerSearch(msg.spotId, msg.seekerId || msg.senderId);
+      } else if (msg.type === 'PLAYER_HIDE_STATE') {
+        const pid = msg.playerId || msg.id || msg.senderId;
+        const p = this.players.find(pl => pl.id === pid);
+        if (p && !p.eliminated) {
+          p.isHidden = !!msg.isHidden;
+          const spotVal = msg.hidingSpotId !== undefined ? msg.hidingSpotId : msg.hiddenSpotId;
+          p.hiddenSpotId = spotVal || null;
+          p.hidingSpotId = spotVal || null;
+          if (msg.x !== undefined) p.x = msg.x;
+          if (msg.y !== undefined) p.y = msg.y;
+          p.isMoving = false;
+          this.broadcast(msg);
+        }
+      } else if (msg.type === 'SEEK_ATTEMPT' || msg.type === 'SEEKER_SEARCH') {
+        this.processSeekerSearch(msg.spotId, msg.seekerId || msg.senderId, msg.x, msg.y);
       } else if (msg.type === 'HIDER_READY') {
         const p = this.players.find(pl => pl.id === msg.id || pl.id === msg.senderId);
         if (p) p.isReady = true;
@@ -1056,29 +1073,46 @@
         this.clientStartMatch();
       } else if (msg.type === 'GAME_SYNC') {
         this.applyGameSync(msg);
-      } else if (msg.type === 'HIDER_CAUGHT') {
+      } else if (msg.type === 'PLAYER_HIDE_STATE') {
+        const pid = msg.playerId || msg.id;
+        const p = this.players.find(pl => pl.id === pid);
+        if (p && pid !== this.localPlayerId) {
+          p.isHidden = !!msg.isHidden;
+          const spotVal = msg.hidingSpotId !== undefined ? msg.hidingSpotId : msg.hiddenSpotId;
+          p.hiddenSpotId = spotVal || null;
+          p.hidingSpotId = spotVal || null;
+          if (msg.x !== undefined) p.x = msg.x;
+          if (msg.y !== undefined) p.y = msg.y;
+          p.isMoving = false;
+        }
+      } else if (msg.type === 'PLAYER_CAUGHT' || msg.type === 'HIDER_CAUGHT') {
         this.revealSpotId = msg.spotId;
+        const caughtIds = msg.caughtPlayerIds || (msg.hiderId ? [msg.hiderId] : []);
         const caughtNames = [];
         this.players.forEach(p => {
-          if (msg.caughtPlayerIds && msg.caughtPlayerIds.includes(p.id)) {
+          if (caughtIds.includes(p.id)) {
             p.eliminated = true;
             p.isHidden = false;
+            p.hiddenSpotId = null;
+            p.hidingSpotId = null;
             p.revealedSpotId = msg.spotId;
             caughtNames.push(p.name);
           }
         });
 
+        const seekerLabel = msg.seekerName || 'Seeker';
         const me = this.players.find(p => p.id === this.localPlayerId);
-        if (me && msg.caughtPlayerIds && msg.caughtPlayerIds.includes(me.id)) {
+        if (me && caughtIds.includes(me.id)) {
           this.game.player.speed = 0;
           this.game.player.isMoving = false;
           if (typeof Sound !== 'undefined' && Sound.playCaught) Sound.playCaught();
-          this.game.showToast(`🚨 You were CAUGHT in ${msg.spotName}!`);
+          this.game.showToast(`🚨 ${seekerLabel} caught you in ${msg.spotName || 'hiding'}!`);
           if (this.spectatorBanner) this.spectatorBanner.classList.remove('hidden');
         } else {
           if (typeof Sound !== 'undefined' && Sound.playCaught) Sound.playCaught();
-          this.game.showToast(`🚨 ${caughtNames.join(', ')} was CAUGHT in ${msg.spotName}!`);
+          this.game.showToast(`🚨 ${seekerLabel} caught ${caughtNames.join(', ')}!`);
         }
+        this.updateMultiplayerHUD();
       } else if (msg.type === 'PROXIMITY_HINT') {
         const me = this.players.find(p => p.id === this.localPlayerId);
         if (me && me.role === 'seeker' && msg.hint) {
@@ -1593,7 +1627,8 @@
           angle: Math.round(p.angle * 100) / 100,
           isMoving: p.isMoving,
           isHidden: p.isHidden,
-          hiddenSpotId: p.hiddenSpotId,
+          hiddenSpotId: p.hiddenSpotId || p.hidingSpotId || null,
+          hidingSpotId: p.hidingSpotId || p.hiddenSpotId || null,
           isReady: p.isReady,
           eliminated: p.eliminated,
           eliminatedReason: p.eliminatedReason,
@@ -1656,7 +1691,7 @@
     /* ========================================================
        SEEKER ACTIONS & FAIR LINE-OF-SIGHT RULES
        ======================================================== */
-    processSeekerSearch(spotId, seekerId) {
+    processSeekerSearch(spotId, seekerId, searchX, searchY) {
       if (!this.isHost || this.phase !== 'mp_hunting') return;
       if (this.settings.winRule !== 'timer' && this.attemptsLeft <= 0) return;
 
@@ -1670,16 +1705,21 @@
         this.checkedSpots.push(spotId);
       }
 
-      // Check if any Hider is ACTUALLY physically inside / hiding in this spot (prevents ghost catch if player relocated)
-      const spotX = spot.hideX || spot.x;
-      const spotY = spot.hideY || spot.y;
-      const caughtHiders = this.players.filter(p =>
-        p.role === 'hider' &&
-        !p.eliminated &&
-        p.isHidden &&
-        p.hiddenSpotId === spotId &&
-        Math.hypot((p.x || spotX) - spotX, (p.y || spotY) - spotY) <= 85
-      );
+      // Dual-Condition Seek Check:
+      // 1) Primary Match: Hider's hidingSpotId/hiddenSpotId matches spotId
+      // 2) Proximity Fallback: Hidden Hider's (x, y) is within <= 65px of spot center or search point
+      const spotX = spot.hideX !== undefined ? spot.hideX : (spot.x + (spot.w || 40) / 2);
+      const spotY = spot.hideY !== undefined ? spot.hideY : (spot.y + (spot.h || 40) / 2);
+      const caughtHiders = this.players.filter(p => {
+        if (p.role !== 'hider' || p.eliminated || !p.isHidden) return false;
+        const pSpotId = p.hidingSpotId || p.hiddenSpotId;
+        const primaryMatch = (pSpotId === spotId);
+        const distToSpot = Math.hypot((p.x || 0) - spotX, (p.y || 0) - spotY);
+        const distToSearch = (typeof searchX === 'number' && typeof searchY === 'number')
+          ? Math.hypot((p.x || 0) - searchX, (p.y || 0) - searchY)
+          : Infinity;
+        return primaryMatch || distToSpot <= 65 || distToSearch <= 65;
+      });
 
       if (caughtHiders.length > 0) {
         caughtHiders.forEach(h => {
@@ -1687,22 +1727,36 @@
           h.eliminatedAt = this.attemptsLeft;
           h.eliminatedReason = `Found in ${spot.name}`;
           h.isHidden = false;
+          h.hiddenSpotId = null;
+          h.hidingSpotId = null;
+          h.x = spotX;
+          h.y = spotY;
           h.revealedSpotId = spot.id;
         });
         this.revealSpotId = spot.id;
 
-        // Broadcast HIDER_CAUGHT immediately across channels so all players see the reveal
+        const remainingHiders = this.players.filter(p => p.role === 'hider' && !p.eliminated).length;
+        const seekerPlayer = this.players.find(p => p.id === seekerId) || this.players.find(p => p.role === 'seeker');
+        const seekerName = seekerPlayer ? seekerPlayer.name : 'Seeker';
+
+        // Broadcast PLAYER_CAUGHT immediately to ALL players in the room
         const caughtPayload = {
-          type: 'HIDER_CAUGHT',
+          type: 'PLAYER_CAUGHT',
+          seekerId: seekerPlayer ? seekerPlayer.id : seekerId,
+          seekerName: seekerName,
+          hiderId: caughtHiders[0].id,
+          hiderName: caughtHiders.map(h => h.name).join(', '),
           spotId: spot.id,
           spotName: spot.name,
-          caughtPlayerIds: caughtHiders.map(h => h.id)
+          caughtPlayerIds: caughtHiders.map(h => h.id),
+          remainingHiders: remainingHiders
         };
         this.broadcast(caughtPayload);
 
         const caughtNames = caughtHiders.map(h => h.name).join(', ');
-        this.game.showToast(`🚨 ${caughtNames} was CAUGHT in ${spot.name}!`);
+        this.game.showToast(`🚨 ${seekerName} caught ${caughtNames}!`);
         if (typeof Sound !== 'undefined' && Sound.playCaught) Sound.playCaught();
+        this.updateMultiplayerHUD();
 
         const me = this.players.find(p => p.id === this.localPlayerId);
         if (me && me.eliminated) {
@@ -2130,7 +2184,8 @@
             angle: me.angle,
             isMoving: me.isMoving,
             isHidden: me.isHidden,
-            hiddenSpotId: me.hiddenSpotId,
+            hiddenSpotId: me.hiddenSpotId || me.hidingSpotId || null,
+            hidingSpotId: me.hidingSpotId || me.hiddenSpotId || null,
             isReady: me.isReady,
             hasRelocated: me.hasRelocated
           });
@@ -2138,15 +2193,19 @@
       }, intervalMs);
     }
 
-    sendSeekerSearch(spotId) {
+    sendSeekerSearch(spotId, searchX, searchY) {
       if (this.phase !== 'mp_hunting') return;
+      const sx = searchX !== undefined ? searchX : this.game.player.x;
+      const sy = searchY !== undefined ? searchY : this.game.player.y;
       if (this.isHost) {
-        this.processSeekerSearch(spotId, this.localPlayerId);
+        this.processSeekerSearch(spotId, this.localPlayerId, sx, sy);
       } else {
         this.sendToHost({
-          type: 'SEEKER_SEARCH',
+          type: 'SEEK_ATTEMPT',
           spotId: spotId,
-          seekerId: this.localPlayerId
+          seekerId: this.localPlayerId,
+          x: sx,
+          y: sy
         });
       }
     }
@@ -2165,18 +2224,28 @@
       }
     }
 
-    sendHiderInstantAction(isHidden, hiddenSpotId, x, y) {
+    sendHiderInstantAction(isHidden, hidingSpotId, x, y) {
       let me = this.players.find(p => p.id === this.localPlayerId);
       if (me) {
-        me.isHidden = isHidden;
-        me.hiddenSpotId = hiddenSpotId;
+        me.isHidden = !!isHidden;
+        me.hiddenSpotId = hidingSpotId || null;
+        me.hidingSpotId = hidingSpotId || null;
         if (x !== undefined) me.x = x;
         if (y !== undefined) me.y = y;
         me.isMoving = false;
       }
       const posX = x !== undefined ? x : (me ? me.x : this.game.player.x);
       const posY = y !== undefined ? y : (me ? me.y : this.game.player.y);
-      const payload = {
+      const hideStatePayload = {
+        type: 'PLAYER_HIDE_STATE',
+        playerId: this.localPlayerId,
+        isHidden: !!isHidden,
+        hidingSpotId: hidingSpotId || null,
+        hiddenSpotId: hidingSpotId || null,
+        x: posX,
+        y: posY
+      };
+      const inputPayload = {
         type: 'PLAYER_INPUT',
         t: Date.now(),
         id: this.localPlayerId,
@@ -2185,15 +2254,18 @@
         angle: this.game.player.angle,
         speed: this.game.player.speed,
         isMoving: false,
-        isHidden: isHidden,
-        hiddenSpotId: hiddenSpotId,
+        isHidden: !!isHidden,
+        hiddenSpotId: hidingSpotId || null,
+        hidingSpotId: hidingSpotId || null,
         isReady: me ? me.isReady : false,
         hasRelocated: true
       };
       if (this.isHost) {
-        this.broadcast(payload);
+        this.broadcast(hideStatePayload);
+        this.broadcast(inputPayload);
       } else {
-        this.sendToHost(payload);
+        this.sendToHost(hideStatePayload);
+        this.sendToHost(inputPayload);
       }
     }
 
@@ -2269,7 +2341,9 @@
           if (localP) {
             localP.isMoving = remote.isMoving;
             localP.isHidden = remote.isHidden;
-            localP.hiddenSpotId = remote.hiddenSpotId;
+            const spotVal = remote.hidingSpotId !== undefined ? remote.hidingSpotId : remote.hiddenSpotId;
+            localP.hiddenSpotId = spotVal || null;
+            localP.hidingSpotId = spotVal || null;
             localP.isReady = remote.isReady;
             localP.eliminated = remote.eliminated;
             localP.eliminatedReason = remote.eliminatedReason;
