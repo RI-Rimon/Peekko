@@ -463,6 +463,26 @@ class ApartmentRenderer {
           false,
           true
         );
+      } else if (gameState.role === 'seeker' && gameState.hiderBot && gameState.hiderBot.active && !gameState.hiderBot.isHidden && gameState.player) {
+        const hb = gameState.hiderBot;
+        const pl = gameState.player;
+        const dist = Math.hypot(hb.x - pl.x, hb.y - pl.y);
+        const hasLOS = this.apt.hasLineOfSight(pl.x, pl.y, hb.x, hb.y);
+        let visible = false;
+        if (hasLOS) {
+          if (this.theme === 'dark') {
+            const angToBot = Math.atan2(hb.y - pl.y, hb.x - pl.x);
+            let diff = angToBot - pl.angle;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            visible = (dist <= 270 && Math.abs(diff) <= 0.72) || dist <= 40;
+          } else {
+            visible = dist <= 480;
+          }
+        }
+        if (visible) {
+          this.drawCharacter(ctx, hb.x, hb.y, hb.angle || 0, '#38bdf8', 'BOT', false, hb.isMoving);
+        }
       }
 
       if (gameState.player) {
@@ -563,11 +583,81 @@ class ApartmentRenderer {
       );
     }
 
-    // Local Player ONLY: Glowing pulsing position dot
-    const px = originX + gameState.player.x * mmScale;
-    const py = originY + gameState.player.y * mmScale;
+    // Anti-Cheat / Tactical Dot Rendering:
+    // - Hiders see: Local Player (cyan), Fellow Hider teammates (emerald), and Active Seekers (pulsing red #EF4444)
+    // - Seekers see: ONLY Local Seeker (amber) and Fellow Seekers (amber) - NEVER Hiders!
     const pulse = 0.5 + 0.5 * Math.sin(performance.now() * 0.006);
     const isSeeker = gameState.role === 'seeker' || (gameState.isMultiplayer && gameState.mpRole === 'seeker');
+
+    if (gameState.isMultiplayer && gameState.mpPlayers && gameState.mpPlayers.length > 0) {
+      for (const pl of gameState.mpPlayers) {
+        if (pl.id === gameState.mpLocalId) continue;
+        const rx = pl.renderX !== undefined ? pl.renderX : pl.x;
+        const ry = pl.renderY !== undefined ? pl.renderY : pl.y;
+        const mx = originX + rx * mmScale;
+        const my = originY + ry * mmScale;
+
+        if (!isSeeker && pl.role === 'seeker') {
+          // Hiders see Seekers as glowing pulsing red dots
+          ctx.beginPath();
+          ctx.arc(mx, my, (this.isMobile ? 4.4 : 5.0) + pulse * 2.2, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(239, 68, 68, ${0.24 + pulse * 0.30})`;
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(mx, my, this.isMobile ? 2.5 : 2.9, 0, Math.PI * 2);
+          ctx.fillStyle = '#EF4444';
+          ctx.fill();
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = '#ffffff';
+          ctx.stroke();
+        } else if (!isSeeker && pl.role === 'hider' && !pl.eliminated) {
+          // Hiders see fellow Hider teammates
+          ctx.beginPath();
+          ctx.arc(mx, my, this.isMobile ? 2.3 : 2.7, 0, Math.PI * 2);
+          ctx.fillStyle = '#10b981';
+          ctx.fill();
+          ctx.lineWidth = 0.8;
+          ctx.strokeStyle = '#ffffff';
+          ctx.stroke();
+        } else if (isSeeker && pl.role === 'seeker') {
+          // Seekers only see fellow Seekers (never Hiders!)
+          ctx.beginPath();
+          ctx.arc(mx, my, this.isMobile ? 2.4 : 2.8, 0, Math.PI * 2);
+          ctx.fillStyle = '#f59e0b';
+          ctx.fill();
+          ctx.lineWidth = 0.8;
+          ctx.strokeStyle = '#ffffff';
+          ctx.stroke();
+        }
+      }
+    } else if (!isSeeker) {
+      // Single Player Hider: show active Seeker Bot(s) as glowing pulsing red dots (#EF4444)
+      const bots = (gameState.botSeekers && gameState.botSeekers.length > 0)
+        ? gameState.botSeekers
+        : (gameState.botSeeker ? [gameState.botSeeker] : []);
+      for (const b of bots) {
+        if (!b || !b.active) continue;
+        const bx = originX + b.x * mmScale;
+        const by = originY + b.y * mmScale;
+        ctx.beginPath();
+        ctx.arc(bx, by, (this.isMobile ? 4.4 : 5.0) + pulse * 2.2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(239, 68, 68, ${0.24 + pulse * 0.30})`;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(bx, by, this.isMobile ? 2.5 : 2.9, 0, Math.PI * 2);
+        ctx.fillStyle = '#EF4444';
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+      }
+    }
+
+    // Local Player: Glowing pulsing position dot
+    const px = originX + gameState.player.x * mmScale;
+    const py = originY + gameState.player.y * mmScale;
     const dotColor = isSeeker ? '#f59e0b' : '#38bdf8';
     const haloColor = isSeeker ? `rgba(245, 158, 11, ${0.22 + pulse * 0.28})` : `rgba(56, 189, 248, ${0.22 + pulse * 0.28})`;
 
@@ -1306,16 +1396,22 @@ class ApartmentRenderer {
         ctx.beginPath(); ctx.moveTo(prop.x + 6, ly); ctx.lineTo(prop.x + prop.w - 6, ly); ctx.stroke();
       }
     } else if (prop.type === 'park_water_fountain') {
-      // Tiered Stone Dolphin Water Fountain
+      // Concentric Circular Stone Basins with Rippling Cyan Water Rings
       const pcx = prop.x + prop.w / 2;
       const pcy = prop.y + prop.h / 2;
+      const rOuter = Math.min(prop.w, prop.h) / 2;
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath(); ctx.arc(pcx, pcy, rOuter, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#0284c7';
-      ctx.beginPath(); ctx.ellipse(pcx, pcy, prop.w / 2, prop.h / 2, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      ctx.fillStyle = '#0369a1';
-      ctx.beginPath(); ctx.ellipse(pcx, pcy, prop.w / 3, prop.h / 3, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(pcx, pcy, rOuter * 0.86, 0, Math.PI * 2); ctx.fill();
+      const ripplePhase = (performance.now() * 0.002) % 1;
+      ctx.strokeStyle = `rgba(125, 211, 252, ${0.7 - ripplePhase * 0.5})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(pcx, pcy, rOuter * (0.35 + ripplePhase * 0.45), 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = '#64748b';
+      ctx.beginPath(); ctx.arc(pcx, pcy, rOuter * 0.42, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath(); ctx.arc(pcx, pcy, rOuter * 0.30, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#e2e8f0';
       ctx.beginPath(); ctx.arc(pcx, pcy, 7, 0, Math.PI * 2); ctx.fill();
     } else if (prop.type === 'ferris_support_leg') {
@@ -2985,17 +3081,27 @@ class ApartmentRenderer {
         ctx.fillRect(spot.x + 16 + i * 20, spot.y + 4, 6, spot.h - 8);
       }
     } else if (spot.type === 'carousel_center') {
-      // Grand carousel band organ central pillar
-      ctx.fillStyle = '#78350f';
-      this.roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 8);
-      ctx.fill();
-      ctx.fillStyle = '#f59e0b';
-      for (let px = spot.x + 10; px < spot.x + spot.w - 10; px += 8) {
-        ctx.fillRect(px, spot.y + 6, 5, spot.h - 12);
+      // Multi-Colored Radial Striped Circular Canopy with Golden Center Pole
+      const cx = spot.x + spot.w / 2;
+      const cy = spot.y + spot.h / 2;
+      const r = Math.min(spot.w, spot.h) / 2;
+      const sliceColors = ['#e11d48', '#f8fafc', '#f59e0b', '#38bdf8', '#a855f7', '#10b981'];
+      const slices = 12;
+      for (let i = 0; i < slices; i++) {
+        ctx.fillStyle = sliceColors[i % sliceColors.length];
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, r, (i * Math.PI * 2) / slices, ((i + 1) * Math.PI * 2) / slices);
+        ctx.closePath();
+        ctx.fill();
       }
-      ctx.strokeStyle = '#fef08a';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(spot.x + 4, spot.y + 4, spot.w - 8, spot.h - 8);
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath(); ctx.arc(cx, cy, r - 1.5, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.22, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.10, 0, Math.PI * 2); ctx.fill();
     } else if (spot.type === 'swan_boat') {
       // Enchanted swan paddle boat
       const scx = spot.x + spot.w / 2;

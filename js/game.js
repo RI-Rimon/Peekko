@@ -114,6 +114,19 @@
       // Bot State
       this.botHiddenSpot = null;
       this.revealBotSpot = false;
+      this.hiderBot = {
+        active: false,
+        isHidden: true,
+        x: 0,
+        y: 0,
+        angle: 0,
+        isMoving: false,
+        relocationsUsed: 0,
+        maxRelocations: 2,
+        cooldown: 0,
+        targetSpot: null,
+        path: []
+      };
       this.botSeeker = this.createBotSeekerInstance('SEEKER BOT', '#f59e0b', null);
       this.botSeekers = [this.botSeeker];
 
@@ -1124,6 +1137,7 @@
         this.botSeekers.forEach(b => { if (b) b.active = false; });
       }
       this.botSeeker.active = false;
+      if (this.hiderBot) this.hiderBot.active = false;
       this.topHud.classList.add('hidden');
       this.menuScreen.classList.remove('hidden');
       this.menuScreen.style.display = '';
@@ -1189,6 +1203,7 @@
       this.botSeekers = [this.botSeeker];
       this.botHiddenSpot = null;
       this.revealBotSpot = false;
+      if (this.hiderBot) this.hiderBot.active = false;
 
       this.mapPill.textContent = this.apt.mapName.toUpperCase();
       this.mapPill.classList.remove('hidden');
@@ -1221,6 +1236,19 @@
         // Skill-based bot spot selection (weighted by stealth, avoiding identical consecutive spot)
         this.botHiddenSpot = this.pickSkillfulBotHidingSpot();
         this.lastBotHiddenSpotId = this.botHiddenSpot.id;
+        this.hiderBot = {
+          active: true,
+          isHidden: true,
+          x: this.botHiddenSpot.hideX,
+          y: this.botHiddenSpot.hideY,
+          angle: 0,
+          isMoving: false,
+          relocationsUsed: 0,
+          maxRelocations: this.selectedDifficulty === 'easy' ? 1 : 2,
+          cooldown: 180,
+          targetSpot: null,
+          path: []
+        };
 
         this.showToast(`${this.apt.mapName}: Bot hidden! You have ${this.maxAttempts} attempts across ${this.apt.hidingSpots.length} spots.`);
       }
@@ -1373,7 +1401,7 @@
       this.attemptsLeft--;
       this.attemptsValue.textContent = `${this.attemptsLeft} / ${this.maxAttempts}`;
 
-      if (spot.id === this.botHiddenSpot.id) {
+      if (this.botHiddenSpot && spot.id === this.botHiddenSpot.id) {
         this.revealBotSpot = true;
         const bonus = this.attemptsLeft * CFG.pointsSeekerBonusPerAttempt;
         const gained = CFG.pointsWinBase + bonus;
@@ -1390,7 +1418,9 @@
       Sound.playEmpty();
 
       // Proximity distance feedback (Hot / Warm / Cool)
-      const dist = Math.hypot(spot.ix - this.botHiddenSpot.ix, spot.iy - this.botHiddenSpot.iy);
+      const refX = this.botHiddenSpot ? this.botHiddenSpot.ix : (this.hiderBot ? this.hiderBot.x : spot.ix);
+      const refY = this.botHiddenSpot ? this.botHiddenSpot.iy : (this.hiderBot ? this.hiderBot.y : spot.iy);
+      const dist = Math.hypot(spot.ix - refX, spot.iy - refY);
       let hintText = 'COOL (Far Away)';
       let hintType = 'cool';
 
@@ -1682,6 +1712,7 @@
         botSeeker: this.botSeeker,
         botSeekers: this.botSeekers,
         botHiddenSpot: this.botHiddenSpot,
+        hiderBot: this.hiderBot,
         revealBotSpot: this.revealBotSpot,
         proximityHint: this.proximityHint,
         isMultiplayer: this.isMultiplayer,
@@ -1713,9 +1744,13 @@
         return;
       }
 
-      if (this.phase === 'hider_move' || this.phase === 'seeker_hunt') {
+      if (this.phase === 'hider_move') {
         this.updatePlayerMovement(dt);
         this.updateInteractionPrompt();
+      } else if (this.phase === 'seeker_hunt') {
+        this.updatePlayerMovement(dt);
+        this.updateInteractionPrompt();
+        this.updateHiderBot(dt);
       } else if (this.phase === 'hider_ready') {
         this.updateInteractionPrompt();
       } else if (this.phase === 'bot_seeking') {
@@ -1726,6 +1761,125 @@
         }
         this.updateInteractionPrompt();
         this.updateBotSeeker(dt);
+      }
+    }
+
+    updateHiderBot(dt) {
+      const hb = this.hiderBot;
+      if (!hb || !hb.active) return;
+
+      if (hb.cooldown > 0) {
+        hb.cooldown = Math.max(0, hb.cooldown - dt);
+      }
+
+      const pl = this.player;
+      const isPointInSeekerCone = (px, py) => {
+        const d = Math.hypot(px - pl.x, py - pl.y);
+        if (d > this.losMaxDist + 20) return false;
+        if (!this.apt.hasLineOfSight(pl.x, pl.y, px, py)) return false;
+        const ang = Math.atan2(py - pl.y, px - pl.x);
+        let diff = ang - pl.angle;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        return Math.abs(diff) <= this.losConeHalfAngle + 0.25 || d <= 50;
+      };
+
+      if (hb.isHidden) {
+        if (!this.botHiddenSpot || hb.relocationsUsed >= hb.maxRelocations || hb.cooldown > 0) return;
+
+        const spot = this.botHiddenSpot;
+        const distToSeeker = Math.hypot(pl.x - spot.hideX, pl.y - spot.hideY);
+
+        // Trigger relocation ONLY when Seeker is in mid-range (220-320px) AND vision cone faces away from exit
+        if (distToSeeker >= 220 && distToSeeker <= 320 && !isPointInSeekerCone(spot.ix, spot.iy)) {
+          const candidates = this.apt.hidingSpots.filter(s => {
+            if (s.id === spot.id || s.checked) return false;
+            const dSeeker = Math.hypot(s.ix - pl.x, s.iy - pl.y);
+            return dSeeker > 320;
+          });
+
+          if (candidates.length > 0) {
+            // Shuffle/sort by stealthWeight & distance from Seeker
+            candidates.sort((a, b) => {
+              const da = Math.hypot(a.ix - pl.x, a.iy - pl.y);
+              const db = Math.hypot(b.ix - pl.x, b.iy - pl.y);
+              return (db * b.stealthWeight) - (da * a.stealthWeight);
+            });
+
+            const topPool = candidates.slice(0, Math.min(4, candidates.length));
+            for (const cand of topPool) {
+              const path = this.apt.findPathToSpot(spot.ix, spot.iy, cand);
+              if (path && path.length > 0) {
+                const firstWp = path[0];
+                if (!isPointInSeekerCone(firstWp.x, firstWp.y)) {
+                  hb.isHidden = false;
+                  hb.x = spot.ix;
+                  hb.y = spot.iy;
+                  hb.targetSpot = cand;
+                  hb.path = path;
+                  hb.relocationsUsed++;
+                  hb.isMoving = true;
+                  this.botHiddenSpot = null;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        return;
+      }
+
+      // Sprinting to new hiding spot
+      const distCatch = Math.hypot(hb.x - pl.x, hb.y - pl.y);
+      if (distCatch <= CFG.losInstantCatchDist && this.apt.hasLineOfSight(pl.x, pl.y, hb.x, hb.y)) {
+        this.endRound(
+          true,
+          'Caught the Bot Running!',
+          `You spotted and caught the Bot relocating in ${this.apt.mapName} with ${this.attemptsLeft} attempt(s) left.`,
+          CFG.pointsWinBase + this.attemptsLeft * CFG.pointsSeekerBonusPerAttempt
+        );
+        return;
+      }
+
+      if (!hb.path || hb.path.length === 0) {
+        if (hb.targetSpot) {
+          this.botHiddenSpot = hb.targetSpot;
+          this.lastBotHiddenSpotId = hb.targetSpot.id;
+          hb.x = hb.targetSpot.hideX;
+          hb.y = hb.targetSpot.hideY;
+          hb.isHidden = true;
+          hb.isMoving = false;
+          hb.targetSpot = null;
+          hb.cooldown = 360;
+        }
+        return;
+      }
+
+      const wp = hb.path[0];
+      const dx = wp.x - hb.x;
+      const dy = wp.y - hb.y;
+      const dist = Math.hypot(dx, dy);
+      const speed = this.player.speed * 1.05 * dt;
+
+      if (dist <= speed + 2) {
+        hb.x = wp.x;
+        hb.y = wp.y;
+        hb.path.shift();
+        if (hb.path.length === 0 && hb.targetSpot) {
+          this.botHiddenSpot = hb.targetSpot;
+          this.lastBotHiddenSpotId = hb.targetSpot.id;
+          hb.x = hb.targetSpot.hideX;
+          hb.y = hb.targetSpot.hideY;
+          hb.isHidden = true;
+          hb.isMoving = false;
+          hb.targetSpot = null;
+          hb.cooldown = 360;
+        }
+      } else {
+        hb.angle = Math.atan2(dy, dx);
+        hb.x += (dx / dist) * speed;
+        hb.y += (dy / dist) * speed;
+        hb.isMoving = true;
       }
     }
 
